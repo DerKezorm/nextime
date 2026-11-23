@@ -116,9 +116,12 @@ def test_time26_groups_calendars_name_their_group_source_and_hidden(
     assert (found["Familie"]["group"], found["Familie"]["source_name"], found["Familie"]["hidden"]) == ("own", "", True)
     one = program.get(f"/api/v1/calendars/{familie}", headers=key(client, "read", calendar_ids=[familie])).json()
     assert one["hidden"] is True and one["group"] == "own"
-    # A key for all leaves the hidden calendar out (decided after the review): it is not there at all.
-    assert "Familie" not in {row["name"] for row in program.get("/api/v1/calendars", headers=key(
-        client, "read")).json()["calendars"]}
+    # A key for all lists the hidden calendar too, as hidden (for nexmail's sidebar, 2026-11-23).
+    every_key = key(client, "read")
+    listed = {row["name"]: row["hidden"] for row in program.get("/api/v1/calendars", headers=every_key).json()[
+        "calendars"]}
+    assert listed["Familie"] is True and listed["Arbeit"] is False
+    assert program.get(f"/api/v1/calendars/{familie}", headers=every_key).json()["hidden"] is True
 
 
 # --- 6. features, 7. state ------------------------------------------------------------------------------------------

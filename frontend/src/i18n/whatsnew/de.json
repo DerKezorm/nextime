@@ -1,4 +1,25 @@
 {
+  "0.2.0": {
+    "lead": "Feiertage aus iCloud, Google oder einem Abo fallen jetzt genauso auf wie die eingebauten, und nexmail kann deine Kalender lesen und Einladungen aus Mails eintragen.",
+    "sections": [
+      {
+        "title": "Tage hervorheben",
+        "where": "Menü eines Kalenders › Bearbeiten …",
+        "body": "Ein Hintergrund-Kalender kann seine Tage farbig hinterlegen, wie die Feiertage. So fällt auch ein Feiertagskalender aus iCloud, Google oder einem Abo auf. Das Kästchen „Tage hervorheben“ steht unter „Als Hintergrund zeigen“ und gilt nur für dich. Die eingebauten Feiertage sind ab Werk hervorgehoben, Schulferien nicht."
+      },
+      {
+        "title": "Für nexmail",
+        "where": "Einstellungen › Verbindungen",
+        "body": "Mit einem Schlüssel für nextime zeigt nexmail deine Kalender so gruppiert wie hier, erkennt, ob eine Einladung schon eingetragen ist, beantwortet sie und trägt Einladungen aus einer Mail ein. Dabei schickt nextime selbst nichts, die Antwort geht genau einmal hinaus. Kommt derselbe Termin später aus iCloud oder Google, bleibt er nur einmal stehen."
+      }
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Die Programmschnittstelle nennt an jedem Termin seine Kennung (UID) und die Adresse in nextime, dazu Organisator und Teilnehmer.",
+      "Ausgeblendete Kalender stehen in der Programmschnittstelle mit dem Vermerk „ausgeblendet“; ihre Termine liest ein Programm nur, wenn es ausdrücklich danach fragt.",
+      "Mail-Kopien einer Einladung zeigen in nextime keine Antwort-Knöpfe; der Papierkorb sagt, warum ein Termin dorthin kam."
+    ]
+  },
   "0.1.0": {
     "lead": "Die erste Version von nextime: deine Kalender auf deinem eigenen Server, im Browser und über CalDAV auf iPhone und Android. Ein kurzer Rundgang durch das, was schon da ist.",
     "sections": [

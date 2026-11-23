@@ -76,7 +76,16 @@ class Caller:
             self._scope["reach"] = {item.calendar.id: item for item, setting in listed
                                     if (item.calendar.id in chosen if chosen is not None else not setting.hidden)}
             self._scope["hidden"] = {item.calendar.id for item, setting in listed if setting.hidden}
+            # What the key may read when asked by name: for "all" the hidden calendars too, listed with
+            # ``hidden: true`` and read only when a question names them (decided for nexmail, 2026-11-23).
+            self._scope["listed"] = {item.calendar.id: item for item, _setting in listed
+                                     if (item.calendar.id in chosen if chosen is not None else True)}
         return self._scope["reach"]
+
+    def listed(self, db: Session) -> dict[int, calendars.Access]:
+        """The calendars the key lists and reads when named: ``reach`` plus, for a key for all, the hidden ones."""
+        self.reach(db)
+        return self._scope["listed"]
 
     def hidden(self, db: Session) -> set[int]:
         """The calendars the member hid in nextime (only those the key names reach it)."""
@@ -145,26 +154,29 @@ def calendar_out(db: Session, item: calendars.Access, default_id: int | None, hi
     }
 
 
-def calendar_list(db: Session, caller: Caller) -> list[dict[str, Any]]:
+def calendar_list(db: Session, caller: Caller, *, with_hidden: bool = True) -> list[dict[str, Any]]:
+    """The key's calendars; ``with_hidden`` (the API, for nexmail) lists the hidden ones too, MCP leaves them out."""
     default = calendars.default_of(db, caller.account.id).calendar
     default_id = default.id if default is not None else None
     hidden = caller.hidden(db)
-    return [calendar_out(db, item, default_id, item.calendar.id in hidden) for item in caller.reach(db).values()]
+    shown = caller.listed(db) if with_hidden else caller.reach(db)
+    return [calendar_out(db, item, default_id, item.calendar.id in hidden) for item in shown.values()]
 
 
 def one_calendar(db: Session, caller: Caller, calendar_id: int) -> calendars.Access:
-    found = caller.reach(db).get(calendar_id)
+    found = caller.listed(db).get(calendar_id)
     if found is None:
         raise error("not_found", "Not found.", 404)
     return found
 
 
 def checked_calendars(db: Session, caller: Caller, wanted: set[int] | None) -> set[int]:
-    """The calendars a question is about: those asked for (each must be in reach, EC-4), or all in reach."""
-    reach = caller.reach(db)
+    """The calendars a question is about: those asked for (each must be listed for the key, EC-4; a hidden one only
+    so), or all in reach (without the hidden ones)."""
     if wanted is None:
-        return set(reach)
-    if any(found not in reach for found in wanted):
+        return set(caller.reach(db))
+    listed = caller.listed(db)
+    if any(found not in listed for found in wanted):
         raise error("not_found", "Not found.", 404)
     return wanted
 
@@ -255,7 +267,7 @@ def occurrences(db: Session, caller: Caller, start: datetime, end: datetime,
         only = {calendar_id for calendar_id, _id in ids}
     if not only:
         return []
-    reach = caller.reach(db)
+    reach = caller.listed(db)
     zone = zone_name(caller.account)
     found = events.occurrence_list(db, caller.account, start, end, include_hidden=True, only=only,
                                    include_declined=uid is not None)
@@ -276,7 +288,7 @@ def by_uid(db: Session, caller: Caller, uid: str, wanted: set[int] | None = None
            base: str = "") -> list[dict[str, Any]]:
     """Each event with this UID in the key's calendars, once, as it begins (a series by its first occurrence), with
     the member's invitation state, declined or not; "busy only" calendars keep it to themselves."""
-    reach = caller.reach(db)
+    reach = caller.listed(db)
     only = {calendar_id for calendar_id in checked_calendars(db, caller, wanted)
             if reach[calendar_id].right != RIGHT_BUSY}
     zone = zone_name(caller.account)
@@ -394,7 +406,7 @@ def _extra(caller: Caller, row: Event, found: dict[str, Any], base: str) -> dict
 
 def _event_row(db: Session, caller: Caller, event_id: int) -> Any:
     row = db.get(Event, event_id) if 0 < event_id < 2**62 else None
-    if row is None or row.calendar_id not in caller.reach(db):
+    if row is None or row.calendar_id not in caller.listed(db):
         raise error("not_found", "Not found.", 404)
     return row
 
@@ -409,7 +421,7 @@ def target_calendar(db: Session, caller: Caller, calendar_id: int | None) -> int
     else the first calendar in reach the account may write."""
     reach = caller.reach(db)
     if calendar_id is not None:
-        if calendar_id not in reach:
+        if calendar_id not in caller.listed(db):
             raise error("not_found", "Not found.", 404)
         return calendar_id
     default = calendars.default_of(db, caller.account.id).calendar

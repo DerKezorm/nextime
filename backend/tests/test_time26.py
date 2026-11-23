@@ -608,7 +608,8 @@ def test_time26_ec4_a_key_for_all_leaves_hidden_calendars_out_a_named_one_reads_
                                                                                     account: Account,
                                                                                     program: TestClient) -> None:
     """Decided after the review (2026-11-23): a key for "all" reads what the member shows; a hidden calendar only
-    when the key names it. For the API, MCP, the search and the card alike."""
+    when the key or the question names it. The API lists it with ``hidden: true``; MCP, the search and the card leave
+    it out."""
     familie = make_calendar(client, "Familie")
     tagebuch = make_calendar(client, "Tagebuch")
     make_event(client, "Arzttermin", start="2026-11-27T10:00", end="2026-11-27T11:00", calendar_id=tagebuch)
@@ -616,10 +617,15 @@ def test_time26_ec4_a_key_for_all_leaves_hidden_calendars_out_a_named_one_reads_
     assert client.patch(f"/api/calendars/{tagebuch}", json={"hidden": True}).status_code == 200
     every = make_key(client, "Alles", mcp=True)["token"]
     named = make_key(client, "Tagebuch", calendar_ids=[tagebuch])["token"]
-    names = [row["name"] for row in program.get("/api/v1/calendars", headers=as_key(every)).json()["calendars"]]
-    assert "Tagebuch" not in names and "Familie" in names
+    # Listed with hidden: true (for nexmail, 2026-11-23), its events read only when a question names it.
+    shown = {row["name"]: row["hidden"] for row in program.get("/api/v1/calendars", headers=as_key(every)).json()[
+        "calendars"]}
+    assert shown["Tagebuch"] is True and shown["Familie"] is False
     window = program.get("/api/v1/events", headers=as_key(every), params={"start": START, "end": END}).json()
     assert [row["title"] for row in window["events"]] == ["Training"]
+    asked = program.get("/api/v1/events", headers=as_key(every),
+                        params={"start": START, "end": END, "calendars": str(tagebuch)}).json()
+    assert [row["title"] for row in asked["events"]] == ["Arzttermin"]
     assert program.get("/api/v1/search", headers=as_key(every), params={"q": "Arzt"}).json()["events"] == []
     listed = tool(program, every, "list_calendars")["structuredContent"]["calendars"]
     assert "Tagebuch" not in [row["name"] for row in listed]

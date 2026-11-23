@@ -160,7 +160,8 @@ def calendar_list(caller: Reader) -> dict[str, Any]:
     `owner`, `default`, and where it stands in nextime's sidebar: `group` (`own`, `icloud`, `google`, `caldav`,
     `shared`, `subscriptions`; subscriptions and holidays share `subscriptions`), `source_name` (`iCloud`, `Google`,
     the name of a CalDAV account or subscription; "" for own and shared calendars) and `hidden` (the member hid it in
-    nextime; a key for all calendars leaves hidden ones out, a key naming them reads them)."""
+    nextime; a key for all calendars lists them too, and reads their events only when a question names them by
+    `calendars`)."""
     with SessionLocal() as db:
         return {"calendars": apiv1.calendar_list(db, caller)}
 
@@ -243,7 +244,7 @@ def event_make(body: NewEvent, caller: Writer, response: Response) -> dict[str, 
         change.calendar_id = apiv1.target_calendar(db, caller, body.calendar_id)
         with events.acting_via(caller.key_name):
             row, new = events.create(db, caller.account, change, body.client_ref)
-        if row.calendar_id not in caller.reach(db):
+        if row.calendar_id not in caller.listed(db):
             # An earlier event of the same client_ref made by another way, outside this key (EC-4).
             raise error("not_found", "Not found.", 404)
         if new:
@@ -329,7 +330,7 @@ def event_from_mail(body: IcalIn, caller: Writer, request: Request, response: Re
         if invitation.method != imip.CANCEL:
             target = apiv1.target_calendar(db, caller, body.calendar_id)
         with events.acting_via(caller.key_name):
-            outcome = imip.take(db, caller.account, caller.reach(db), invitation, calendar_id=target,
+            outcome = imip.take(db, caller.account, caller.listed(db), invitation, calendar_id=target,
                                 answer=body.answer, attendee=body.attendee or "")
         base = devices.base_url(request, db)
         reply_by = invitations.REPLY_BY_CLIENT

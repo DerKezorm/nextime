@@ -1,4 +1,25 @@
 {
+  "0.2.0": {
+    "lead": "Holidays from iCloud, Google or a subscription now stand out just like the built-in ones, and nexmail can read your calendars and enter invitations from mails.",
+    "sections": [
+      {
+        "title": "Highlight its days",
+        "where": "Menu of a calendar › Edit …",
+        "body": "A background calendar can tint its days, as holidays do. So a holiday calendar from iCloud, Google or a subscription stands out too. The box “Highlight its days” sits under “Show in the background” and is yours alone. The built-in public holidays are highlighted from the start, school holidays are not."
+      },
+      {
+        "title": "For nexmail",
+        "where": "Settings › Connections",
+        "body": "With a key for nextime, nexmail groups your calendars as they are grouped here, sees whether an invitation is already entered, answers it and enters invitations from a mail. nextime sends nothing itself, so the answer goes out exactly once. When the same event comes from iCloud or Google later, it still stands only once."
+      }
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "The API names each event's UID and its address in nextime, and the organizer and attendees.",
+      "Hidden calendars appear in the API marked as hidden; a program reads their events only when it asks for them by name.",
+      "Mail copies of an invitation show no answer buttons in nextime; the trash says why an event went there."
+    ]
+  },
   "0.1.0": {
     "lead": "The first version of nextime: your calendars on your own server, in the browser and through CalDAV on iPhone and Android. A short tour of what is already there.",
     "sections": [

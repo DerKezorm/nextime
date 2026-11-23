@@ -169,7 +169,8 @@ def _in_thread(work: Callable[[], Any]) -> Awaitable[Any]:
 async def list_calendars(caller: Caller, _args: dict[str, Any]) -> Any:
     def work() -> Any:
         with SessionLocal() as db:
-            return {"time_zone": apiv1.zone_name(caller.account), "calendars": apiv1.calendar_list(db, caller)}
+            return {"time_zone": apiv1.zone_name(caller.account),
+                    "calendars": apiv1.calendar_list(db, caller, with_hidden=False)}
 
     return await _in_thread(work)
 
