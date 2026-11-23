@@ -3,8 +3,8 @@
 A self-hosted calendar for families and small groups: your own calendars on your own server, in the browser and, later,
 on iPhone and Android through CalDAV.
 
-> **Early days.** Everything below is built and in daily use, but there is no release yet and things may still change.
-> Native apps for iPhone and iPad come later; until then iPhones and Android phones connect through CalDAV.
+> **Early days.** Everything below is built and in daily use; this is an early release, so keep a backup and open an
+> issue when something is wrong. Native apps for iPhone and iPad come later; until then phones connect through CalDAV.
 
 ![Today: the next event in a box of its own, the rest of the day below it, the next events of the coming days on the right](docs/screenshots/today.png)
 
