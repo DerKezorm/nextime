@@ -81,15 +81,30 @@ address. On a phone the week shows three days, and nextime installs from the bro
 
 ## Start
 
-```sh
-docker compose up -d --build
-docker logs nextime   # the setup code
+```yaml
+services:
+  nextime:
+    image: ghcr.io/derkezorm/nextime:latest
+    container_name: nextime
+    restart: unless-stopped
+    ports:
+      - "8585:8000"
+    volumes:
+      - ./data:/data
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Berlin
 ```
 
-This builds the image from the sources in this repository. An image on ghcr.io follows with the first release.
+Then `docker compose up -d`. Images for `linux/amd64` and `linux/arm64` are on the GitHub Container Registry and on
+Docker Hub (`derkezorm/nextime`), one tag per release (`0.1.0`) and `latest`. The [docker-compose.yml](docker-compose.yml)
+in this repository has the same service with every option explained; it builds from source with
+`docker compose up -d --build`.
 
-Then open `http://<your-host>:8585` and set nextime up. Calendars on iPhones and Android connect only over HTTPS: put
-nextime behind a reverse proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
+Open `http://<your-host>:8585` and create the first account: it becomes the operator and needs the setup code from the
+log (`docker logs nextime`). Calendars on iPhones and Android connect only over HTTPS: put nextime behind a reverse
+proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
 
 ## Settings
 
