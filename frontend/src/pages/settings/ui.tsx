@@ -17,8 +17,19 @@ import { go, startAddress } from '../../lib/providers'
 /** A card of the settings; `logo` (an app's mark, as nextasks') takes the place of the symbol on its tinted tile. */
 /** `foldable` names a choice of this device: the card folds to its head with the arrow on the right (the connections
  * to the other apps, so the page stays short); folded until opened, its head then shows `summary`. */
-export function Card({ icon: Icon, logo, title, text, children, id, foldable, summary }: { icon: LucideIcon; logo?: string; title: string; text?: string; children: ReactNode; id?: string; foldable?: string; summary?: ReactNode }) {
-  const [folded, setFolded] = useDevicePref(foldable ? `fold.${foldable}` : 'fold.none', (raw) => Boolean(foldable) && raw !== '0')
+type CardProps = { icon: LucideIcon; logo?: string; title: string; text?: string; children: ReactNode; id?: string; foldable?: string; summary?: ReactNode }
+
+export function Card(props: CardProps) {
+  // Only a foldable card reads the choice of this device; the others stay plain (and need no account).
+  return props.foldable ? <FoldableCard {...props} foldable={props.foldable} /> : <CardView {...props} folded={false} />
+}
+
+function FoldableCard(props: CardProps & { foldable: string }) {
+  const [folded, setFolded] = useDevicePref(`fold.${props.foldable}`, (raw) => raw !== '0')
+  return <CardView {...props} folded={folded} onFold={() => setFolded(folded ? '0' : null)} />
+}
+
+function CardView({ icon: Icon, logo, title, text, children, id, summary, folded, onFold }: CardProps & { folded: boolean; onFold?: () => void }) {
   const bodyId = useId()
   const mark = logo ? (
     <img src={logo} alt="" className="h-9 w-9 shrink-0 rounded-xl" data-testid="card-logo" />
@@ -37,14 +48,14 @@ export function Card({ icon: Icon, logo, title, text, children, id, foldable, su
     </div>
   )
   return (
-    <section id={id} aria-labelledby={id ? `${id}-title` : undefined} className="rounded-[12px] border border-ink-700 bg-ink-850 p-5" data-folded={foldable ? folded : undefined}>
-      {foldable ? (
+    <section id={id} aria-labelledby={id ? `${id}-title` : undefined} className="rounded-[12px] border border-ink-700 bg-ink-850 p-5" data-folded={onFold ? folded : undefined}>
+      {onFold ? (
         <button
           type="button"
           className={'flex w-full gap-3 text-left ' + (folded ? '' : 'mb-4')}
           aria-expanded={!folded}
           aria-controls={bodyId}
-          onClick={() => setFolded(folded ? '0' : null)}
+          onClick={onFold}
           data-testid="card-fold"
         >
           {mark}
