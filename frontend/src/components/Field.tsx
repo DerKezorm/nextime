@@ -1,0 +1,57 @@
+/** A field with its name above it, and a problem as a red box: the pieces of the account page. */
+import { useId } from 'react'
+
+export function Field({
+  label,
+  value,
+  onChange,
+  type = 'text',
+  autoComplete,
+  autoFocus = false,
+  hint,
+  maxLength,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  type?: string
+  autoComplete?: string
+  autoFocus?: boolean
+  hint?: string
+  /** The server's limit, so a longer text cannot be typed at all. */
+  maxLength?: number
+}) {
+  // The hint describes the field; it is not part of its name.
+  const hintId = useId()
+  return (
+    <div className="text-sm">
+      <label className="block">
+        <span className="font-medium text-mist-100">{label}</span>
+        <input
+          type={type}
+          value={value}
+          autoComplete={autoComplete}
+          autoFocus={autoFocus}
+          maxLength={maxLength}
+          aria-describedby={hint ? hintId : undefined}
+          onChange={(event) => onChange(event.target.value)}
+          className="nt-field mt-1"
+        />
+      </label>
+      {hint && (
+        <span id={hintId} className="mt-1 block text-xs text-mist-500">
+          {hint}
+        </span>
+      )}
+    </div>
+  )
+}
+
+export function Problem({ text }: { text: string | null }) {
+  if (!text) return null
+  return (
+    <p role="alert" className="rounded-[9px] border border-bad-500/30 bg-bad-500/10 px-3 py-2 text-sm text-bad-500">
+      {text}
+    </p>
+  )
+}

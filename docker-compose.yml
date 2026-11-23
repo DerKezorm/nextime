@@ -1,0 +1,39 @@
+# nextime, start with:  docker compose up -d --build
+#
+# Then open http://<your-host>:8585. The first account you create there is the operator; it needs the setup code
+# from the log (docker logs nextime) or the one you set below.
+
+services:
+  nextime:
+    build: .
+    container_name: nextime
+    restart: unless-stopped
+
+    ports:
+      # Host port on the left, container port on the right.
+      - "8585:8000"
+
+    volumes:
+      # Database, attachments, logs, backups and the operator's own languages.
+      # A local disk, never an SMB or NFS share: SQLite's locking does not work reliably over network filesystems.
+      - ./data:/data
+
+    environment:
+      # Who should own the files in the data directory. The container fixes the permissions itself on startup.
+      PUID: 1000
+      PGID: 1000
+
+      # The server's time zone: the daily backup runs at 03:00 in it.
+      TZ: Europe/Berlin
+
+      # The address people use to reach nextime, for invitation links and the providers' redirect. Can also be set
+      # in the interface. Calendars on iPhones and Android connect only over HTTPS.
+      # NEXTIME_PUBLIC_URL: https://time.example.com
+
+      # Behind a reverse proxy: its address, so that the brake against password guessing sees the real sender, and
+      # so that nextime believes the proxy that it was reached over https (X-Forwarded-Proto).
+      # NEXTIME_TRUSTED_PROXIES: 172.16.0.0/12
+
+      # The code the first account needs. Without it nextime makes one at every start until it is set up and
+      # writes it to the log: docker logs nextime
+      # NEXTIME_SETUP_TOKEN: choose-a-long-one

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- The tab's icon follows the system's light or dark (prefers-color-scheme inside the SVG). -->
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <!-- The installable web app (TIME-28): its manifest, and the symbols iPhone and iPad take for the home screen. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=1" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192-dark.png?v=1" media="(prefers-color-scheme: dark)" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="theme-color" content="#0b0b0f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="nextime" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>nextime</title>
+    <!-- Before the first paint, as its own file because of the Content Security Policy. -->
+    <script src="/theme.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

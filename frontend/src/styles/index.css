@@ -1,0 +1,768 @@
+@import 'tailwindcss';
+
+/* nextime: the gray tones of the nex family, accent slate blue (design system "nextime Designsystem"). The tokens keep
+ * the family's names (ink for grounds, mist for text, accent); dark is the base, light swaps the values. */
+@theme {
+  --color-ink-950: #0b0b0f; /* page background */
+  --color-ink-900: #101016; /* sidebar */
+  --color-ink-850: #16161d; /* cards, lists */
+  --color-ink-800: #1d1d26; /* hover */
+  --color-ink-700: #26262f; /* border */
+  --color-ink-600: #3a3a46;
+  --color-line: #22222a; /* dividers in lists and the grid */
+  --color-edge: #66667a; /* the edge of a field */
+
+  --color-mist-100: #f2f2f5; /* text */
+  --color-mist-200: #dcdce4;
+  --color-mist-300: #c3c3ce;
+  --color-mist-400: #aeaebc;
+  --color-mist-500: #9a9aa8; /* quiet text */
+  --color-mist-600: #858594;
+
+  /* Slate blue: buttons, switches and ticks in 500, accent as text (links, the now line) in 400. */
+  --color-accent-300: #c3d2ea;
+  --color-accent-400: #c3d2ea;
+  --color-accent-500: #9fb4d8;
+  /* Darker than 500 for the hover of a button, as nexnotes' honey (the light shade turns darker too). */
+  --color-accent-600: #8aa1c8;
+  --color-accent-700: #9fb4d8;
+  --color-accent-wash: rgb(159 180 216 / 0.16);
+  --color-highlight: rgb(159 180 216 / 0.3);
+  --color-focus-ring: rgb(159 180 216 / 0.3);
+  --color-wordmark: #9fb4d8;
+
+  --color-on-accent: #0f1626;
+  --color-on-bad: #2a0a10;
+
+  --color-ok-500: #4ade80;
+  --color-ok-wash: rgb(74 222 128 / 0.12);
+  --color-warn-500: #fb923c;
+  --color-warn-wash: rgb(251 146 60 / 0.14);
+  --color-bad-500: #fb7185;
+
+  --color-scrim: rgb(6 6 10 / 0.85);
+
+  /* The eleven calendar colors (design system), dark shades here, light ones below. */
+  --color-cal-slate: #9fb4d8;
+  --color-cal-red: #fb7185;
+  --color-cal-orange: #fb923c;
+  --color-cal-yellow: #fbbf24;
+  --color-cal-green: #4ade80;
+  --color-cal-teal: #2dd4bf;
+  --color-cal-blue: #60a5fa;
+  --color-cal-violet: #a78bfa;
+  --color-cal-pink: #f472b6;
+  --color-cal-brown: #d6a77a;
+  --color-cal-gray: #9a9aa8;
+  --color-scrollbar: #3a3a46;
+  /* Title and time of an event in its calendar's color, the light shade in dark mode (design system). */
+  --color-calt-slate: #c3d2ea;
+  --color-calt-red: #fda4af;
+  --color-calt-orange: #fdba74;
+  --color-calt-yellow: #fcd34d;
+  --color-calt-green: #86efac;
+  --color-calt-teal: #5eead4;
+  --color-calt-blue: #93c5fd;
+  --color-calt-violet: #c4b5fd;
+  --color-calt-pink: #f9a8d4;
+  --color-calt-brown: #e7c6a5;
+  --color-calt-gray: #c9c9d3;
+  /* The views (TIME-12, TIME-14): today's column, the weekend in slate blue (AC-12), "busy" hatched, dashed edges. */
+  --color-today-column: rgb(159 180 216 / 0.09);
+  --color-weekend: rgb(159 180 216 / 0.045);
+  /* Public holidays stand out (TIME-17): a red tint over the whole day, the name in red. */
+  --color-holiday: rgb(251 113 133 / 0.13);
+  /* Lines of the hour grid: translucent, so they show on the tint of weekend and today too. */
+  --color-grid-line: rgb(255 255 255 / 0.08);
+  --color-hatch-a: #22222a;
+  --color-hatch-b: #1a1a21;
+  --color-dashed: #3a3a46;
+  --color-bad-wash: rgb(251 113 133 / 0.12);
+
+  --font-sans: 'Inter Variable', 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, 'DejaVu Sans Mono', monospace;
+
+  --radius-button: 9px;
+  --radius-tile: 12px;
+  --radius-dialog: 16px;
+}
+
+/* Own calendar colors (TIME-4, as nexnotes): their OKLCH lightness held in the band of the eleven of each look (dark:
+   the eleven lie at about 0.70 to 0.85), and text in an own color on its tint held light in the dark look, dark in
+   the light one, so it reads whatever the color. */
+:root {
+  --own-min: 0.7;
+  --own-max: 0.86;
+  --own-text-min: 0.84;
+  --own-text-max: 1;
+}
+
+/* Light mode: only swap the values behind the same names. */
+:root[data-theme='light'] {
+  --own-min: 0.42;
+  --own-max: 0.62;
+  --own-text-min: 0;
+  --own-text-max: 0.4;
+  --color-ink-950: #f5f5f8;
+  --color-ink-900: #ffffff;
+  --color-ink-850: #ffffff;
+  --color-ink-800: #ececf1;
+  --color-ink-700: #dcdce4;
+  --color-ink-600: #b4b4c2;
+  --color-line: #ececf1;
+  --color-edge: #8a8a97;
+
+  --color-mist-100: #14141a;
+  --color-mist-200: #26262f;
+  --color-mist-300: #3c3c48;
+  --color-mist-400: #4e4e5c;
+  --color-mist-500: #61616f;
+  --color-mist-600: #696976;
+
+  --color-accent-300: #3d5682;
+  --color-accent-400: #3d5682;
+  --color-accent-500: #4a6491;
+  --color-accent-600: #3d5682;
+  --color-accent-700: #4a6491;
+  --color-accent-wash: rgb(74 100 145 / 0.1);
+  --color-highlight: rgb(74 100 145 / 0.2);
+  --color-focus-ring: rgb(74 100 145 / 0.25);
+  --color-wordmark: #3d5682;
+
+  --color-on-accent: #ffffff;
+  --color-on-bad: #ffffff;
+
+  --color-ok-500: #166534;
+  --color-ok-wash: rgb(22 101 52 / 0.08);
+  --color-warn-500: #b45309;
+  --color-warn-wash: rgb(234 88 12 / 0.1);
+  --color-bad-500: #b91c3c;
+
+  --color-scrim: rgb(20 20 30 / 0.35);
+  --color-cal-slate: #4a6491;
+  --color-cal-red: #c62f47;
+  --color-cal-orange: #c2410c;
+  --color-cal-yellow: #a16207;
+  --color-cal-green: #2f7d4f;
+  --color-cal-teal: #0e7f74;
+  --color-cal-blue: #2563a8;
+  --color-cal-violet: #6d4bc2;
+  --color-cal-pink: #be3d78;
+  --color-cal-brown: #8a5a3b;
+  --color-cal-gray: #61616f;
+  --color-scrollbar: #c3c3cd;
+  --color-calt-slate: #3d5682;
+  --color-calt-red: #9f1d33;
+  --color-calt-orange: #9a3412;
+  --color-calt-yellow: #854d0e;
+  --color-calt-green: #1f5e3a;
+  --color-calt-teal: #0b5f57;
+  --color-calt-blue: #1e4f8a;
+  --color-calt-violet: #5b3aa8;
+  --color-calt-pink: #9d2f62;
+  --color-calt-brown: #6e4730;
+  --color-calt-gray: #4a4a55;
+  --color-today-column: rgb(74 100 145 / 0.1);
+  --color-weekend: rgb(74 100 145 / 0.05);
+  --color-holiday: rgb(198 47 71 / 0.09);
+  --color-grid-line: rgb(20 24 40 / 0.09);
+  --color-hatch-a: #ececf1;
+  --color-hatch-b: #f5f5f8;
+  --color-dashed: #c9c9d3;
+  --color-bad-wash: rgb(185 28 60 / 0.08);
+}
+
+@layer base {
+  /* What can be clicked shows the hand, also rows whose label is plain text; nothing shows the text cursor there. */
+  button:not(:disabled),
+  [role='button'],
+  summary,
+  label:has(> input[type='checkbox']:not(:disabled)) {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: default;
+  }
+  html {
+    color-scheme: dark;
+  }
+
+  html[data-theme='light'] {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-ink-950 text-mist-100 font-sans antialiased;
+    min-height: 100dvh;
+  }
+
+  /* Fine scroll bars everywhere, as in the other nex apps: thin, a quiet gray on a clear track. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-scrollbar);
+    border-radius: 8px;
+  }
+
+  :focus-visible {
+    @apply outline-accent-500 outline-2 outline-offset-2;
+  }
+
+  ::selection {
+    background: var(--color-highlight);
+  }
+
+  kbd {
+    @apply rounded border border-ink-700 px-1.5 font-mono text-[11px] text-mist-500;
+  }
+}
+
+@layer components {
+  /* The wordmark NEX/TIME: TIME in the accent's text color. */
+  .nt-wordmark-accent {
+    color: var(--color-wordmark);
+  }
+  .nt-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-scrollbar) transparent;
+  }
+
+  .nt-menu {
+    @apply z-50 min-w-48 rounded-xl border border-ink-700 bg-ink-850 p-1 shadow-xl shadow-black/30;
+  }
+
+  .nt-menu-item {
+    @apply flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm text-mist-200 hover:bg-ink-800 hover:text-mist-100 disabled:opacity-40;
+  }
+
+  /* A field: 40 px, 9 px corners, accent edge and ring in focus. */
+  .nt-field {
+    @apply h-10 w-full border border-edge bg-ink-900 px-3 text-sm text-mist-100 placeholder:text-mist-600 focus:border-accent-500 focus:outline-none;
+    border-radius: var(--radius-button);
+  }
+
+  .nt-field:focus {
+    box-shadow: 0 0 0 3px var(--color-focus-ring);
+  }
+
+  /* A date field holds DD.MM.YYYY or MM/DD/YYYY with the browser's calendar sign beside it, a time field "11:30 PM"
+     with its sign: never narrower (the year was cut off in the side panel, "09.11.20"). */
+  .nt-date {
+    min-width: 10.5rem;
+  }
+  .nt-time {
+    width: 8.5rem;
+    min-width: 8.5rem;
+    flex: none;
+  }
+
+  .nt-btn {
+    @apply inline-flex h-10 items-center justify-center gap-2 px-4 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:bg-ink-800 disabled:text-mist-600;
+    border-radius: var(--radius-button);
+  }
+
+  /* The one main action: slate blue. */
+  .nt-btn-accent {
+    @apply bg-accent-500 text-on-accent hover:bg-accent-600;
+  }
+
+  /* Secondary: an edge, no ground. */
+  .nt-btn-ghost {
+    @apply border border-edge text-mist-200 hover:bg-ink-800 hover:text-mist-100;
+  }
+
+  /* Danger: only for deleting and what cannot be undone. */
+  .nt-btn-danger {
+    @apply bg-bad-500 text-on-bad hover:opacity-90;
+  }
+
+  /* Quiet: text in the accent colour. */
+  .nt-btn-quiet {
+    @apply h-auto px-0 text-accent-400 hover:underline;
+  }
+
+  .nt-card {
+    @apply border border-ink-700 bg-ink-850;
+    border-radius: var(--radius-tile);
+  }
+
+  .nt-chosen {
+    @apply text-accent-400;
+    background: var(--color-accent-wash);
+  }
+
+  /* The bar at the bottom below 1024 px (TIME-28 AC-5): the view shown has a short line in the accent above its name. */
+  .nt-bar-current .nt-bar-mark {
+    background: var(--color-accent-500);
+  }
+
+  /* The legend of a group of choices, as nexnotes': small, semibold, in capitals. */
+  .nt-legend {
+    @apply mb-2 text-xs font-semibold tracking-wide text-mist-500 uppercase;
+  }
+
+  /* A chip, as nexnotes' filters: 34 px, round, an edge and no ground; a chosen one on the accent's wash. */
+  .nt-chip {
+    @apply inline-flex h-[34px] max-w-full items-center gap-1.5 rounded-full border border-ink-600 px-3 text-[13px] text-mist-100 hover:bg-ink-800 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .nt-chip[aria-pressed='true'] {
+    @apply border-accent-500 text-accent-400;
+    background: var(--color-accent-wash);
+  }
+
+  /* An empty state as nexnotes': dashed frame, a sign, a title, a calm sentence, a button. */
+  .nt-empty {
+    @apply flex flex-col items-center justify-center gap-3.5 border border-dashed border-ink-600 px-6 py-12 text-center text-sm leading-relaxed text-mist-500;
+    border-radius: var(--radius-dialog);
+  }
+}
+
+/* Outside the layers on purpose: these win over the utilities of the elements. */
+
+/* A field's edge at 3:1 to its ground; a field in focus keeps the accent. */
+:is(input:not([type='checkbox'], [type='radio'], [type='range'], [type='color']), select, textarea)[class*='border-ink-7']:not(:focus) {
+  border-color: var(--color-edge);
+}
+
+/* The sign and the title of an empty state as nexnotes draws them: large and thin in the accent, the title larger. Outside
+ * the layers so they win over the sizes the elements bring along. */
+.nt-empty > svg:first-child {
+  width: 48px;
+  height: 48px;
+  color: var(--color-accent-400);
+  stroke-width: 1.3;
+}
+.nt-empty > strong {
+  @apply text-lg font-semibold text-mist-100;
+}
+
+/* Less motion when the system asks for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* A finger's size on a phone and a tablet: every button, link and field is at least 44 px to tap. */
+@media (max-width: 767px), (pointer: coarse) {
+  :where(
+      button,
+      a[href],
+      select,
+      textarea,
+      input:not([type='checkbox'], [type='radio'], [type='hidden'], [type='range']),
+      [role='button'],
+      [role='menuitem'],
+      [role='tab'],
+      [role='radio'],
+      [role='option'],
+      summary
+    ) {
+    min-height: 44px;
+  }
+  :where(button, a[href], [role='button'], [role='tab'], [role='radio']) {
+    min-width: 44px;
+  }
+}
+
+/* An event tinted in its calendar's color (light 14 %, dark 16 %), no side stripe; title and time in the color. */
+.nt-tint {
+  background: color-mix(in srgb, var(--k) 16%, transparent);
+}
+:root[data-theme='light'] .nt-tint {
+  background: color-mix(in srgb, var(--k) 14%, transparent);
+}
+
+/* ---- The views: Today, Day, Week, Month (TIME-11, TIME-12, TIME-14) ------------------------------------------------ */
+
+/* Titles break between words where the room ends, never in the middle of one, and are never cut off (TIME-11 EC-7,
+ * TIME-12 EC-10). */
+.nt-wrap {
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+}
+
+/* Background entries: small, a dot and quiet text, no block (TIME-14 AC-1, AC-6). */
+.nt-background {
+  @apply flex min-w-0 items-center gap-2 text-xs text-mist-500;
+}
+.nt-background-entry {
+  @apply inline-flex min-w-0 items-center gap-1.5;
+}
+.nt-background-more {
+  @apply text-xs font-semibold text-accent-400;
+}
+.nt-twice {
+  @apply text-[10.5px] text-mist-500;
+}
+
+/* An event in the grid: tinted in its calendar's color, no side stripe; title and time in the color. */
+.nt-ev {
+  --k: var(--color-cal-gray);
+  --kt: var(--color-calt-gray);
+  position: absolute;
+  top: calc(var(--h) * var(--s));
+  height: max(16px, calc(var(--h) * var(--d) - 3px));
+  left: calc(3px + (100% - 6px) * var(--l));
+  width: calc((100% - 6px) * var(--w) - 2px);
+  border-radius: 8px;
+  padding: 3px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  font-size: 11.5px;
+  text-align: left;
+  color: var(--kt);
+  background: color-mix(in srgb, var(--k) 16%, transparent);
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+  min-height: 0;
+  min-width: 0;
+}
+:root[data-theme='light'] .nt-ev {
+  background: color-mix(in srgb, var(--k) 14%, transparent);
+}
+.nt-ev .nt-ev-title {
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+}
+.nt-ev.nt-continues-before {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+.nt-ev.nt-continues-after {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+/* "Busy": hatched gray, never a color (TIME-14 AC-5, AC-6). */
+.nt-busy {
+  color: var(--color-mist-500) !important;
+  background: repeating-linear-gradient(135deg, var(--color-hatch-a) 0, var(--color-hatch-a) 6px, var(--color-hatch-b) 6px, var(--color-hatch-b) 12px) !important;
+  cursor: default;
+}
+/* An open invitation: a dashed edge in the accent (TIME-14 AC-6, TIME-18). */
+.nt-invitation {
+  border: 1.5px dashed var(--color-accent-500);
+  color: var(--color-accent-400);
+  background: var(--color-ink-950);
+}
+.nt-ev.nt-read-only {
+  cursor: default;
+}
+.nt-ev.nt-dragging {
+  opacity: 0.9;
+  z-index: 5;
+  cursor: grabbing;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+}
+.nt-ev .nt-edge {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 7px;
+  cursor: ns-resize;
+}
+.nt-ev .nt-ev-person {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+}
+.nt-ev-ghost {
+  pointer-events: none;
+  opacity: 0.7;
+  border: 1.5px dashed var(--color-accent-500);
+}
+
+.nt-grid-head,
+.nt-all-day,
+.nt-grid-body {
+  display: grid;
+  grid-template-columns: 44px repeat(var(--n), minmax(0, 1fr));
+}
+.nt-grid-body {
+  position: relative;
+  height: calc(var(--h) * 24);
+}
+/* The free space of the all-day row makes a new all-day event (TIME-12). */
+.nt-all-day-addable {
+  cursor: pointer;
+}
+.nt-all-day-addable [data-all-day]:hover {
+  background-color: var(--color-accent-wash);
+}
+.nt-column {
+  position: relative;
+  border-left: 1px solid var(--color-grid-line);
+  touch-action: pan-y;
+}
+/* The hour lines lie over the tint of the weekend and of today (TIME-12 AC-12): a layer of their own above the
+   column's background, in a translucent line color that stays visible on tinted and plain ground alike. */
+.nt-column::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: repeating-linear-gradient(to bottom, var(--color-grid-line) 0, var(--color-grid-line) 1px, transparent 1px, transparent var(--h));
+}
+/* The head and the all-day row keep the room of the grid's scroll bar, so their columns stand flush with the grid's. */
+.nt-gutter {
+  overflow-y: hidden;
+  scrollbar-gutter: stable;
+}
+.nt-weekend {
+  background-color: var(--color-weekend);
+}
+.nt-today-column {
+  background-color: var(--color-today-column);
+}
+.nt-holiday {
+  background-color: var(--color-holiday);
+}
+.nt-holiday.nt-today-column {
+  background-image: linear-gradient(var(--color-today-column), var(--color-today-column));
+}
+.nt-holiday-name,
+.nt-background-entry[data-holiday] {
+  color: var(--color-cal-red);
+  font-weight: 600;
+}
+.nt-now {
+  position: absolute;
+  left: -5px;
+  right: 0;
+  top: calc(var(--h) * var(--s));
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 4;
+}
+.nt-now::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-accent-400);
+}
+.nt-now::after {
+  content: '';
+  flex-grow: 1;
+  height: 2px;
+  background: var(--color-accent-400);
+}
+.nt-more {
+  position: absolute;
+  right: 3px;
+  z-index: 3;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-accent-400);
+  background: var(--color-ink-850);
+  border: 1px solid var(--color-ink-700);
+  border-radius: 6px;
+  padding: 0 5px;
+  min-height: 0;
+  min-width: 0;
+}
+.nt-bar {
+  --k: var(--color-cal-gray);
+  --kt: var(--color-calt-gray);
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  border-radius: 5px;
+  padding: 1px 6px;
+  margin: 1px 2px;
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--kt);
+  background: color-mix(in srgb, var(--k) 16%, transparent);
+  min-height: 0;
+}
+:root[data-theme='light'] .nt-bar {
+  background: color-mix(in srgb, var(--k) 14%, transparent);
+}
+.nt-bar.nt-cut-start {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: 0;
+}
+.nt-bar.nt-cut-end {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+}
+
+/* The month: rows as high as the room gives, the weekend tinted, today stronger. */
+.nt-month {
+  display: grid;
+  grid-template-columns: var(--kw) repeat(7, minmax(0, 1fr));
+}
+.nt-month-cell {
+  @apply flex min-w-0 flex-col gap-0.5 overflow-hidden px-1.5 py-1;
+  border-left: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  min-height: 92px;
+}
+/* The free space of a day makes a new event (TIME-12): a pointer, a quiet "+" in the corner and the hover surface. */
+.nt-month-cell[data-addable] {
+  position: relative;
+  cursor: pointer;
+}
+.nt-month-cell[data-addable]:hover {
+  background-color: var(--color-accent-wash);
+}
+.nt-month-cell[data-addable]:hover::after {
+  content: '+';
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  font-size: 14px;
+  line-height: 1;
+  color: var(--color-mist-500);
+}
+.nt-month-event {
+  @apply flex w-full min-w-0 items-center gap-1.5 rounded text-left text-[11.5px] text-mist-100 hover:bg-ink-800;
+  min-height: 0;
+}
+
+.nt-skeleton {
+  @apply block animate-pulse rounded-md bg-ink-800;
+}
+
+/* A phone: one column for Today; the month as dots (TIME-11 EC-12, TIME-12 EC-3). */
+.nt-today-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 699px) {
+  .nt-today-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .nt-grid-head,
+  .nt-all-day,
+  .nt-grid-body {
+    grid-template-columns: 34px repeat(var(--n), minmax(0, 1fr));
+  }
+  .nt-month-cell {
+    min-height: 54px;
+  }
+  .nt-hide-narrow {
+    display: none;
+  }
+}
+
+/* ---- Connected sources and invitations (TIME-15 to TIME-18) ------------------------------------------------------ */
+
+/* A small mark on a way, a calendar or an invitation: "nur lesen", "neu", "Einladung offen". */
+.nt-mark {
+  @apply inline-block rounded-md px-1.5 py-0.5 text-[11px] font-bold whitespace-nowrap text-accent-400;
+  background: var(--color-accent-wash);
+}
+.nt-mark-gray {
+  @apply bg-ink-700 text-mist-400;
+}
+.nt-mark-open {
+  background: transparent;
+  border: 1.5px dashed var(--color-accent-500);
+}
+/* "wartet": a change on its way to the source (TIME-15 EC-2). */
+.nt-waiting {
+  @apply inline-block rounded px-1.5 text-[10.5px] font-bold whitespace-nowrap text-warn-500;
+  background: var(--color-warn-wash);
+}
+/* "Stand 15:52": a source that does not answer (TIME-15 EC-5). */
+.nt-state-of {
+  @apply inline-block text-[11px] whitespace-nowrap text-mist-500;
+}
+/* An invitation in a list: dashed in the accent (TIME-18 AC-1, AC-7). */
+.nt-invitation-text {
+  @apply rounded-md px-1.5 text-accent-400;
+  border: 1.5px dashed var(--color-accent-500);
+  box-decoration-break: clone;
+}
+/* The sign "1 Einladung" in the head of "Heute" (TIME-18 AC-1). */
+.nt-invitation-sign {
+  @apply inline-flex h-10 items-center rounded-full px-3.5 text-sm font-semibold whitespace-nowrap text-accent-400;
+  border: 1.5px dashed var(--color-accent-500);
+}
+
+/* Tasks of nextasks (TIME-25): a box to tick, apart from the title that opens nextasks; dashed, never like an event. */
+.nt-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid var(--color-edge);
+  background: transparent;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-on-accent);
+}
+.nt-check[aria-checked='true'] {
+  background: var(--color-accent-500);
+  border-color: var(--color-accent-500);
+}
+.nt-check:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+/* On a touch screen the box is a target of its own of 44 px (EC-15); the mark inside stays small. */
+.nt-check-hit {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+@media (pointer: coarse) {
+  .nt-check-hit {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+.nt-done {
+  color: var(--color-mist-500);
+  text-decoration: line-through;
+}
+.nt-task-chip {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: 1px dashed var(--color-dashed);
+  border-radius: 5px;
+  padding: 1px 4px;
+  font-size: 11px;
+  background: transparent;
+}
+.nt-task-timed {
+  position: absolute;
+  top: calc(var(--h) * var(--s));
+  left: 3px;
+  right: 3px;
+  z-index: 2;
+  background: var(--color-ink-900);
+}

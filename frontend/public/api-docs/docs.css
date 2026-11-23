@@ -1,0 +1,15 @@
+/* The page of the API description (TIME-26 AC-8): Swagger UI on the light background it is made for. */
+body {
+  margin: 0;
+  background: #ffffff;
+  font-family: Inter, system-ui, sans-serif;
+}
+.nt-api-off {
+  margin: 16px;
+  padding: 10px 14px;
+  border: 1px solid rgba(234, 88, 12, 0.35);
+  border-radius: 9px;
+  background: rgba(234, 88, 12, 0.1);
+  color: #b45309;
+  font-size: 14px;
+}

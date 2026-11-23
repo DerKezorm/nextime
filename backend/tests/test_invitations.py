@@ -1,0 +1,77 @@
+"""The invitation page names who invites and says when a link expired, nothing of nextime belongs in a search
+engine, and the log hands each line's moment with its offset."""
+
+from __future__ import annotations
+
+import logging
+from datetime import datetime, timedelta
+
+from fastapi.testclient import TestClient
+from sqlalchemy import select
+
+from app.db import SessionLocal
+from app.models import Account, Invite, utcnow
+from app.services import logs
+
+GOOD = "a long enough password"
+
+
+def _token(link: str) -> str:
+    return link.rsplit("/", 1)[1]
+
+
+def _stranger(client: TestClient) -> TestClient:
+    return TestClient(client.app, headers={"X-Nextime-Client": "tab-stranger0"})
+
+
+def _rename(name: str, display_name: str) -> None:
+    with SessionLocal() as db:
+        row = db.scalar(select(Account).where(Account.name == name))
+        assert row is not None
+        row.display_name = display_name
+        db.commit()
+
+
+def test_the_invitation_page_names_who_invites_as_others_see_them(client: TestClient, operator: Account) -> None:
+    token = _token(client.post("/api/invites", json={}).json()["link"])
+    assert _stranger(client).get(f"/api/invite/{token}").json()["by"] == "Tester"
+    _rename("tester", "Robin Keller")
+    assert _stranger(client).get(f"/api/invite/{token}").json()["by"] == "Robin Keller"
+
+
+def test_an_expired_link_says_so_and_any_other_that_it_is_not_valid(client: TestClient, operator: Account) -> None:
+    expired = _token(client.post("/api/invites", json={}).json()["link"])
+    withdrawn = client.post("/api/invites", json={}).json()
+    with SessionLocal() as db:
+        for row in db.scalars(select(Invite)):
+            if row.id != withdrawn["id"]:
+                row.expires_at = utcnow() - timedelta(minutes=1)
+        db.commit()
+    assert client.delete(f"/api/invites/{withdrawn['id']}").status_code == 204
+    stranger = _stranger(client)
+    for answer in (stranger.get(f"/api/invite/{expired}"),
+                   stranger.post(f"/api/invite/{expired}", json={"display_name": "Dora", "password": GOOD})):
+        assert answer.status_code == 404
+        assert answer.json()["detail"]["code"] == "invite_expired"
+    gone = stranger.get(f"/api/invite/{_token(withdrawn['link'])}")
+    assert gone.status_code == 404 and gone.json()["detail"]["code"] == "invite_invalid"
+    assert stranger.get("/api/invite/" + "x" * 32).json()["detail"]["code"] == "invite_invalid"
+
+
+def test_nothing_of_nextime_is_for_search_engines(client: TestClient, operator: Account) -> None:
+    for path in ("/api/about", "/api/public/no-such-page", "/api/no/such/route"):
+        assert client.get(path).headers.get("x-robots-tag") == "noindex, nofollow", path
+    # The page itself says it too, for a proxy that drops headers.
+    from pathlib import Path
+
+    index = (Path(__file__).resolve().parents[2] / "frontend" / "index.html").read_text(encoding="utf-8")
+    assert '<meta name="robots" content="noindex, nofollow" />' in index
+
+
+def test_a_log_line_carries_its_moment_with_the_offset(client: TestClient, operator: Account) -> None:
+    logging.getLogger("nextime.probe").warning("probe-moment line")
+    line = client.get("/api/logs", params={"search": "probe-moment"}).json()[0]
+    moment = datetime.fromisoformat(line["at"])
+    assert moment.utcoffset() is not None
+    assert moment.strftime(logs.DATE_FORMAT) == line["time"]
+    assert logs.moment_of("not a time") is None
