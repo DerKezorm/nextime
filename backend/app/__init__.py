@@ -1,3 +1,3 @@
-"""nextime: quick notes, self-hosted, in the browser and on iPhone and iPad."""
+"""nextime: a calendar for families and small groups, self-hosted, in the browser and through CalDAV on every phone."""
 
 __version__ = "0.1.0"

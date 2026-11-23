@@ -6,6 +6,41 @@ on iPhone and Android through CalDAV.
 > **Early days.** Everything below is built and in daily use, but there is no release yet and things may still change.
 > Native apps for iPhone and iPad come later; until then iPhones and Android phones connect through CalDAV.
 
+![Today: the next event in a box of its own, the rest of the day below it, the next events of the coming days on the right](docs/screenshots/today.png)
+
+*Today, across every calendar: what comes next and how soon, the rest of the day, and the next events of the days
+after. Quick entry at the top understands a line like "Tomorrow 3 pm dentist". On the left the views, own calendars,
+calendars shared with you, and public holidays in the background.*
+
+## Screenshots
+
+![A week with events in several calendar colors, one of them entered by another person, and the column "Coming up" on the right](docs/screenshots/week.png)
+
+*The week, with an event from a calendar shared by someone else carrying their initial. Events move by dragging;
+the column "Coming up" on the right folds away.*
+
+![December as a month: Christmas Day and the day after tinted red as public holidays, a birthday, a family visit over several days](docs/screenshots/month.png)
+
+*The month. Built-in public holidays stand out, and an event over several days shows on each of them.*
+
+![An event opened: title, who entered it, start and end, calendar, repeat, a reminder, the place and notes with a link](docs/screenshots/event.png)
+
+*An event opens over the page: times and time zone, busy or free, calendar and repeat, reminders that are yours alone,
+a place with a link to a map, notes with links.*
+
+![Sharing the calendar "Family": four members with the right to read or to edit, and a read link for guests](docs/screenshots/share.png)
+
+*Share a calendar with members of the server, each with a right of their own, or with guests through a read link they
+can subscribe to.*
+
+<p>
+  <img src="docs/screenshots/devices.png" alt="Setting up a device: a QR code for the iPhone, and address, name and device password for Android and Thunderbird" width="68%">
+  <img src="docs/screenshots/phone.png" alt="The week on a phone as three days, with the bar at the bottom" width="28%">
+</p>
+
+*A device gets its own password: the iPhone scans a QR code and loads a profile, Android and Thunderbird take the
+address. On a phone the week shows three days, and nextime installs from the browser as an app.*
+
 ## What is there
 
 - **One container.** FastAPI and SQLite, the interface built in. The first account is the operator; it needs the
@@ -51,6 +86,8 @@ docker compose up -d --build
 docker logs nextime   # the setup code
 ```
 
+This builds the image from the sources in this repository. An image on ghcr.io follows with the first release.
+
 Then open `http://<your-host>:8585` and set nextime up. Calendars on iPhones and Android connect only over HTTPS: put
 nextime behind a reverse proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
 
@@ -88,4 +125,5 @@ Checks: `pytest -q -n 4` and `ruff check .` in `backend`, `npx vitest run`, `npm
 
 ## Licence
 
-AGPL-3.0, see `LICENSE`.
+AGPL-3.0, see `LICENSE`. What nextime ships or depends on, with its licence, is listed in
+[THIRD-PARTY.md](THIRD-PARTY.md).
