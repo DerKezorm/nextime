@@ -1,0 +1,70 @@
+{
+  "0.1.0": {
+    "lead": "The first version of nextime: your calendars on your own server, in the browser and through CalDAV on iPhone and Android. A short tour of what is already there.",
+    "sections": [
+      {
+        "title": "Today, day, week and month",
+        "where": "Sidebar",
+        "body": "“Today” shows what comes next and how soon, the rest of the day below it and the events of the coming days beside it. The week has the column “Coming up” on the right, which folds away. Events move by dragging, and the keys T, W, M and H switch to day, week, month and today."
+      },
+      {
+        "title": "Calendars of your own",
+        "where": "Sidebar › Calendars",
+        "body": "Add as many calendars as you need, each with one of eleven colors or one of your own and a symbol. Show and hide them and put them in your own order. Events are all-day or have a time and time zone, are busy or free, and repeat daily, weekly, monthly or yearly, with exceptions too."
+      },
+      {
+        "title": "Sharing with people and by link",
+        "where": "A calendar's menu › Share …",
+        "body": "Share a calendar with others on your server, each person with a right of their own: busy only, read or edit. Guests without an account get a link to read, which they can also subscribe to. In a shared calendar a picture shows who entered an event, and if you like, nextime tells you when others change something."
+      },
+      {
+        "title": "iCloud, Google, CalDAV and subscriptions",
+        "where": "Sidebar › Add calendar",
+        "body": "Bring in your calendars from iCloud, Google or another CalDAV server such as Nextcloud, to read and write, synced every minute. What you change while a source is away goes out later. Subscriptions to calendar links come along, and public and school holidays of Germany, Austria and Switzerland are built in, without asking any outside service. Invitations from iCloud and Google are answered right in nextime."
+      },
+      {
+        "title": "Calendar account for iPhone and Android",
+        "where": "Settings › On iPhone and co",
+        "body": "Through CalDAV your calendars show in Apple Calendar, on Android with DAVx5 and in Thunderbird. Every device gets a password of its own and can be locked out on its own; the iPhone scans a QR code and loads a profile. This needs nextime reached over HTTPS."
+      },
+      {
+        "title": "Reminders, place and attachments",
+        "where": "Open an event; Settings › Reminders",
+        "body": "Reminders are yours alone and can be set per device. A place gets address suggestions and a small map, notes may hold links, and an event takes attachments. “Join” takes you into a video meeting."
+      },
+      {
+        "title": "Quick entry and defaults per calendar",
+        "where": "Today, at the top; a calendar's menu › Edit …",
+        "body": "A line like “Tomorrow 3 pm dentist” becomes an event with day and time. Every calendar can have defaults for new events, such as an all-day yearly birthday with a reminder the day before."
+      },
+      {
+        "title": "Search and trash",
+        "where": "Sidebar › Search, Trash",
+        "body": "Search goes over every calendar and opens anywhere with Ctrl K or “/”. What you delete goes to the trash and comes back from there, and right after deleting with “Undo” too."
+      },
+      {
+        "title": "Tasks and deadlines in the calendar",
+        "where": "Settings › Connections",
+        "body": "Due tasks from nextasks and deadlines from nexpaper stand in your calendar. Each person connects them on their own, with a key of that app."
+      },
+      {
+        "title": "Take along and move",
+        "where": "Settings › Take along and move",
+        "body": "Every calendar downloads as an ICS file, all of them together as a ZIP with the attachments. An ICS file goes into a calendar of your own with a preview and without duplicates. A calendar from iCloud or Google moves into one of your own, while everything there stays as it is."
+      },
+      {
+        "title": "API and MCP",
+        "where": "Settings › Connections",
+        "body": "With a key of your own, programs read your calendars and, if you want, add events: through the REST API or as an MCP server for AI tools. Every key has rights of its own, and the operator decides who may use them."
+      }
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "Light, dark or like the device.",
+      "German and English; the operator adds more languages as files.",
+      "The first day of the week, week numbers, 12 or 24 hours and the time zone are set per account.",
+      "nextime installs from the browser as an app. On a phone the week shows three days, with a bar at the bottom.",
+      "Without a connection the installed app keeps showing the next four weeks to read and search; adding events needs a connection again."
+    ]
+  }
+}

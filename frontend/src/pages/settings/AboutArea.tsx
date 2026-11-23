@@ -5,7 +5,8 @@
  *
  * The switch for the daily check stands here, where its answer shows, as in nexnotes (TIME-1 AC-11), and the page
  * says what goes out: the question to GitHub. Every account sees the answer; switching and asking now belong to the
- * operator, because the question goes out for the whole installation.
+ * operator, because the question goes out for the whole installation. Under the version, "What's new" opens the
+ * written text of the running version again, as in nextasks.
  */
 import { BookOpen, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
@@ -13,8 +14,10 @@ import { useTranslation } from 'react-i18next'
 
 import { api, ApiError } from '../../api/client'
 import { Logo, Wordmark } from '../../components/Logo'
+import { WhatsNewWindow } from '../../components/WhatsNew'
 import { moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
+import { useWhatsNew } from '../../lib/whatsNew'
 import { useAuth } from '../../state/auth'
 import { Button, Card, Feedback, Toggle } from './ui'
 
@@ -71,6 +74,9 @@ export function AboutArea() {
   const [updates, setUpdates] = useState<Updates | null>(null)
   const [problem, setProblem] = useState<ApiError | string | null>(null)
   const [busy, setBusy] = useState(false)
+  // The written text of the running version, to read again at any time.
+  const { entry } = useWhatsNew(me?.version, i18n.language)
+  const [reading, setReading] = useState(false)
 
   const load = useCallback(() => {
     api<About>('/api/about').then(setAbout, (error: unknown) => setProblem(code(error)))
@@ -127,6 +133,18 @@ export function AboutArea() {
                 )}
               </span>
             </Row>
+            {entry && me && (
+              <Row label={t('about.whatsNew')}>
+                <button
+                  type="button"
+                  onClick={() => setReading(true)}
+                  className="text-accent-400 underline decoration-accent-700/40 underline-offset-4 hover:decoration-accent-400"
+                  data-testid="about-whats-new"
+                >
+                  {t('whatsNew.title', { version: me.version })}
+                </button>
+              </Row>
+            )}
             <Row label={t('about.licence')}>
               <Out href="https://www.gnu.org/licenses/agpl-3.0.html">{about.license}</Out>
             </Row>
@@ -190,6 +208,7 @@ export function AboutArea() {
           ))}
         </ul>
       </Card>
+      {reading && entry && me && <WhatsNewWindow version={me.version} entry={entry} onClose={() => setReading(false)} />}
     </div>
   )
 }

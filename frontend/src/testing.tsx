@@ -50,7 +50,7 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
     more(method, path, body) ??
     (path === '/api/setup'
       ? ok({ needs_setup: false, code_required: true, signed_in: true, version: '0.1.0', min_password: 12 })
-      : path === '/api/auth/me'
+      : path === '/api/auth/me' || path === '/api/me/whats-new/seen'
         ? ok(account)
         : path === '/api/auth/methods'
           ? ok({ password: true, providers: [] })

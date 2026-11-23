@@ -1,0 +1,70 @@
+{
+  "0.1.0": {
+    "lead": "Die erste Version von nextime: deine Kalender auf deinem eigenen Server, im Browser und über CalDAV auf iPhone und Android. Ein kurzer Rundgang durch das, was schon da ist.",
+    "sections": [
+      {
+        "title": "Heute, Tag, Woche und Monat",
+        "where": "Seitenleiste",
+        "body": "„Heute“ zeigt, was als Nächstes kommt und wie bald, darunter den Rest des Tages und daneben die Termine der kommenden Tage. In der Woche steht rechts die Spalte „Kommende Termine“, die sich einklappen lässt. Termine verschiebst du durch Ziehen, die Tasten T, W, M und H wechseln zu Tag, Woche, Monat und Heute."
+      },
+      {
+        "title": "Eigene Kalender",
+        "where": "Seitenleiste › Kalender",
+        "body": "Leg so viele Kalender an, wie du brauchst, jeden mit einer von elf Farben oder einer eigenen und mit einem Symbol. Du blendest sie ein und aus und ordnest sie, wie du willst. Termine gibt es ganztägig oder mit Uhrzeit und Zeitzone, als belegt oder frei und als Serie täglich, wöchentlich, monatlich oder jährlich, auch mit Ausnahmen."
+      },
+      {
+        "title": "Teilen mit Personen und per Link",
+        "where": "Menü eines Kalenders › Teilen …",
+        "body": "Teile einen Kalender mit anderen auf deinem Server, jede Person mit eigenem Recht: nur belegt, lesen oder bearbeiten. Gäste ohne Konto bekommen einen Link zum Lesen, den sie auch abonnieren können. In einem geteilten Kalender zeigt ein Bild, wer einen Termin eingetragen hat, und auf Wunsch meldet nextime, wenn andere etwas ändern."
+      },
+      {
+        "title": "iCloud, Google, CalDAV und Abos",
+        "where": "Seitenleiste › Kalender hinzufügen",
+        "body": "Hol deine Kalender aus iCloud, Google oder von einem anderen CalDAV-Server wie Nextcloud dazu, zum Lesen und Schreiben und jede Minute abgeglichen. Was du änderst, während eine Quelle nicht erreichbar ist, geht später hinaus. Dazu kommen Abos über einen Kalender-Link sowie Feiertage und Ferien für Deutschland, Österreich und die Schweiz, eingebaut und ohne dass ein fremder Dienst gefragt wird. Einladungen aus iCloud und Google beantwortest du direkt in nextime."
+      },
+      {
+        "title": "Kalenderkonto für iPhone und Android",
+        "where": "Einstellungen › Auf iPhone und Co",
+        "body": "Über CalDAV erscheinen deine Kalender in Apple Kalender, auf Android mit DAVx5 und in Thunderbird. Jedes Gerät bekommt ein eigenes Passwort und lässt sich einzeln sperren; das iPhone scannt einen QR-Code und lädt ein Profil. Dafür muss nextime über HTTPS erreichbar sein."
+      },
+      {
+        "title": "Erinnerungen, Ort und Anhänge",
+        "where": "Einen Termin öffnen; Einstellungen › Erinnerungen",
+        "body": "Erinnerungen gehören dir allein und lassen sich je Gerät regeln. Ein Ort bekommt Vorschläge für die Adresse und eine kleine Karte, Notizen dürfen Links enthalten, und ein Termin nimmt Anhänge auf. Zu einer Videokonferenz kommst du mit „Beitreten“."
+      },
+      {
+        "title": "Schnell eintragen und Vorgaben je Kalender",
+        "where": "Heute, ganz oben; Menü eines Kalenders › Bearbeiten …",
+        "body": "Eine Zeile wie „Morgen 15 Uhr Zahnarzt“ wird zum Termin mit Tag und Uhrzeit. Jeder Kalender kann Vorgaben für neue Termine haben, etwa einen ganztägigen, jährlichen Geburtstag mit Erinnerung am Vortag."
+      },
+      {
+        "title": "Suche und Papierkorb",
+        "where": "Seitenleiste › Suchen, Papierkorb",
+        "body": "Die Suche geht über alle Kalender und öffnet sich überall mit Strg K oder „/“. Gelöschtes kommt in den Papierkorb und lässt sich von dort zurückholen, direkt nach dem Löschen auch mit „Rückgängig“."
+      },
+      {
+        "title": "Aufgaben und Fristen im Kalender",
+        "where": "Einstellungen › Verbindungen",
+        "body": "Fällige Aufgaben aus nextasks und Fristen aus nexpaper stehen in deinem Kalender. Jede Person verbindet sie selbst, mit einem Schlüssel der jeweiligen App."
+      },
+      {
+        "title": "Mitnehmen und umziehen",
+        "where": "Einstellungen › Mitnehmen und umziehen",
+        "body": "Jeder Kalender lässt sich als ICS-Datei herunterladen, alle zusammen als ZIP mit den Anhängen. Eine ICS-Datei übernimmst du mit Vorschau und ohne Doppelte in einen eigenen Kalender. Einen Kalender aus iCloud oder Google ziehst du in einen eigenen um; dort bleibt alles unverändert."
+      },
+      {
+        "title": "API und MCP",
+        "where": "Einstellungen › Verbindungen",
+        "body": "Mit einem eigenen Schlüssel lesen Programme deine Kalender und tragen, wenn du willst, Termine ein: über die REST-API oder als MCP-Server für KI-Werkzeuge. Jeder Schlüssel hat eigene Rechte, und der Betreiber entscheidet, wer sie nutzen darf."
+      }
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Hell, dunkel oder wie das Gerät.",
+      "Deutsch und Englisch; weitere Sprachen spielt der Betreiber als Datei ein.",
+      "Wochenbeginn, Kalenderwochen, 12 oder 24 Stunden und die Zeitzone stellst du für dein Konto ein.",
+      "nextime lässt sich aus dem Browser als App installieren. Auf dem Handy zeigt die Woche drei Tage, unten steht eine Leiste.",
+      "Ohne Verbindung zeigt die installierte App die nächsten vier Wochen zum Lesen und Suchen weiter; eintragen geht wieder mit Verbindung."
+    ]
+  }
+}

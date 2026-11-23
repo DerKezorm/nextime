@@ -3,7 +3,7 @@
  * a phone) a slim head with the mark, the collection, the invitations and the profile (the sidebar's lists behind it,
  * TIME-28 AC-6, AC-8), and a bar at the bottom with Heute, Woche, the round plus for a new event, Monat and Suchen
  * (TIME-28 AC-5, EC-10). Without a connection the orange hint stands over the page and everything that changes
- * something is off (TIME-28 AC-3); a new version of the installed app offers itself as a bar (EC-7). Over the page the hint
+ * something is off (TIME-28 AC-3); a new version of the installed app offers itself as a bar (EC-7), and after an update "What's new" below it. Over the page the hint
  * while travelling ("Times in New York (UTC−5)", TIME-3 AC-5). A session that ends while the page is open shows its
  * dialog over everything, so nothing typed is lost. Collections (TIME-13) switch in the sidebar and, on a phone, in the
  * head; while one calendar is shown alone a bar says so. The keys T, W, M, H, the arrows, K, G and N work everywhere in the
@@ -38,6 +38,7 @@ import { Avatar } from './Avatar'
 import { Dialog } from './Dialog'
 import { Logo } from './Logo'
 import { SessionDialog } from './SessionDialog'
+import { WhatsNewBanner } from './WhatsNew'
 import { NoticeHost } from './NoticeHost'
 import { Sidebar, VIEWS } from './Sidebar'
 
@@ -96,6 +97,7 @@ export function AppShell() {
             </span>
           </header>
           <UpdateBanner />
+          <WhatsNewBanner />
           <OfflineHint />
           <TravelHint />
           <OnlyBar />

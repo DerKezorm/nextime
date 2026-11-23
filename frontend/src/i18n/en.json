@@ -1301,6 +1301,7 @@
     "source": "Source code",
     "subtitle": "Calendars for families and small groups, self-hosted.",
     "version": "Version",
+    "whatsNew": "What's new",
     "updates": {
       "checkedAt": "last checked {{when}}",
       "current": "This is the newest version.",
@@ -2418,5 +2419,13 @@
       "disconnectText": "The deadlines leave nextime and the token is deleted. In nexpaper everything stays as it is.",
       "toSwitch": "Go to “Connections into the local network”"
     }
+  },
+  "whatsNew": {
+    "title": "New in nextime {{version}}",
+    "banner": "nextime {{version}} is here.",
+    "show": "What's new?",
+    "putAway": "Dismiss",
+    "where": "Where:",
+    "done": "Got it"
   }
 }

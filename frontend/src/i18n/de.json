@@ -1301,6 +1301,7 @@
     "source": "Quelltext",
     "subtitle": "Kalender für Familien und kleine Gruppen, selbst gehostet.",
     "version": "Version",
+    "whatsNew": "Was ist neu",
     "updates": {
       "checkedAt": "zuletzt nachgesehen {{when}}",
       "current": "Das ist die neueste Version.",
@@ -2418,5 +2419,13 @@
       "disconnectText": "Die Fristen verschwinden aus nextime, das Token wird gelöscht. In nexpaper bleibt alles, wie es ist.",
       "toSwitch": "Zu „Verbindungen ins eigene Netz“"
     }
+  },
+  "whatsNew": {
+    "title": "Neu in nextime {{version}}",
+    "banner": "nextime {{version}} ist da.",
+    "show": "Was ist neu?",
+    "putAway": "Wegklicken",
+    "where": "Wo:",
+    "done": "Verstanden"
   }
 }
