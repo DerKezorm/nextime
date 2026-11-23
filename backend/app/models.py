@@ -438,7 +438,7 @@ class Calendar(Base):
 
 
 class CalendarSetting(Base):
-    """What one account chose for one calendar it sees: hidden, its place in its group."""
+    """What one account chose for one calendar it sees: hidden, its place in its group, whether its days stand out."""
 
     __tablename__ = "calendar_settings"
 
@@ -455,6 +455,10 @@ class CalendarSetting(Base):
     #: What a new event of this calendar starts with for this account (TIME-4, "Vorgaben für neue Termine"): whole day,
     #: length, repeat, reminders, busy; a key left out is as from the start. Only here: never sent to a source.
     new_defaults: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    #: "Highlight its days" (the days of its events tinted as holidays are): ``None`` as from the start, which is on
+    #: for the built-in public holidays (``holidays:<country>:public``) and off for everything else (see
+    #: ``services/calendars.highlighted``); a choice made wins, "off" for the public holidays too. Only here.
+    highlight: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
 
 class CalendarPrefs(Base):

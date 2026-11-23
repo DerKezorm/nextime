@@ -203,6 +203,8 @@ export function CalendarDialog({ calendar, onDone, onDelete, onClose }: { calend
   const [color, setColor] = useState<CalendarColor>(calendar?.color ?? 'slate')
   const [icon, setIcon] = useState(calendar?.icon ?? '')
   const [background, setBackground] = useState(calendar?.background ?? false)
+  // "Highlight its days" is the person's own; as from the start on for the built-in public holidays only.
+  const [holiday, setHoliday] = useState(calendar?.holiday ?? false)
   const [standard, setStandard] = useState(calendar?.default ?? false)
   // The calendar's own reminder (TIME-7) stays as it is; the reminders chosen here are the person's (TIME-4 defaults).
   const reminder = calendar?.reminder ?? 0
@@ -228,7 +230,8 @@ export function CalendarDialog({ calendar, onDone, onDelete, onClose }: { calend
     inFlight.current = true
     setBusy(true)
     try {
-      const form = { name: clean, color, icon, background, default: standard, reminder, defaults }
+      // Only a changed choice goes along, so a calendar left alone keeps following what holds from the start.
+      const form = { name: clean, color, icon, background, default: standard, reminder, defaults, ...(holiday !== (calendar?.holiday ?? false) ? { holiday } : {}) }
       onDone(calendar ? await calendarsApi.change(calendar.id, form) : await calendarsApi.create(form, ref.current))
     } catch (error) {
       if (error instanceof ApiError && error.values.field === 'name') setNameProblem(errorText(error.code, error.values))
@@ -277,6 +280,9 @@ export function CalendarDialog({ calendar, onDone, onDelete, onClose }: { calend
         <ColorChoice value={color} onChange={setColor} onWrong={(on) => (colorWrong.current = on)} />
         <SymbolChoice value={icon} color={color} onChange={setIcon} />
         <CheckLine label={t('calendars.background')} hint={t('calendars.backgroundHint')} checked={background} onChange={setBackground} />
+        {background && (
+          <CheckLine label={t('calendars.highlight')} hint={t('calendars.highlightHint')} checked={holiday} onChange={setHoliday} testId="calendar-highlight" />
+        )}
         <CheckLine label={t('calendars.standard')} checked={standard} onChange={setStandard} />
         <NewEventDefaults value={defaults} fallbackReminders={(allDay) => fallbackLeads(calendar, reminder, allDay)} onChange={setDefaults} />
         <p className="text-xs text-mist-500">{t('calendars.lives')}</p>

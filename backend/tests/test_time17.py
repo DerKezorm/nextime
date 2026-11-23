@@ -17,10 +17,11 @@ from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
 from app.db import SessionLocal
-from app.models import Account, Calendar, Source
+from app.models import RIGHT_READ, Account, Calendar, Source
 from app.services import holidays, internet, logs, subscriptions, sync
 
-from .calendar_helpers import calendars_of, code, window
+from .calendar_helpers import calendars_of, code, make_calendar, named, share, window
+from .conftest import make_account, new_client
 from .remote_helpers import mirrored, quiet_world, source_row  # noqa: F401 - the fixture
 
 
@@ -330,10 +331,19 @@ def test_time17_ac3_holidays_of_a_state_and_its_school_holidays_come_as_backgrou
              calendars_of(client)["calendars"] if row["group"] == "subscriptions"}
     assert shown == {"Feiertage Deutschland": (True, False, "subscriptions"),
                      "Schulferien Deutschland": (True, False, "subscriptions")}
-    # Only the public holidays stand out in the views, school holidays stay quiet (decided while testing).
+    # As from the start only the public holidays stand out in the views ("Tage hervorheben"), school holidays and an
+    # own calendar stay quiet (decided while testing).
+    make_calendar(client, "Familie", background=True)
     marked = {row["name"]: row["holiday"] for row in calendars_of(client)["calendars"]}
     assert marked["Feiertage Deutschland"] is True and marked["Schulferien Deutschland"] is False
+    assert marked["Familie"] is False
     assert not any(flag for name, flag in marked.items() if name not in ("Feiertage Deutschland",))
+    # Switched off on purpose, the public holidays stay quiet; null goes back to as from the start.
+    public = named(client, "Feiertage Deutschland")["id"]
+    assert client.patch(f"/api/calendars/{public}", json={"holiday": False}).status_code == 200
+    assert named(client, "Feiertage Deutschland")["holiday"] is False
+    assert client.patch(f"/api/calendars/{public}", json={"holiday": None}).status_code == 200
+    assert named(client, "Feiertage Deutschland")["holiday"] is True
     titles = _holiday_titles(client)
     for day, name in GERMANY_2027.items():
         assert titles[day] == name, day
@@ -494,3 +504,30 @@ def test_time17_ec8_a_server_that_trickles_ends_at_the_limit_of_one_fetch(
     answer = client.post("/api/sources/subscriptions/preview", json={"url": ABFALL})
     assert answer.status_code == 502 and code(answer) == "subscription_unreachable"
     assert time.monotonic() - began < 1.5
+
+
+def test_time17_highlight_its_days_is_each_persons_own_for_a_subscription_and_a_shared_calendar(
+        client: TestClient, account: Account, feeds: Feeds) -> None:
+    feeds.answers[ABFALL] = (200, WASTE, {"Content-Type": "text/calendar"})
+    _subscribe(client, background=True)
+    waste = named(client, "Müllabfuhr")["id"]
+    assert named(client, "Müllabfuhr")["holiday"] is False
+    # Read only at its source, still the person's own choice; null takes it back.
+    assert client.patch(f"/api/calendars/{waste}", json={"holiday": True}).status_code == 200
+    assert named(client, "Müllabfuhr")["holiday"] is True
+    assert client.patch(f"/api/calendars/{waste}", json={"holiday": None}).status_code == 200
+    assert named(client, "Müllabfuhr")["holiday"] is False
+    # A calendar shared to read: the one it is shared with chooses for itself, the owner's stays as it was.
+    family = make_calendar(client, "Familie", background=True)
+    other = make_account("reader")
+    stranger = make_account("stranger")
+    share(family, other.id, RIGHT_READ)
+    with new_client(other) as reader, new_client(stranger) as outsider:
+        assert reader.patch(f"/api/calendars/{family}", json={"holiday": True}).status_code == 200
+        assert named(reader, "Familie")["holiday"] is True
+        assert named(client, "Familie")["holiday"] is False
+        # Nobody reaches the choice of another: a calendar it does not see is not there.
+        assert outsider.patch(f"/api/calendars/{family}", json={"holiday": True}).status_code == 404
+        assert outsider.patch(f"/api/calendars/{waste}", json={"holiday": True}).status_code == 404
+        assert reader.patch(f"/api/calendars/{waste}", json={"holiday": True}).status_code == 404
+    assert named(client, "Familie")["holiday"] is False and named(client, "Müllabfuhr")["holiday"] is False

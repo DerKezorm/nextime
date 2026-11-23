@@ -33,7 +33,8 @@ export type CalendarEntry = {
   /** Its symbol (a name of `lib/symbols.ts`), drawn in its color; empty: the color square (TIME-4, as nexnotes). */
   icon?: string
   background: boolean
-  /** A calendar of public holidays (TIME-17): its days stand out in month and week. */
+  /** "Highlight its days", the person's own: the days of its background events stand out in month and week. As from
+   * the start on for the built-in public holidays (TIME-17) only. */
   holiday?: boolean
   reminder: number
   /** What a new event of it starts with, for this account (TIME-4, `features/calendars/defaults.ts`). */
@@ -68,7 +69,17 @@ export type CalendarList = {
   deleted_events?: number
 }
 
-export type CalendarForm = { name: string; color: CalendarColor; icon: string; background: boolean; default: boolean; reminder: number; defaults?: NewDefaults }
+export type CalendarForm = {
+  name: string
+  color: CalendarColor
+  icon: string
+  background: boolean
+  default: boolean
+  reminder: number
+  defaults?: NewDefaults
+  /** "Highlight its days", sent only when the person changed it: left out, the server keeps what holds. */
+  holiday?: boolean
+}
 
 export type Person = { id: number; name: string; color: number | null; avatar: string | null }
 

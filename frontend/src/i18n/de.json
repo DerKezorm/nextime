@@ -978,6 +978,8 @@
     "name": "Name",
     "background": "Als Hintergrund zeigen",
     "backgroundHint": "klein oben im Tag, etwa Feiertage",
+    "highlight": "Tage hervorheben",
+    "highlightHint": "Tage mit Einträgen dieses Kalenders farbig hinterlegen, wie Feiertage",
     "standard": "Standard für neue Termine",
     "reminder": "Erinnerung für neue Termine",
     "lives": "Liegt auf deinem nextime-Server. Teilen und aufs iPhone bringen kannst du ihn danach.",

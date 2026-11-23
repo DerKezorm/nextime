@@ -978,6 +978,8 @@
     "name": "Name",
     "background": "Show as background",
     "backgroundHint": "small at the top of the day, such as holidays",
+    "highlight": "Highlight its days",
+    "highlightHint": "tint the days with entries of this calendar, as holidays are",
     "standard": "Default for new events",
     "reminder": "Reminder for new events",
     "lives": "Lives on your nextime server. You can share it and put it on your iPhone afterwards.",

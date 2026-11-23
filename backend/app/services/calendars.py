@@ -210,6 +210,18 @@ def setting(db: Session, account_id: int, calendar_id: int) -> CalendarSetting:
     return row
 
 
+def public_holidays(calendar: Calendar) -> bool:
+    """A calendar of the built-in public holidays (TIME-17), ``holidays:<country>:public``; school holidays are not."""
+    url = calendar.remote_url or ""
+    return url.startswith("holidays:") and url.endswith(":public")
+
+
+def highlighted(calendar: Calendar, row: CalendarSetting) -> bool:
+    """Whether the days of this calendar stand out for the account ("Tage hervorheben"): what it chose, else on for
+    the built-in public holidays only."""
+    return public_holidays(calendar) if row.highlight is None else row.highlight
+
+
 def _next_position(db: Session, account_id: int) -> int:
     highest = db.scalar(select(func.max(CalendarSetting.position)).where(CalendarSetting.account_id == account_id))
     return 0 if highest is None else int(highest) + 1
@@ -367,8 +379,9 @@ def create(db: Session, account: Account, *, name: str, color: str, background: 
 
 
 def change(db: Session, account: Account, calendar_id: int, values: dict) -> Access:
-    """Name, color, background and reminder change for everybody (the owner only); hidden and default only for the
-    account itself (EC-8). The later change wins (EC-11)."""
+    """Name, color, background and reminder change for everybody (the owner only); hidden, default, the defaults for
+    new events and "Tage hervorheben" only for the account itself, with any right (EC-8). The later change wins
+    (EC-11)."""
     ensure_seeded(db, account)
     found = access(db, account.id, calendar_id)
     if found is None:
@@ -403,6 +416,10 @@ def change(db: Session, account: Account, calendar_id: int, values: dict) -> Acc
     if "defaults" in values:
         # Each account its own, with any right, a source's calendar too: nothing goes to the source.
         setting(db, account.id, calendar_id).new_defaults = clean_defaults(values["defaults"])
+    if "holiday" in values:
+        # "Highlight its days": each account its own, with any right; ``None`` goes back to as from the start.
+        chosen = values["holiday"]
+        setting(db, account.id, calendar_id).highlight = None if chosen is None else bool(chosen)
     if values.get("default"):
         set_default(db, account.id, calendar_id)
     db.commit()

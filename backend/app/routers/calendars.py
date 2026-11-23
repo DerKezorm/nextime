@@ -4,7 +4,7 @@
 |---|---|---|
 | GET | ``/api/calendars`` | the list by group, the default for new events, the count against 20 |
 | POST | ``/api/calendars`` | a new own calendar (201; the same ``client_ref`` again: 200 with the first one) |
-| PATCH | ``/api/calendars/{id}`` | name, color, icon, background, reminder (owner); hidden, default (the account) |
+| PATCH | ``/api/calendars/{id}`` | name, color, icon, background, reminder (owner); hidden, default, holiday (own) |
 | PUT | ``/api/calendars/order`` | the order within one group |
 | DELETE | ``/api/calendars/{id}`` | into the trash with its events |
 """
@@ -35,6 +35,8 @@ class CalendarIn(BaseModel):
     client_ref: str | None = Field(default=None, max_length=64)
     #: What new events of it start with, for this account (TIME-4); left out: as from the start.
     defaults: dict[str, Any] | None = None
+    #: "Highlight its days" for this account; left out: as from the start (off for an own calendar).
+    holiday: bool | None = None
 
 
 class CalendarChange(BaseModel):
@@ -48,6 +50,9 @@ class CalendarChange(BaseModel):
     defaults: dict[str, Any] | None = None
     hidden: bool | None = None
     default: bool | None = None
+    #: "Highlight its days", the account's own with any right; ``null`` goes back to as from the start (on for the
+    #: built-in public holidays, off for everything else).
+    holiday: bool | None = None
 
 
 class OrderIn(BaseModel):
@@ -66,8 +71,9 @@ def _view(db: DbSession, item: calendars.Access, row: CalendarSetting, default_i
         "color": calendar.color,
         "icon": symbols.shown(calendar.icon),
         "background": calendar.background,
-        # A calendar of public holidays (TIME-17): its days stand out in the views, school holidays do not.
-        "holiday": (calendar.remote_url or "").startswith("holidays:") and calendar.remote_url.endswith(":public"),
+        # Its days stand out in the views ("Tage hervorheben", the account's own): as from the start only the public
+        # holidays (TIME-17), not the school holidays.
+        "holiday": calendars.highlighted(calendar, row),
         "reminder": calendar.reminder,
         # The account's own defaults for new events of it (TIME-4), a source's calendar too.
         "defaults": row.new_defaults or {},
@@ -137,8 +143,13 @@ def create_calendar(payload: CalendarIn, response: Response, account: Account, d
     row, new = calendars.create(db, account, name=payload.name, color=payload.color, background=payload.background,
                                 reminder=payload.reminder, make_default=payload.default, client_ref=payload.client_ref,
                                 icon=payload.icon)
-    if new and payload.defaults:
-        calendars.change(db, account, row.id, {"defaults": payload.defaults})
+    own: dict[str, Any] = {}
+    if payload.defaults:
+        own["defaults"] = payload.defaults
+    if payload.holiday is not None:
+        own["holiday"] = payload.holiday
+    if new and own:
+        calendars.change(db, account, row.id, own)
     if not new:
         response.status_code = 200
     result = listing(db, account)
@@ -154,7 +165,11 @@ def order_calendars(payload: OrderIn, account: Account, db: DbSession) -> dict[s
 
 @router.patch("/{calendar_id}", summary="Change a calendar")
 def change_calendar(calendar_id: int, payload: CalendarChange, account: Account, db: DbSession) -> dict[str, Any]:
-    calendars.change(db, account, calendar_id, payload.model_dump(exclude_none=True))
+    values = payload.model_dump(exclude_none=True)
+    if "holiday" in payload.model_fields_set:
+        # ``null`` here is a choice: back to as from the start.
+        values["holiday"] = payload.holiday
+    calendars.change(db, account, calendar_id, values)
     return listing(db, account)
 
 

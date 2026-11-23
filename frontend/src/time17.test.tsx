@@ -9,7 +9,7 @@ import i18n from './i18n'
 import { forgetPrefs } from './lib/devicePref'
 import { COUNTRIES, preview, row, sources } from './sourceFakes'
 import { AuthProvider } from './state/auth'
-import { calls, click, ok, render, serve, settle, signedIn, start, stop, type, type Answer } from './testing'
+import { byText, calls, click, ok, render, serve, settle, signedIn, start, stop, type, type Answer } from './testing'
 import { NOW, robin } from './viewFakes'
 
 type More = (method: string, path: string, body: unknown) => Answer | undefined
@@ -260,5 +260,51 @@ describe('TIME-17 holidays and school holidays', () => {
     await open()
     expect(one('calendar-group-subscriptions')!.querySelector('h3')!.textContent).toBe('Abos und Hintergrund')
     expect([...one('calendar-group-subscriptions')!.querySelectorAll('[data-testid="calendar-name"]')].map((name) => name.textContent)).toEqual(['Müllabfuhr', 'Feiertage'])
+  })
+})
+
+describe('TIME-17 "Tage hervorheben"', () => {
+  const holidays = calendar(2, 'Feiertage Deutschland', {
+    background: true,
+    holiday: true,
+    group: 'subscriptions',
+    writable: false,
+    origin: { id: 7, kind: 'holidays', label: 'Feiertage', state: 'ok', synced_at: null },
+  })
+  const listed = (entries = [calendar(1, 'Familie', { default: true }), holidays]) => (_method: string, path: string) =>
+    path.startsWith('/api/calendars') ? ok(calendarList(entries)) : undefined
+
+  async function edit(index: number): Promise<HTMLElement> {
+    await open()
+    await click(one('calendar-list')!.querySelectorAll('[aria-haspopup="menu"]')[index])
+    await click(byText('Bearbeiten …'))
+    return one('calendar-dialog')!
+  }
+  const backgroundBox = (dialog: HTMLElement) => dialog.querySelector<HTMLInputElement>('input[aria-label="Als Hintergrund zeigen"]')!
+
+  it('TIME-17 the box stands only under a ticked "Als Hintergrund zeigen" and sends the choice', async () => {
+    server(sources([]), listed())
+    const dialog = await edit(1)
+    const highlight = () => dialog.querySelector<HTMLInputElement>('[data-testid="calendar-highlight"]')
+    expect(highlight()?.checked).toBe(true)
+    expect(dialog.textContent).toContain('Tage hervorheben')
+    await click(backgroundBox(dialog))
+    expect(highlight()).toBeNull()
+    await click(backgroundBox(dialog))
+    await click(highlight())
+    await click(one('calendar-save'))
+    expect(posted('/api/calendars/2')[0]?.body).toMatchObject({ background: true, holiday: false })
+  })
+
+  it('TIME-17 a calendar left alone sends no choice, so it keeps following what holds from the start', async () => {
+    server(sources([]), listed())
+    const dialog = await edit(0)
+    expect(dialog.querySelector('[data-testid="calendar-highlight"]')).toBeNull()
+    await click(backgroundBox(dialog))
+    expect(dialog.querySelector<HTMLInputElement>('[data-testid="calendar-highlight"]')?.checked).toBe(false)
+    await click(one('calendar-save'))
+    const body = posted('/api/calendars/1')[0]?.body as Record<string, unknown>
+    expect(body).toMatchObject({ background: true })
+    expect('holiday' in body).toBe(false)
   })
 })
