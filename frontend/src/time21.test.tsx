@@ -186,7 +186,13 @@ describe('TIME-21 AC-4 a tapped notification', () => {
     await settle()
     expect(calls.some((call) => call.path.startsWith('/api/events/12'))).toBe(true)
     // The day of the notification is shown (its window asked for), and the event is open in the side panel.
-    expect(calls.some((call) => call.path.startsWith('/api/events?') && call.path.includes('end=2026-12-03'))).toBe(true)
+    // Its window holds noon of that day, whatever time zone the machine running the test has.
+    const noon = new Date(2026, 11, 3, 12).getTime()
+    const holds = (path: string) => {
+      const query = new URLSearchParams(path.split('?')[1])
+      return Date.parse(query.get('start') ?? '') <= noon && noon < Date.parse(query.get('end') ?? '')
+    }
+    expect(calls.some((call) => call.path.startsWith('/api/events?') && holds(call.path))).toBe(true)
     expect([...document.querySelectorAll<HTMLInputElement>('input')].some((field) => field.value === 'Elternabend')).toBe(true)
     // The address loses its marks, so a reload does not open it again.
     expect(calls.filter((call) => call.path.startsWith('/api/events/12')).length).toBe(1)
