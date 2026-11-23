@@ -22,15 +22,20 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..errors import error
-from ..models import RIGHT_BUSY, Account, ApiKey, utcnow
-from . import calendars, display, events, ical, symbols
+from ..models import RIGHT_BUSY, Account, ApiKey, Event, Source, utcnow
+from . import calendars, display, events, ical, invitations, symbols
 
 LEVELS = ("read", "write")
 #: What ``/me`` names: what this nextime offers under ``/api/v1/`` (AC-9). It only grows.
-FEATURES = ["calendars", "events", "write", "search", "free", "dashboard", "client_ref", "series"]
+FEATURES = ["calendars", "events", "write", "search", "free", "dashboard", "client_ref", "series",
+            # For nexmail (2026-11-23): calendar groups, events by UID, answers, invitations from mails, a version.
+            "calendar_groups", "uid_lookup", "answer", "ical_import", "state"]
+#: How the sidebar names a source's group (``source_name``); a CalDAV account and a subscription by their label.
+SOURCE_NAMES = {"icloud": "iCloud", "google": "Google"}
 #: The longest window one request reads, as the interface (TIME-12).
 MAX_DAYS = events.MAX_RANGE_DAYS
 
@@ -67,9 +72,16 @@ class Caller:
             chosen = None if self.calendar_ids is None else set(self.calendar_ids)
             # A key for "all" reads what the member shows: a hidden calendar only when the key names it (decided
             # after the review, 2026-11-23); for API, MCP, the card and the search alike.
-            self._scope["reach"] = {item.calendar.id: item for item, setting in calendars.ordered(db, self.account.id)
+            listed = calendars.ordered(db, self.account.id)
+            self._scope["reach"] = {item.calendar.id: item for item, setting in listed
                                     if (item.calendar.id in chosen if chosen is not None else not setting.hidden)}
+            self._scope["hidden"] = {item.calendar.id for item, setting in listed if setting.hidden}
         return self._scope["reach"]
+
+    def hidden(self, db: Session) -> set[int]:
+        """The calendars the member hid in nextime (only those the key names reach it)."""
+        self.reach(db)
+        return self._scope["hidden"]
 
 
 def caller_of(account: Account, row: ApiKey) -> Caller:
@@ -94,7 +106,19 @@ def zone_name(account: Account) -> str:
 # --- Calendars ------------------------------------------------------------------------------------------------------
 
 
-def calendar_out(db: Session, item: calendars.Access, default_id: int | None) -> dict[str, Any]:
+def source_name(db: Session, item: calendars.Access) -> str:
+    """The name of the calendar's source as the sidebar heads its group: "iCloud", "Google", a CalDAV account or a
+    subscription by the name of its connection; "" for nextime's own calendars and those shared with the member."""
+    group = item.group
+    if group in ("own", "shared"):
+        return ""
+    if item.kind in SOURCE_NAMES:
+        return SOURCE_NAMES[item.kind]
+    source = db.get(Source, item.calendar.source_id) if item.calendar.source_id is not None else None
+    return source.label if source is not None and source.label else ("CalDAV" if group == "caldav" else "")
+
+
+def calendar_out(db: Session, item: calendars.Access, default_id: int | None, hidden: bool = False) -> dict[str, Any]:
     calendar = item.calendar
     busy = item.right == RIGHT_BUSY
     owner = None
@@ -113,13 +137,19 @@ def calendar_out(db: Session, item: calendars.Access, default_id: int | None) ->
         "source": item.kind or "nextime",
         "owner": owner,
         "default": calendar.id == default_id,
+        # Where it stands in the sidebar (``own``, ``icloud``, ``google``, ``caldav``, ``shared``, ``subscriptions``),
+        # the name of that source, and whether the member hid it in nextime (TIME-26, for nexmail).
+        "group": item.group,
+        "source_name": source_name(db, item),
+        "hidden": hidden,
     }
 
 
 def calendar_list(db: Session, caller: Caller) -> list[dict[str, Any]]:
     default = calendars.default_of(db, caller.account.id).calendar
     default_id = default.id if default is not None else None
-    return [calendar_out(db, item, default_id) for item in caller.reach(db).values()]
+    hidden = caller.hidden(db)
+    return [calendar_out(db, item, default_id, item.calendar.id in hidden) for item in caller.reach(db).values()]
 
 
 def one_calendar(db: Session, caller: Caller, calendar_id: int) -> calendars.Access:
@@ -164,7 +194,20 @@ def moment(text: str, name: str, zone: str = "UTC") -> datetime:
 # --- Events ---------------------------------------------------------------------------------------------------------
 
 
-def occurrence_out(entry: dict[str, Any], reach: dict[int, calendars.Access]) -> dict[str, Any]:
+def web_url(base: str, event_id: int, occurrence: str | None, start: str, all_day: bool, zone: str) -> str | None:
+    """Where the event opens in nextime: its day (in the account's zone) with the event, as notifications link it."""
+    if not base:
+        return None
+    if all_day:
+        day = start[:10]
+    else:
+        day = ical.local_wall(datetime.fromisoformat(start), zone).date().isoformat()
+    url = f"{base}/day?day={day}&event={event_id}"
+    return url + (f"&occurrence={occurrence}" if occurrence else "")
+
+
+def occurrence_out(entry: dict[str, Any], reach: dict[int, calendars.Access], base: str = "",
+                   zone: str = "UTC") -> dict[str, Any]:
     """An occurrence as programs read it. "Busy only": its times, nothing else (EC-3)."""
     if entry.get("busy_only"):
         return {"calendar_id": entry["calendar_id"], "busy_only": True, "busy": True, "all_day": entry["all_day"],
@@ -189,6 +232,9 @@ def occurrence_out(entry: dict[str, Any], reach: dict[int, calendars.Access]) ->
         "background": bool(reach[entry["calendar_id"]].calendar.background),
         "person": person["name"] if person else None,
         "invitation": entry["invitation"]["state"] if entry.get("invitation") else None,
+        "uid": entry.get("uid", ""),
+        "origin": entry.get("origin") or None,
+        "web_url": web_url(base, entry["id"], entry["occurrence"], entry["start"], entry["all_day"], zone),
     }
     if entry.get("sources"):
         out["also_in"] = [source["calendar_id"] for source in entry["sources"]
@@ -198,19 +244,105 @@ def occurrence_out(entry: dict[str, Any], reach: dict[int, calendars.Access]) ->
 
 
 def occurrences(db: Session, caller: Caller, start: datetime, end: datetime,
-                wanted: set[int] | None = None) -> list[dict[str, Any]]:
-    """Every occurrence in [start, end) of the calendars in reach, series rolled out (AC-2)."""
+                wanted: set[int] | None = None, *, base: str = "", uid: str | None = None) -> list[dict[str, Any]]:
+    """Every occurrence in [start, end) of the calendars in reach, series rolled out (AC-2); with ``uid`` only that
+    event's, declined ones too."""
     if end <= start or (end - start).days > MAX_DAYS:
         raise error("invalid_range", f"Ask for at most {MAX_DAYS} days at once.", 422)
     only = checked_calendars(db, caller, wanted)
+    if uid is not None:
+        ids = _ids_of_uid(db, uid, only)
+        only = {calendar_id for calendar_id, _id in ids}
     if not only:
         return []
     reach = caller.reach(db)
-    found = events.occurrence_list(db, caller.account, start, end, include_hidden=True, only=only)
-    return [occurrence_out(entry, reach) for entry in found]
+    zone = zone_name(caller.account)
+    found = events.occurrence_list(db, caller.account, start, end, include_hidden=True, only=only,
+                                   include_declined=uid is not None)
+    if uid is not None:
+        found = [entry for entry in found if not entry.get("busy_only") and entry.get("uid") == uid]
+    return [occurrence_out(entry, reach, base, zone) for entry in found]
 
 
-def event_out(db: Session, caller: Caller, event_id: int, occurrence: str | None = None) -> dict[str, Any]:
+def _ids_of_uid(db: Session, uid: str, only: set[int]) -> list[tuple[int, int]]:
+    if not uid or not only:
+        return []
+    return [(calendar_id, event_id) for calendar_id, event_id in db.execute(
+        select(Event.calendar_id, Event.id).where(Event.uid == uid, Event.deleted_at.is_(None),
+                                                  Event.calendar_id.in_(only)).order_by(Event.id)).all()]
+
+
+def by_uid(db: Session, caller: Caller, uid: str, wanted: set[int] | None = None, *,
+           base: str = "") -> list[dict[str, Any]]:
+    """Each event with this UID in the key's calendars, once, as it begins (a series by its first occurrence), with
+    the member's invitation state, declined or not; "busy only" calendars keep it to themselves."""
+    reach = caller.reach(db)
+    only = {calendar_id for calendar_id in checked_calendars(db, caller, wanted)
+            if reach[calendar_id].right != RIGHT_BUSY}
+    zone = zone_name(caller.account)
+    out = []
+    for _calendar_id, event_id in _ids_of_uid(db, uid, only):
+        row = db.get(Event, event_id)
+        if row is None:
+            continue
+        out.append(_first_entry(db, caller, row, reach[row.calendar_id], base, zone))
+    return out
+
+
+def _first_entry(db: Session, caller: Caller, row: Event, item: calendars.Access, base: str,
+                 zone: str) -> dict[str, Any]:
+    parsed = ical.parse(row.ical)
+    master = ical.master_of(parsed)
+    begin = master.decoded("DTSTART")
+    finish = begin + ical.duration_of(master)
+    mine, _source = invitations.context_of(db, item, row)
+    invitation = invitations.state_of(master, mine)
+    person = None
+    if item.right != calendars.OWNER and row.created_by is not None and row.created_by != caller.account.id:
+        author = db.get(Account, row.created_by)
+        person = {"name": author.shown_name} if author is not None else None
+    entry: dict[str, Any] = {
+        "id": row.id, "occurrence": None, "calendar_id": row.calendar_id,
+        "title": events.summary_in(master, events.language_of(caller.account)),
+        "location": str(master.get("LOCATION", "")),
+        "busy": str(master.get("TRANSP", "OPAQUE")).upper() != "TRANSPARENT", "busy_only": False,
+        "recurring": row.recurring, "writable": item.writable, "etag": row.etag, "person": person,
+        "waiting": row.waiting, "invitation": invitation, "uid": row.uid, "origin": row.origin or "",
+    }
+    if isinstance(begin, datetime):
+        entry.update(all_day=False, start=iso(ical._as_utc(begin)), end=iso(ical._as_utc(finish)),
+                     time_zone=ical.zone_name(begin))
+    else:
+        last = finish - timedelta(days=1) if finish > begin else begin
+        entry.update(all_day=True, start=begin.isoformat(), end=last.isoformat(), time_zone="")
+    return occurrence_out(entry, {row.calendar_id: item}, base, zone)
+
+
+def _people_of(row: Event, occurrence: str | None) -> tuple[dict[str, str] | None, list[dict[str, str]]]:
+    """The organizer and the attendees of the event (or of its occurrence), each with name and address; attendees
+    with their state in the words of ``invitation``: ``open``, ``accepted``, ``tentative``, ``declined``."""
+    parsed = ical.parse(row.ical)
+    component = ical.master_of(parsed)
+    if occurrence and row.recurring:
+        try:
+            changed = events._override(parsed, events._occurrence_start(component, occurrence))
+        except Exception:  # noqa: BLE001 - an occurrence the detail already accepted; its master otherwise
+            changed = None
+        component = changed if changed is not None else component
+
+    def name_of(value: Any) -> str:
+        return str((getattr(value, "params", {}) or {}).get("CN", "") or "").strip().strip('"')
+
+    found = component.get("ORGANIZER")
+    organizer = {"name": name_of(found), "email": invitations.address(found)} if found is not None else None
+    attendees = [{"name": name_of(item), "email": invitations.address(item),
+                  "status": invitations.STATES.get(str(item.params.get("PARTSTAT", "NEEDS-ACTION")).upper(), "open")}
+                 for item in invitations._attendees(component)]
+    return organizer, attendees
+
+
+def event_out(db: Session, caller: Caller, event_id: int, occurrence: str | None = None,
+              base: str = "") -> dict[str, Any]:
     """One event or one occurrence. Outside the key's calendars it is not there (EC-4); "busy only" gives its times
     (EC-3)."""
     row = _event_row(db, caller, event_id)
@@ -242,12 +374,25 @@ def event_out(db: Session, caller: Caller, event_id: int, occurrence: str | None
         "updated_via": found.get("updated_via") or None,
         "updated_at": found["updated_at"],
         "invitation": (found.get("invitation") or {}).get("state") if found.get("invitation") else None,
+        **_extra(caller, row, found, base),
     }
 
 
-def _event_row(db: Session, caller: Caller, event_id: int) -> Any:
-    from ..models import Event
+def _extra(caller: Caller, row: Event, found: dict[str, Any], base: str) -> dict[str, Any]:
+    """What nexmail reads besides (TIME-26): the UID, where it opens in nextime, organizer and attendees, and
+    whether it is an invitation entered from a mail (``origin`` ``imip``)."""
+    zone = zone_name(caller.account)
+    if found["all_day"]:
+        start = found["start"]
+    else:
+        start = iso(ical.at_wall(datetime.fromisoformat(found["start"]), found["time_zone"] or zone)) or ""
+    organizer, attendees = _people_of(row, found["occurrence"])
+    return {"uid": row.uid, "origin": row.origin or None,
+            "web_url": web_url(base, row.id, found["occurrence"], start, found["all_day"], zone),
+            "organizer": organizer, "attendees": attendees}
 
+
+def _event_row(db: Session, caller: Caller, event_id: int) -> Any:
     row = db.get(Event, event_id) if 0 < event_id < 2**62 else None
     if row is None or row.calendar_id not in caller.reach(db):
         raise error("not_found", "Not found.", 404)

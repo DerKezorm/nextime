@@ -294,6 +294,10 @@
     "invitation_changed": "Die Einladung hat sich inzwischen geändert.",
     "no_calendar_server": "Unter dieser Adresse antwortet kein Kalenderserver.",
     "not_an_invitation": "Dieser Termin ist keine Einladung an dich.",
+    "attendee_unknown": "Keine deiner Adressen steht unter den Eingeladenen.",
+    "ical_too_large": "Die Kalenderdaten sind zu groß.",
+    "invalid_ical": "Die Kalenderdaten sind kein gültiges iCalendar.",
+    "ical_method_unsupported": "Nur Einladungen und Absagen werden übernommen.",
     "not_google_address": "Das ist keine geheime Adresse von Google. Sie beginnt mit https://calendar.google.com/calendar/ical/.",
     "server_missing": "Bitte die Adresse des Servers eintragen.",
     "source_exists": "Dieses Konto ist schon verbunden.",
@@ -1492,7 +1496,8 @@
     "whyNot": {
       "no_replies": "Dieser CalDAV-Server nimmt keine Antworten an. Antworte in der App deines Kontos.",
       "locked": "Antworten geht erst wieder, wenn die Verbindung unter Kalender und Konten steht.",
-      "read_only_source": "Über einen Abo-Link gehen keine Antworten hinaus."
+      "read_only_source": "Über einen Abo-Link gehen keine Antworten hinaus.",
+      "by_mail": "Diese Einladung kam per Mail. Die Antwort geht aus deinem Mailprogramm."
     },
     "changed": "Die Einladung hat sich inzwischen geändert. Hier steht der neue Stand.",
     "declined": "„{{title}}“ abgesagt. In der Suche bleibt die Einladung.",
@@ -1841,7 +1846,11 @@
       "calendar": "Kalender"
     },
     "seriesGone": "Serie im Papierkorb oder Kalender gelöscht: zuerst die Serie wiederherstellen",
-    "deletedVia": "über Schlüssel „{{key}}“"
+    "deletedVia": "über Schlüssel „{{key}}“",
+    "reason": {
+      "source_has_it": "steht jetzt aus der Quelle im Kalender",
+      "cancelled": "vom Einladenden abgesagt"
+    }
   },
   "pwa": {
     "update": "Es gibt eine neue Version von nextime.",

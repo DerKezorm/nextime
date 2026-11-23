@@ -124,7 +124,7 @@ export type InvitationDetail = {
   cancelled: boolean
   source: SourceKind | ''
   can_answer: boolean
-  why_not: 'no_replies' | 'locked' | 'read_only_source' | ''
+  why_not: 'no_replies' | 'locked' | 'read_only_source' | 'by_mail' | ''
 }
 
 export type Weekday = 'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'

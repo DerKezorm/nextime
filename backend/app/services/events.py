@@ -918,14 +918,21 @@ def occurrence_list(db: Session, account: Account, start: datetime, end: datetim
                                                    for calendar_id, hrefs in events_of.items() if hrefs]))
     rows = db.scalars(statement).all()
     found: list[tuple[dict[str, Any], int, str]] = []
+    # The member's addresses for invitations entered from a mail (TIME-26), asked once when one is there.
+    mail_base: set[str] | None = None
     for row in rows:
         item = shown[row.calendar_id]
+        mine = own[row.calendar_id]
+        if invitations.by_mail(row) and item.right == calendars.OWNER:
+            if mail_base is None:
+                mail_base = invitations.account_addresses(db, account.id)
+            mine = invitations.mail_addresses(row, mine | mail_base)
         hide = busy_only(item)
         # A single event straight from its stored columns; the object itself is read only where the columns cannot
         # tell (a series, an invitation, a holiday named in two languages). Reading every event made a month of
         # 20 calendars take a second (TIME-12 EC-9).
         spans: list[tuple[Any, Any, Any, Any]]
-        if QUICK and _plain_event(row, own[row.calendar_id]):
+        if QUICK and _plain_event(row, mine):
             if row.all_day:
                 spans = [(None, row.starts_at.date(), (row.ends_at or row.starts_at).date(), None)]
             else:
@@ -958,7 +965,7 @@ def occurrence_list(db: Session, account: Account, start: datetime, end: datetim
             else:
                 free = str(component.get("TRANSP", "OPAQUE")).upper() == "TRANSPARENT"
                 title, location = summary_in(component, language), str(component.get("LOCATION", ""))
-                invitation = invitations.state_of(component, own[row.calendar_id]) if not hide else None
+                invitation = invitations.state_of(component, mine) if not hide else None
                 zone = ical.zone_name(begin)
             if hide and free:
                 continue
@@ -979,6 +986,9 @@ def occurrence_list(db: Session, account: Account, start: datetime, end: datetim
                 "person": person,
                 "waiting": row.waiting and not hide,
                 "invitation": {"state": invitation["state"], "by": invitation["by"]} if invitation else None,
+                # For programs (TIME-26): the event's UID and whether it is an invitation entered from a mail.
+                "uid": "" if hide else row.uid,
+                "origin": "" if hide else (row.origin or ""),
             }
             if isinstance(begin, datetime):
                 entry.update(all_day=False, start=ical._as_utc(begin).isoformat().replace("+00:00", "Z"),
@@ -1167,7 +1177,7 @@ def detail(db: Session, account: Account, event_id: int, occurrence: str | None 
     if not hide:
         from . import invitations
 
-        result.update(invitations.detail(db, found, component))
+        result.update(invitations.detail(db, found, component, row))
     clash = conflict_of(db, account, row)
     if clash is not None and not hide:
         result["conflict"] = {

@@ -411,10 +411,10 @@ class Remote:
             raise RemoteError(REFUSED, status)
         return self._raw(answer).decode("utf-8", "replace"), self._header(answer, "ETag")
 
-    def put(self, url: str, text: str, etag: str) -> str:
+    def put(self, url: str, text: str, etag: str, extra: dict[str, str] | None = None) -> str:
         """Stores the object; ``etag`` the version it was made on ("" for a new one). The new ETag, or "" when the
-        server named none."""
-        headers = {"Content-Type": "text/calendar; charset=utf-8"}
+        server named none. ``extra``: more headers (``Schedule-Reply: F``)."""
+        headers = {"Content-Type": "text/calendar; charset=utf-8", **(extra or {})}
         if etag:
             headers["If-Match"] = etag
         else:
@@ -427,8 +427,8 @@ class Remote:
             raise RemoteError(REFUSED, status)
         return self._header(answer, "ETag")
 
-    def delete(self, url: str, etag: str) -> None:
-        headers = {"If-Match": etag} if etag else {}
+    def delete(self, url: str, etag: str, extra: dict[str, str] | None = None) -> None:
+        headers = {**({"If-Match": etag} if etag else {}), **(extra or {})}
         answer = self.request(url, "DELETE", "", headers)
         status = int(getattr(answer, "status", 0) or 0)
         if status in (404, 410):

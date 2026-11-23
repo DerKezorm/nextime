@@ -34,7 +34,7 @@ from ..errors import detail, error
 from ..models import Account as AccountRow
 from ..models import Event as EventRow
 from ..security import brake as sign_in_brake
-from ..services import apibrake, apikeys, apiv1, dashboard, events, logs, search
+from ..services import apibrake, apikeys, apiv1, dashboard, events, imip, invitations, live, logs, search
 from ..services.apiv1 import Caller
 from . import devices
 from .events import EventChangeIn, EventIn, _change
@@ -60,6 +60,8 @@ ERRORS: dict[int | str, dict[str, Any]] = {
                                              "account blocked."},
     403: {"model": ProblemOut, "description": "`api_off`, `origin_refused`, `token_reads_only`, "
                                              "`calendar_read_only`."},
+    409: {"model": ProblemOut, "description": "A state that does not allow it: e.g. `not_an_invitation`, "
+                                             "`answers_not_possible` (with `why`), `invitation_changed`."},
     404: {"model": ProblemOut, "description": "`not_found`: not there, or not in this key's calendars."},
     429: {"model": ProblemOut, "description": "`slow_down` (more than 600 requests a minute, see `Retry-After`) or "
                                              "`too_many_attempts` (too many wrong keys from this sender)."},
@@ -154,6 +156,11 @@ def me(caller: Reader) -> dict[str, Any]:
 
 @router.get("/calendars", summary="The calendars the key sees, in the order of the member's list")
 def calendar_list(caller: Reader) -> dict[str, Any]:
+    """Each calendar: `id`, `name`, `color`, `icon`, `background`, `right`, `writable`, `busy_only`, `source`,
+    `owner`, `default`, and where it stands in nextime's sidebar: `group` (`own`, `icloud`, `google`, `caldav`,
+    `shared`, `subscriptions`; subscriptions and holidays share `subscriptions`), `source_name` (`iCloud`, `Google`,
+    the name of a CalDAV account or subscription; "" for own and shared calendars) and `hidden` (the member hid it in
+    nextime; a key for all calendars leaves hidden ones out, a key naming them reads them)."""
     with SessionLocal() as db:
         return {"calendars": apiv1.calendar_list(db, caller)}
 
@@ -163,32 +170,55 @@ def calendar_one(calendar_id: Annotated[int, Path(ge=1, le=2**62)], caller: Read
     with SessionLocal() as db:
         found = apiv1.one_calendar(db, caller, calendar_id)
         default = apiv1.calendars.default_of(db, caller.account.id).calendar
-        return apiv1.calendar_out(db, found, default.id if default else None)
+        return apiv1.calendar_out(db, found, default.id if default else None, calendar_id in caller.hidden(db))
 
 
 # --- Events (AC-2, EC-3 to EC-11) -----------------------------------------------------------------------------------
 
 
-@router.get("/events", summary="Every occurrence in a window, series rolled out")
+@router.get("/events", summary="Every occurrence in a window, series rolled out; or the events of one UID")
 def event_list(
     caller: Reader,
-    start: Annotated[str, Query(max_length=40, description=(
-        "ISO moment with zone, or a day (`2026-11-26`, from midnight in the account's zone)."))],
-    end: Annotated[str, Query(max_length=40, description="ISO moment with zone, or a day; at most 400 days later.")],
+    request: Request,
+    start: Annotated[str | None, Query(max_length=40, description=(
+        "ISO moment with zone, or a day (`2026-11-26`, from midnight in the account's zone). Needed without "
+        "`uid`."))] = None,
+    end: Annotated[str | None, Query(max_length=40, description=(
+        "ISO moment with zone, or a day; at most 400 days later. Needed without `uid`."))] = None,
     calendars: Annotated[str | None, Query(max_length=4000, description="Only these calendars: `1,4`.")] = None,
+    uid: Annotated[str | None, Query(min_length=1, max_length=255, description=(
+        "Only the events with this iCalendar UID, in every calendar of the key, declined invitations too. Without "
+        "`start`/`end` each event comes once, as it begins (a series with its first occurrence, `occurrence` "
+        "null); with them, its occurrences in that window."))] = None,
 ) -> dict[str, Any]:
+    """Each item: `id`, `occurrence` (null, or `20261126T173000Z`/`20261126` for one of a series), `calendar_id`,
+    `title`, `location`, `busy`, `busy_only`, `all_day`, `start`, `end` (UTC with `Z`; a whole day as dates, `end` its
+    last day), `time_zone`, `recurring`, `writable`, `etag`, `waiting`, `background`, `person`, `invitation` (the
+    member's state in an invitation: `open`, `accepted`, `tentative`, `declined`, else null), `uid`, `origin`
+    (`imip` for an invitation entered from a mail through `POST /events/ical`, else null), `web_url` (where it opens
+    in nextime), and `also_in` where the same event stands in more calendars. "Busy only" items carry their times
+    only."""
     with SessionLocal() as db:
         zone = apiv1.zone_name(caller.account)
+        base = devices.base_url(request, db)
+        wanted = apiv1.parse_ids(calendars)
+        if uid is not None and start is None and end is None:
+            return {"events": apiv1.by_uid(db, caller, uid, wanted, base=base)}
+        if start is None or end is None:
+            raise error("invalid_input", "The input is not valid.", 422, fields=["start", "end"])
         found = apiv1.occurrences(db, caller, apiv1.moment(start, "start", zone), apiv1.moment(end, "end", zone),
-                                  apiv1.parse_ids(calendars))
+                                  wanted, base=base, uid=uid)
     return {"events": found}
 
 
 @router.get("/events/{event_id}", summary="One event, or one occurrence of a series")
-def event_one(event_id: EventId, caller: Reader,
+def event_one(event_id: EventId, caller: Reader, request: Request,
               occurrence: Annotated[str | None, Query(max_length=20)] = None) -> dict[str, Any]:
+    """Besides the fields of the list (times here as wall clock `YYYY-MM-DDTHH:MM` of `time_zone`): `notes`, `rule`,
+    `series_start`, `source`, `created_by`, `updated_by`, `updated_via`, `updated_at`, `organizer` (`{name, email}`
+    or null) and `attendees` (`[{name, email, status}]`, status `open`, `accepted`, `tentative` or `declined`)."""
     with SessionLocal() as db:
-        return apiv1.event_out(db, caller, event_id, occurrence)
+        return apiv1.event_out(db, caller, event_id, occurrence, devices.base_url(request, db))
 
 
 class NewEvent(EventIn):
@@ -223,6 +253,116 @@ def event_make(body: NewEvent, caller: Writer, response: Response) -> dict[str, 
         return apiv1.event_out(db, caller, row.id)
 
 
+# --- Invitations (for nexmail) ----------------------------------------------------------------------------------------
+
+
+class AnswerIn(BaseModel):
+    answer: Literal["accepted", "tentative", "declined"]
+    occurrence: str | None = Field(default=None, max_length=20, description=(
+        "Only this occurrence of a series (`20261126T173000Z` or `20261126`); left out, the whole event."))
+
+
+@router.post("/events/{event_id}/answer", summary="Answer an invitation: accepted, tentative or declined")
+def event_answer(event_id: EventId, body: AnswerIn, caller: Writer, request: Request) -> dict[str, Any]:
+    """The member's answer to an invitation in a calendar of the key, by the rules of nextime's own buttons.
+
+    `{"event": <the event as GET /events/{id}>, "reply_by": "source" | "client", "changed": bool}`:
+
+    - `reply_by: "source"`: iCloud, Google or the CalDAV server sends the answer to the organizer. **Send no reply of
+      your own.**
+    - `reply_by: "client"`: nextime changed only the member's state (an invitation entered from a mail, or a CalDAV
+      server that sends no answers); nothing went to the organizer, **you send the reply** (iMIP REPLY).
+    - `changed: false`: it was already so (the same answer twice changes and sends nothing, also when two requests
+      come at once).
+
+    409 `not_an_invitation`, `answers_not_possible` (`why`: `locked`, `read_only_source`), `invitation_changed`;
+    403 `calendar_read_only`; 422 `occurrence_unknown`."""
+    with imip.held("answer", caller.account.id, event_id), SessionLocal() as db:
+        apiv1.check_event(db, caller, event_id)
+        with events.acting_via(caller.key_name):
+            row, reply_by, changed = invitations.answer_by_program(db, caller.account, event_id, body.answer,
+                                                                   occurrence=body.occurrence)
+        if changed:
+            logger.info("API invitation answered event_id=%s key_id=%s reply_by=%s", row.id, caller.key_id,
+                        reply_by)
+        return {"event": apiv1.event_out(db, caller, row.id, body.occurrence, devices.base_url(request, db)),
+                "reply_by": reply_by, "changed": changed}
+
+
+class IcalIn(BaseModel):
+    ical: str = Field(min_length=1, max_length=imip.MAX_CHARS, description=(
+        "The VCALENDAR of the mail (its text/calendar part), METHOD REQUEST, PUBLISH or CANCEL."))
+    calendar_id: int | None = Field(default=None, ge=1, le=2**62, description=(
+        "Where a new event goes (a writable calendar of the key); left out, the member's default calendar."))
+    answer: Literal["accepted", "tentative", "declined"] | None = Field(default=None, description=(
+        "The member's answer, its PARTSTAT in the event; needed for REQUEST and PUBLISH."))
+    attendee: str | None = Field(default=None, max_length=320, description=(
+        "The member's address among the attendees (the mailbox it arrived in); left out, the account's address or "
+        "one of its iCloud, Google or CalDAV accounts."))
+
+
+@router.post("/events/ical", status_code=201, summary="Enter an invitation from a mail (iMIP), sending nothing")
+def event_from_mail(body: IcalIn, caller: Writer, request: Request, response: Response) -> dict[str, Any]:
+    """The invitation as the organizer sent it (UID, ORGANIZER, ATTENDEE, SEQUENCE kept), the member's own attendee
+    line answered with `answer`. **nextime sends nothing**: the organizer gets `SCHEDULE-AGENT=CLIENT`, iCloud and
+    CalDAV servers get the event with `Schedule-Reply: F`, Google through `events.import`. The reply to the organizer
+    is yours to send (`reply_by: "client"`).
+
+    `{"status", "event", "reply_by", "trash"}`, by the UID in the key's calendars:
+
+    - `created` (201): new, in `calendar_id`.
+    - `existing` (200): there already, nothing new (a second delivery, or two requests at once: one event). An event
+      from iCloud, Google or a CalDAV server is never changed here; then `reply_by` says who answers it (`source`:
+      answer through `POST /events/{id}/answer`, not by mail).
+    - `updated` (200): a copy entered from a mail took a higher SEQUENCE.
+    - `cancelled` (200): METHOD CANCEL put the copies entered from a mail into the trash (`trash`), `event` null; an
+      event from a source stays (`existing`), the source tells of the cancellation itself.
+
+    Once iCloud, Google or a CalDAV server of the member brings the same UID, the copy goes into the trash and the
+    member's answer moves to the source's event, again without anything being sent.
+
+    404 `not_found` (a CANCEL for nothing there); 413 `ical_too_large`; 422 `invalid_ical`, `ical_method_unsupported`,
+    `invalid_answer`, `not_an_invitation`, `attendee_unknown`; 403 `calendar_read_only`."""
+    invitation = imip.read(body.ical)
+    with imip.held("uid", caller.account.id, invitation.uid), SessionLocal() as db:
+        target = None
+        if invitation.method != imip.CANCEL:
+            target = apiv1.target_calendar(db, caller, body.calendar_id)
+        with events.acting_via(caller.key_name):
+            outcome = imip.take(db, caller.account, caller.reach(db), invitation, calendar_id=target,
+                                answer=body.answer, attendee=body.attendee or "")
+        base = devices.base_url(request, db)
+        reply_by = invitations.REPLY_BY_CLIENT
+        if outcome.row is not None and outcome.row.origin != imip.ORIGIN_IMIP:
+            reply_by = _who_answers(db, caller, outcome.row.id)
+        if outcome.status != imip.CREATED:
+            response.status_code = 200
+        else:
+            logger.info("API invitation entered event_id=%s key_id=%s key=%s", outcome.row.id if outcome.row else 0,
+                        caller.key_id, caller.key_name)
+        return {"status": outcome.status, "reply_by": reply_by, "trash": outcome.trash,
+                "event": apiv1.event_out(db, caller, outcome.row.id, None, base) if outcome.row is not None else None}
+
+
+def _who_answers(db: Any, caller: Caller, event_id: int) -> str:
+    """For an event of a source: the source when it answers invitations itself, else the program."""
+    row, item = events.find(db, caller.account, event_id, for_writing=False)
+    mine, source = invitations.context_of(db, item, row)
+    allowed, _why = invitations.can_answer(source, item.calendar, row)
+    return invitations.REPLY_BY_SOURCE if mine and allowed else invitations.REPLY_BY_CLIENT
+
+
+# --- A version to compare (for nexmail) -------------------------------------------------------------------------------
+
+
+@router.get("/state", summary="A version that changes with every change the key may see")
+def state(caller: Reader) -> dict[str, str]:
+    """`{"version": "<opaque>"}`: changes whenever a calendar or event of the account changes (made in nextime, on a
+    device or at a source), also when the member hides or shows a calendar. Compare it to skip asking again; read
+    nothing into its form. After a restart of nextime it is new once."""
+    return {"version": live.version(caller.account.id)}
+
+
 @router.patch("/events/{event_id}", summary="Change an event, one occurrence, the following or the whole series")
 def event_change(event_id: EventId, body: EventChange, caller: Writer, request: Request) -> dict[str, Any]:
     if body.scope != "all" and not body.occurrence:
@@ -242,7 +382,8 @@ def event_change(event_id: EventId, body: EventChange, caller: Writer, request: 
             row = events.update(db, caller.account, event_id, change, scope=body.scope, occurrence=body.occurrence,
                                 base_etag=_etag(request, body.etag))
         logger.info("API event changed event_id=%s key_id=%s key=%s", row.id, caller.key_id, caller.key_name)
-        return apiv1.event_out(db, caller, row.id, body.occurrence if body.scope == "this" else None)
+        return apiv1.event_out(db, caller, row.id, body.occurrence if body.scope == "this" else None,
+                               devices.base_url(request, db))
 
 
 @router.delete("/events/{event_id}", summary="Delete an event, one occurrence or the following: into the trash")
@@ -308,7 +449,9 @@ DOCS_TEXT = (
     "shared \"busy only\" gives times only. Errors come as `{\"detail\": {\"code\", \"message\"}}`. "
     "Times are ISO 8601; `start`/`end` of an event you send are wall clock times of `time_zone`. "
     "Requests with an `Origin` header are refused, so this page cannot try them out: use `curl` as in the "
-    "examples. AI tools use `/api/mcp` with a key made \"for MCP\". What stands under `/api/v1/` stays: fields "
+    "examples. AI tools use `/api/mcp` with a key made \"for MCP\". Invitations: `POST /events/{id}/answer` and "
+    "`POST /events/ical` say in `reply_by` who sends the reply to the organizer (`source` or you, `client`); "
+    "`GET /state` gives a version to compare before asking again. What stands under `/api/v1/` stays: fields "
     "and routes may be added, none renamed or removed."
 )
 
@@ -317,6 +460,9 @@ EXAMPLE_BODIES = {
     ("post", "/api/v1/events"): ('{"title": "Dentist", "start": "2026-11-27T15:00", "end": "2026-11-27T15:45", '
                                  '"time_zone": "Europe/Berlin", "client_ref": "my-script-0815"}'),
     ("patch", "/api/v1/events/{event_id}"): '{"title": "Dentist with Ben", "etag": "<etag>"}',
+    ("post", "/api/v1/events/{event_id}/answer"): '{"answer": "accepted"}',
+    ("post", "/api/v1/events/ical"): ('{"calendar_id": 3, "answer": "accepted", "attendee": "me@example.com", '
+                                      '"ical": "BEGIN:VCALENDAR\\r\\nMETHOD:REQUEST\\r\\n...END:VCALENDAR\\r\\n"}'),
 }
 
 
@@ -326,7 +472,8 @@ def _example(base: str, path: str, method: str) -> str:
         line = (f'curl -X {method.upper()} {auth} -H "Content-Type: application/json" '
                 f"-d '{EXAMPLE_BODIES[(method, path)]}' \"{base}{path}\"")
     elif method == "get" and path.endswith("/events"):
-        line = f'curl {auth} "{base}{path}?start=2026-11-23&end=2026-11-30"'
+        line = (f'curl {auth} "{base}{path}?start=2026-11-23&end=2026-11-30"\n'
+                f'curl {auth} "{base}{path}?uid=meeting-0815@example.com"')
     elif method == "get" and path.endswith("/free"):
         line = f'curl {auth} "{base}{path}?start=2026-11-23&end=2026-11-28&minutes=60&day_start=08:00&day_end=18:00"'
     elif method == "get" and path.endswith("/search"):

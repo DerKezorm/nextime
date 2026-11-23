@@ -287,6 +287,8 @@ SOURCE_HOLIDAYS = "holidays"
 SOURCE_KINDS = (SOURCE_ICLOUD, SOURCE_CALDAV, SOURCE_GOOGLE, SOURCE_SUBSCRIPTION, SOURCE_HOLIDAYS)
 #: The kinds nextime writes into (and whose invitations it answers).
 WRITABLE_SOURCES = (SOURCE_ICLOUD, SOURCE_CALDAV, SOURCE_GOOGLE)
+#: An event a program entered from an invitation mail (``Event.origin``).
+ORIGIN_IMIP = "imip"
 
 #: The state of a source: syncing; its access no longer works ("Access expired since …"); not answering (the last
 #: known events stay, changes wait); resting while the operator switched Google off.
@@ -357,7 +359,9 @@ class RemoteChange(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     calendar_id: Mapped[int] = mapped_column(ForeignKey("calendars.id", ondelete="CASCADE"), index=True)
     href: Mapped[str] = mapped_column(String(255))
-    #: ``put`` (the event as it is now), ``delete``, or ``reply`` (an answer through Google's API, TIME-18).
+    #: ``put`` (the event as it is now), ``delete``, or ``reply`` (an answer through Google's API, TIME-18); ``silent``
+    #: and ``quiet`` are a ``put`` and a ``reply`` that make the source send nothing (an answer that went out by mail,
+    #: TIME-26).
     op: Mapped[str] = mapped_column(String(8), default="put")
     #: The version at the source the change was made on (for a delete: the one to delete).
     remote_etag: Mapped[str] = mapped_column(String(255), default="")
@@ -565,6 +569,8 @@ class Event(Base):
         Index("ix_events_live_uid", "calendar_id", "uid", unique=True, sqlite_where=text("deleted_at IS NULL")),
         Index("ix_events_client_ref", "created_by", "client_ref", unique=True,
               sqlite_where=text("client_ref IS NOT NULL")),
+        # An event by its UID across calendars: the API's lookup, a copy from a mail meeting its source (TIME-26).
+        Index("ix_events_uid", "uid"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -616,6 +622,16 @@ class Event(Base):
     #: or a source.
     updated_via: Mapped[str] = mapped_column(String(100), default="", server_default="")
     deleted_via: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    #: Where it came from when that matters later: ``imip`` for an invitation a program entered from a mail
+    #: (``POST /api/v1/events/ical``); "" for everything else. A copy from a mail never sends anything itself, and it
+    #: gives way once a source brings the same UID (TIME-26, for nexmail).
+    origin: Mapped[str] = mapped_column(String(16), default="", server_default="")
+    #: For a copy from a mail: the member's own address among its attendees, and the organizer's SEQUENCE it holds.
+    origin_address: Mapped[str] = mapped_column(String(320), default="", server_default="")
+    origin_sequence: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    #: Why it went into the trash when nobody deleted it: ``source_has_it`` (its source brought the same event),
+    #: ``cancelled`` (the organizer cancelled an invitation entered from a mail); "" otherwise.
+    deleted_reason: Mapped[str] = mapped_column(String(32), default="", server_default="")
 
 
 class TrashedPart(Base):

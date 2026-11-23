@@ -181,8 +181,9 @@ export function TrashPage() {
     const time = clockText(wall.time, language, twelve)
     const when = wall.date === today ? t('trash.todayAt', { time }) : wall.date === addDays(today, -1) ? t('trash.yesterdayAt', { time }) : t('trash.onDay', { day: shortDay(wall.date, language, thisYear).replace(/^\S+,?\s/, '') })
     const said = !item.deleted_by ? t('trash.deletedWhen', { when }) : item.deleted_by.self ? t('trash.deletedBySelf', { when }) : t('trash.deletedBy', { name: item.deleted_by.name, when })
-    // Through a key of a program (TIME-26 AC-10): the key named.
-    return item.deleted_via ? `${said} · ${t('trash.deletedVia', { key: item.deleted_via })}` : said
+    // Through a key of a program (TIME-26 AC-10): the key named; gone by itself: why.
+    const why = item.reason ? ` · ${t(`trash.reason.${item.reason}`)}` : ''
+    return (item.deleted_via ? `${said} · ${t('trash.deletedVia', { key: item.deleted_via })}` : said) + why
   }
 
   const writable = calendars?.calendars.filter((entry) => entry.writable) ?? []

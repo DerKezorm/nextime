@@ -47,6 +47,8 @@ class Switches:
     #: Google's tokens as the account they stand for: ``{token: (user, device password)}``.
     bearer: dict[str, tuple[str, str]] = field(default_factory=dict)
     seen: list[tuple[str, str]] = field(default_factory=list)
+    #: The headers of every PUT and DELETE, in order: ``(method, path, headers)``.
+    writes: list[tuple[str, str, dict[str, str]]] = field(default_factory=list)
 
     def reset(self) -> None:
         self.down = self.refuse_writes = self.strict_if_match = self.schedules = False
@@ -54,6 +56,7 @@ class Switches:
         self.slow = 0.0
         self.bearer.clear()
         self.seen.clear()
+        self.writes.clear()
 
 
 SWITCHES = Switches()
@@ -71,6 +74,9 @@ class Switchboard:
             return
         method, path = scope["method"], scope["path"]
         SWITCHES.seen.append((method, path))
+        if method in ("PUT", "DELETE"):
+            SWITCHES.writes.append((method, path, {key.decode().lower(): value.decode()
+                                                   for key, value in scope["headers"]}))
         if path.startswith("/not-dav"):
             await _answer(send, 200, b"<html><body>Welcome</body></html>", "text/html")
             return
@@ -295,6 +301,9 @@ class FakeGoogle:
     events: dict[str, dict[str, Any]] = field(default_factory=dict)
     patches: list[tuple[str, dict[str, Any], dict[str, str]]] = field(default_factory=list)
     calls: list[str] = field(default_factory=list)
+    #: What ``events.import`` got, and the deletions with their parameters.
+    imports: list[dict[str, Any]] = field(default_factory=list)
+    deletes: list[tuple[str, dict[str, str]]] = field(default_factory=list)
 
     def handler(self, request: httpx.Request) -> httpx.Response:
         url = str(request.url)
@@ -333,6 +342,18 @@ class FakeGoogle:
             if request.method == "GET" and path.endswith("/instances"):
                 event_id = unquote(path.split("/")[-2])
                 return httpx.Response(200, json={"items": self.events.get(event_id, {}).get("instances", [])})
+            if request.method == "POST" and path.endswith("/events/import"):
+                body = json.loads(request.content)
+                self.imports.append(body)
+                found = next((key for key, item in self.events.items() if item["iCalUID"] == body["iCalUID"]), None)
+                key = found or f"imported{len(self.imports)}"
+                self.events[key] = {**body, "id": key}
+                return httpx.Response(200, json={"id": key})
+            if request.method == "DELETE":
+                event_id = unquote(path.split("/")[-1])
+                self.deletes.append((event_id, dict(request.url.params)))
+                self.events.pop(event_id, None)
+                return httpx.Response(204)
             if request.method == "PATCH":
                 event_id = unquote(path.split("/")[-1])
                 self.patches.append((event_id, json.loads(request.content), dict(request.url.params)))

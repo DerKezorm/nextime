@@ -8,6 +8,7 @@ again. Nothing about the change travels, only that there was one. A rolled-back 
 from __future__ import annotations
 
 import asyncio
+import secrets
 import threading
 
 from sqlalchemy import event, select
@@ -19,6 +20,10 @@ _KEY = "live_accounts"
 _lock = threading.Lock()
 #: Per account the queues of its open pages, each with the loop it lives in.
 _listeners: dict[int, set[tuple[asyncio.AbstractEventLoop, asyncio.Queue[str]]]] = {}
+#: Per account how many changes it heard of since the start, and a mark of this start: together the version a
+#: program compares (``GET /api/v1/state``) without asking the database. A restart begins anew under another mark.
+_counts: dict[int, int] = {}
+_boot = secrets.token_hex(4)
 
 
 def subscribe(account_id: int) -> tuple[asyncio.AbstractEventLoop, asyncio.Queue[str]]:
@@ -47,8 +52,16 @@ def _put(queue: asyncio.Queue[str], message: str) -> None:
         queue.put_nowait(message)
 
 
+def version(account_id: int) -> str:
+    """Changes whenever the account hears of a change to a calendar or event it sees (or to its own list)."""
+    with _lock:
+        return f"{_boot}-{_counts.get(account_id, 0)}"
+
+
 def notify(account_ids: set[int], message: str = "changed") -> None:
     with _lock:
+        for account_id in account_ids:
+            _counts[account_id] = _counts.get(account_id, 0) + 1
         targets = [entry for account_id in account_ids for entry in _listeners.get(account_id, ())]
     for loop, queue in targets:
         try:

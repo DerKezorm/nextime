@@ -396,9 +396,11 @@ def refresh_listing(db: Session, source: Source, secret: dict[str, Any], *, firs
 # --- Answers to invitations (TIME-18 AC-2, EC-6) ---------------------------------------------------------------------
 
 
-def reply(db: Session, source: Source, calendar: Calendar, row: Event, answer: str, occurrence: str) -> None:
+def reply(db: Session, source: Source, calendar: Calendar, row: Event, answer: str, occurrence: str, *,
+          send: bool = True) -> None:
     """The member's answer through the API, so that Google tells the one who invites; for one occurrence of a series
-    on that occurrence only."""
+    on that occurrence only. ``send=False``: Google takes the answer and tells nobody (``sendUpdates=none``), for an
+    answer that already went out by mail (TIME-26)."""
     secret = sync.access_of(source)
     if secret is None:
         raise RemoteError(AUTH)
@@ -425,7 +427,8 @@ def reply(db: Session, source: Source, calendar: Calendar, row: Event, answer: s
     for person in attendees:
         if person.get("self") or str(person.get("email", "")).lower() in mine:
             person["responseStatus"] = answer
-    _api(db, source, secret, "PATCH", f"{path}/{quote(event_id, safe='')}", params={"sendUpdates": "all"},
+    _api(db, source, secret, "PATCH", f"{path}/{quote(event_id, safe='')}",
+         params={"sendUpdates": "all" if send else "none"},
          json={"attendees": attendees})
 
 
@@ -446,3 +449,80 @@ def _instance_key(item: dict[str, Any]) -> str:
     if original.get("date"):
         return ical.recurrence_key(date.fromisoformat(str(original["date"])))
     return ""
+
+
+# --- Invitations entered from a mail (TIME-26, for nexmail) ---------------------------------------------------------
+
+#: PARTSTAT as Google's ``responseStatus``.
+RESPONSES = {"NEEDS-ACTION": "needsAction", "ACCEPTED": "accepted", "TENTATIVE": "tentative", "DECLINED": "declined"}
+
+
+def _when(value: Any) -> dict[str, str]:
+    from datetime import datetime
+
+    if not isinstance(value, datetime):
+        return {"date": value.isoformat()}
+    zone = ical.zone_name(value)
+    moment = ical._as_utc(value).isoformat().replace("+00:00", "Z")
+    return {"dateTime": moment, **({"timeZone": zone} if zone else {})}
+
+
+def _person(value: Any) -> dict[str, str]:
+    text = str(value or "").strip()
+    email = text[7:] if text.lower().startswith("mailto:") else text
+    name = str((getattr(value, "params", {}) or {}).get("CN", "") or "").strip().strip('"')
+    return {"email": email, **({"displayName": name} if name else {})}
+
+
+def imported_body(row: Event) -> dict[str, Any]:
+    """The event as Google's ``events.import`` takes it: its UID, times, rule, organizer and attendees with their
+    answers, SEQUENCE. Changed single occurrences of a series are not carried (Google takes them only one by one)."""
+    master = ical.master_of(ical.parse(row.ical))
+    start = master.decoded("DTSTART")
+    body: dict[str, Any] = {
+        "iCalUID": row.uid,
+        "summary": str(master.get("SUMMARY", "")),
+        "description": str(master.get("DESCRIPTION", "")),
+        "location": str(master.get("LOCATION", "")),
+        "start": _when(start),
+        "end": _when(start + ical.duration_of(master)),
+        "sequence": int(master.get("SEQUENCE", 0) or 0),
+        "transparency": "transparent" if str(master.get("TRANSP", "")).upper() == "TRANSPARENT" else "opaque",
+        "status": "cancelled" if str(master.get("STATUS", "")).upper() == "CANCELLED" else "confirmed",
+    }
+    organizer = master.get("ORGANIZER")
+    if organizer is not None:
+        body["organizer"] = _person(organizer)
+    attendees = master.get("ATTENDEE")
+    if attendees is not None:
+        body["attendees"] = [{**_person(item), "responseStatus": RESPONSES.get(
+            str(item.params.get("PARTSTAT", "NEEDS-ACTION")).upper(), "needsAction")}
+            for item in (attendees if isinstance(attendees, list) else [attendees])]
+    rules = [line.to_ical().decode() if hasattr(line, "to_ical") else str(line)
+             for line in master.content_lines()
+             if str(line).split(":", 1)[0].split(";", 1)[0].upper() in ("RRULE", "EXDATE", "RDATE")]
+    if rules:
+        body["recurrence"] = rules
+    return body
+
+
+def import_event(db: Session, source: Source, calendar: Calendar, row: Event) -> None:
+    """An invitation entered from a mail into a Google calendar: ``events.import`` keeps its UID, organizer and
+    attendees and sends nobody anything; the same UID again updates it there."""
+    secret = sync.access_of(source)
+    if secret is None:
+        raise RemoteError(AUTH)
+    path = f"/calendars/{quote(calendar_id_of(calendar.remote_url), safe='')}/events/import"
+    _api(db, source, secret, "POST", path, json=imported_body(row))
+
+
+def delete_imported(db: Session, source: Source, calendar: Calendar, uid: str) -> None:
+    """The copy of an invitation from a mail goes at Google too, telling nobody (``sendUpdates=none``)."""
+    secret = sync.access_of(source)
+    if secret is None:
+        raise RemoteError(AUTH)
+    path = f"/calendars/{quote(calendar_id_of(calendar.remote_url), safe='')}/events"
+    found = _api(db, source, secret, "GET", path, params={"iCalUID": uid, "maxResults": 5})
+    for item in found.get("items", []):
+        _api(db, source, secret, "DELETE", f"{path}/{quote(str(item.get('id', '')), safe='')}",
+             params={"sendUpdates": "none"})

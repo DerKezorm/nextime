@@ -5,6 +5,11 @@ member among its attendees (one of the member's own addresses there) and somebod
 back the way the source wants it: for iCloud and CalDAV servers that schedule themselves, the member's part of the
 event changes and the server sends the answer (RFC 6638); for Google through Google's API (``services/google.py``).
 A server that does neither, and a subscription, show the attendees without buttons (EC-2).
+
+An invitation a program entered from a mail (``Event.origin`` ``imip``, TIME-26 for nexmail) is the member's in any
+calendar it owns: its own address there is the one noted at the import, the account's address, or one of its sources.
+Answers to it go out by mail from that program, never from here: it shows without buttons (``by_mail``), and the
+program's answer only changes the member's part (``answer_by_program``).
 """
 
 from __future__ import annotations
@@ -13,10 +18,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import icalendar
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..errors import error
-from ..models import SOURCE_CALDAV, SOURCE_GOOGLE, WRITABLE_SOURCES, Account, Calendar, Event, Source
+from ..models import ORIGIN_IMIP, SOURCE_CALDAV, SOURCE_GOOGLE, WRITABLE_SOURCES, Account, Calendar, Event, Source
 from . import calendars, ical
 
 #: The member's state in an invitation, by the PARTSTAT of its part.
@@ -105,8 +111,39 @@ def context(db: Session, item: calendars.Access) -> tuple[set[str], Source | Non
     return own_addresses(source), source
 
 
-def can_answer(source: Source | None, calendar: Calendar) -> tuple[bool, str]:
-    """Whether answers go out from here, and why not (EC-2)."""
+def account_addresses(db: Session, account_id: int) -> set[str]:
+    """The member's addresses: its own and those at every iCloud, Google or CalDAV account it connected."""
+    account = db.get(Account, account_id)
+    found = {address(account.email)} if account is not None and account.email else set()
+    for source in db.scalars(select(Source).where(Source.account_id == account_id,
+                                                  Source.kind.in_(WRITABLE_SOURCES))):
+        found |= own_addresses(source)
+    return {item for item in found if item}
+
+
+def by_mail(row: Event | None) -> bool:
+    return row is not None and row.origin == ORIGIN_IMIP
+
+
+def mail_addresses(row: Event, base: set[str]) -> set[str]:
+    """The member's addresses for an invitation entered from a mail: the one noted then, and ``base``."""
+    noted = address(row.origin_address)
+    return base | ({noted} if noted else set())
+
+
+def context_of(db: Session, item: calendars.Access, row: Event | None) -> tuple[set[str], Source | None]:
+    """``context``, and for an invitation from a mail in a calendar the member owns its addresses for it."""
+    mine, source = context(db, item)
+    if by_mail(row) and item.right == calendars.OWNER:
+        assert row is not None
+        mine = mail_addresses(row, mine | account_addresses(db, item.calendar.owner_id))
+    return mine, source
+
+
+def can_answer(source: Source | None, calendar: Calendar, row: Event | None = None) -> tuple[bool, str]:
+    """Whether answers go out from here, and why not (EC-2). An invitation from a mail is answered by mail."""
+    if by_mail(row):
+        return False, "by_mail"
     if source is None:
         return False, "read_only_source"
     if source.kind == SOURCE_CALDAV and not source.schedules:
@@ -119,14 +156,15 @@ def can_answer(source: Source | None, calendar: Calendar) -> tuple[bool, str]:
     return True, ""
 
 
-def detail(db: Session, item: calendars.Access, component: icalendar.cal.Component) -> dict[str, Any]:
+def detail(db: Session, item: calendars.Access, component: icalendar.cal.Component,
+           row: Event | None = None) -> dict[str, Any]:
     """What the side panel shows of attendees and the invitation (AC-3, AC-4, EC-8)."""
-    mine, source = context(db, item)
+    mine, source = context_of(db, item, row)
     everybody = people(component, mine)
     found = state_of(component, mine)
     result: dict[str, Any] = {"attendees": everybody, "attendees_count": len(everybody), "invitation": None}
     if found is not None:
-        allowed, why = can_answer(source, item.calendar)
+        allowed, why = can_answer(source, item.calendar, row)
         result["invitation"] = {**found, "source": source.kind if source else "", "can_answer": allowed,
                                 "why_not": why}
     elif everybody and source is None and item.kind and item.kind not in WRITABLE_SOURCES:
@@ -140,17 +178,28 @@ def answer(db: Session, account: Account, event_id: int, reply: str, *, scope: s
     """The member's answer (AC-2, AC-5): its part of the event changes here at once; the source gets it with the
     next round, and while it does not answer the event shows "waiting" (EC-3). The same answer twice sends one
     (EC-5); an invitation that changed or was cancelled meanwhile shows its new state instead (EC-1, EC-4)."""
-    from . import events, sync
+    from . import events
 
     if reply not in ANSWERS:
         raise error("invalid_answer", "Answer accepted, tentative or declined.", 422)
     row, item = events.find(db, account, event_id, for_writing=False)
-    mine, source = context(db, item)
-    allowed, why = can_answer(source, item.calendar)
+    mine, source = context_of(db, item, row)
+    allowed, why = can_answer(source, item.calendar, row)
     if source is None or not mine:
         raise error("not_an_invitation", "This event is no invitation to you.", 409)
     if not allowed:
         raise error("answers_not_possible", "Answers cannot go out from here.", 409, why=why)
+    _set_answer(db, account, row, mine, reply, scope=scope, occurrence=occurrence, etag=etag,
+                through_google=source.kind == SOURCE_GOOGLE)
+    return row
+
+
+def _set_answer(db: Session, account: Account, row: Event, mine: set[str], reply: str, *, scope: str,
+                occurrence: str | None, etag: str | None, through_google: bool) -> bool:
+    """The member's part of the event (or of one occurrence) takes ``reply``; whether anything changed. An answer
+    through Google's API is noted to go there; otherwise the event goes to its source as any change does."""
+    from . import events, sync
+
     if etag and etag != row.etag:
         raise error("invitation_changed", "The invitation changed meanwhile.", 409)
     parsed = ical.parse(row.ical)
@@ -172,7 +221,7 @@ def answer(db: Session, account: Account, event_id: int, reply: str, *, scope: s
         raise error("invitation_changed", "The invitation changed meanwhile.", 409)
     wanted = PARTSTAT[reply]
     if all(str(part.params.get("PARTSTAT", "")).upper() == wanted for _component, part in parts):
-        return row
+        return False
     for component, part in parts:
         part.params["PARTSTAT"] = wanted
         part.params.pop("RSVP", None)
@@ -180,13 +229,49 @@ def answer(db: Session, account: Account, event_id: int, reply: str, *, scope: s
         component.add("DTSTAMP", sync.clock().replace(microsecond=0))
     text = ical.serialize(parsed)
     events.write(db, row, text, parsed, account.id)
-    if source.kind == SOURCE_GOOGLE:
+    if through_google:
         events.record_change(db, row.calendar_id, row.href, remote=False)
         sync.note_reply(db, row, reply, key)
     else:
         events.record_change(db, row.calendar_id, row.href, row=row)
     db.commit()
-    return row
+    return True
+
+
+#: Who tells the organizer, for a program (TIME-26): the source (iCloud, Google or a CalDAV server that schedules)
+#: or the program itself by mail.
+REPLY_BY_SOURCE = "source"
+REPLY_BY_CLIENT = "client"
+
+
+def answer_by_program(db: Session, account: Account, event_id: int, reply: str, *,
+                      occurrence: str | None) -> tuple[Event, str, bool]:
+    """A program's answer (``POST /api/v1/events/{id}/answer``): by the rules of the page's (``answer``) where the
+    source sends answers itself, then ``source``; where it cannot (an invitation entered from a mail, a CalDAV server
+    without scheduling) only the member's part changes here, nothing goes to the organizer from nextime, and the
+    program sends the answer (``client``). The event, who answers, and whether anything changed (the same answer
+    twice changes nothing)."""
+    from . import events
+
+    if reply not in ANSWERS:
+        raise error("invalid_answer", "Answer accepted, tentative or declined.", 422)
+    scope = "this" if occurrence else "all"
+    row, item = events.find(db, account, event_id, for_writing=False)
+    mine, source = context_of(db, item, row)
+    if not mine or not any(state_of(component, mine) is not None for component in ical.events_of(ical.parse(row.ical))):
+        raise error("not_an_invitation", "This event is no invitation to you.", 409)
+    allowed, why = can_answer(source, item.calendar, row)
+    if allowed:
+        before = row.etag
+        answer(db, account, event_id, reply, scope=scope, occurrence=occurrence, etag=None)
+        return row, REPLY_BY_SOURCE, row.etag != before
+    if why not in ("by_mail", "no_replies"):
+        raise error("answers_not_possible", "Answers cannot go out from here.", 409, why=why)
+    # Only the member's part, as any change of the member: the calendar must take changes.
+    row, item = events.find(db, account, event_id, for_writing=True)
+    changed = _set_answer(db, account, row, mine, reply, scope=scope, occurrence=occurrence, etag=None,
+                          through_google=False)
+    return row, REPLY_BY_CLIENT, changed
 
 
 #: How far ahead the head of "Today" looks for open invitations.

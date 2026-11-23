@@ -294,6 +294,10 @@
     "invitation_changed": "The invitation changed meanwhile.",
     "no_calendar_server": "No calendar server answers at this address.",
     "not_an_invitation": "This event is no invitation to you.",
+    "attendee_unknown": "None of your addresses is among the attendees.",
+    "ical_too_large": "The calendar data is too large.",
+    "invalid_ical": "The calendar data is not valid iCalendar.",
+    "ical_method_unsupported": "Only invitations and cancellations are taken.",
     "not_google_address": "This is no secret address from Google. It starts with https://calendar.google.com/calendar/ical/.",
     "server_missing": "Please enter the address of the server.",
     "source_exists": "This account is connected already.",
@@ -1492,7 +1496,8 @@
     "whyNot": {
       "no_replies": "This CalDAV server takes no answers. Answer in the app of your account.",
       "locked": "Answers work again once the connection under Calendars and accounts stands.",
-      "read_only_source": "No answers go out through a subscription link."
+      "read_only_source": "No answers go out through a subscription link.",
+      "by_mail": "This invitation came by mail. The answer goes out from your mail app."
     },
     "changed": "The invitation changed meanwhile. This is how it stands now.",
     "declined": "“{{title}}” declined. The invitation stays in the search.",
@@ -1841,7 +1846,11 @@
       "calendar": "Calendar"
     },
     "seriesGone": "series in the trash or calendar deleted: restore the series first",
-    "deletedVia": "via key “{{key}}”"
+    "deletedVia": "via key “{{key}}”",
+    "reason": {
+      "source_has_it": "now in the calendar from its source",
+      "cancelled": "cancelled by the organizer"
+    }
   },
   "pwa": {
     "update": "There is a new version of nextime.",

@@ -29,6 +29,7 @@ from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
 from ..models import (
+    ORIGIN_IMIP,
     SOURCE_CALDAV,
     SOURCE_GOOGLE,
     SOURCE_HOLIDAYS,
@@ -384,11 +385,117 @@ def store(db: Session, calendar: Calendar, href: str, etag: str, text: str) -> b
     events.write(db, row, text, parsed, None)
     row.remote_etag, row.remote_of, row.waiting = etag, calendar.id, False
     events.record_change(db, calendar.id, href, remote=False)
+    _copies_give_way(db, calendar, row)
     from . import notify
 
     # Changed at the source: the others it is shared with hear of it, naming the calendar, not a person (TIME-21 EC-3).
     notify.note(db, calendar.id, row, deleted=False, by=notify.FROM_SOURCE)
     return True
+
+
+def _copies_give_way(db: Session, calendar: Calendar, row: Event) -> None:
+    """An invitation a program entered from a mail (``imip``) goes into the trash once iCloud, Google or a CalDAV
+    server of the same person brings the same UID: the source's event wins, the event stands there once (TIME-26,
+    for nexmail). The copy can be brought back from the trash, which names why it went. The member's answer in the
+    copy moves over to the source's event without anything being sent: the program sent it by mail already."""
+    from . import events
+
+    copies = list(db.scalars(select(Event).join(Calendar, Calendar.id == Event.calendar_id).where(
+        Event.uid == row.uid, Event.origin == ORIGIN_IMIP, Event.deleted_at.is_(None),
+        Event.calendar_id != calendar.id, Calendar.owner_id == calendar.owner_id)))
+    if not copies or calendar.source_id is None:
+        return
+    source = db.get(Source, calendar.source_id)
+    if source is None or source.kind not in WRITABLE_SOURCES:
+        return
+    answer = _answer_of(db, calendar.owner_id, copies[-1])
+    for copy in copies:
+        events.trash(db, copy, None)
+        copy.deleted_reason = "source_has_it"
+    logger.info("Copies from a mail gave way to their source calendar=%s count=%s", calendar.id, len(copies))
+    if answer:
+        _carry_answer(db, source, calendar, row, answer)
+
+
+def _answer_of(db: Session, owner_id: int, copy: Event) -> str:
+    """The member's answer in a copy from a mail (``accepted``, ``tentative``, ``declined``), or ""."""
+    from . import invitations
+
+    mine = invitations.mail_addresses(copy, invitations.account_addresses(db, owner_id))
+    found = invitations.state_of(ical.master_of(ical.parse(copy.ical)), mine)
+    return found["state"] if found and found["state"] in invitations.PARTSTAT else ""
+
+
+def _carry_answer(db: Session, source: Source, calendar: Calendar, row: Event, answer: str) -> None:
+    """The member's part of the source's event takes ``answer`` and goes back quietly: to iCloud and CalDAV with
+    ``SCHEDULE-AGENT=CLIENT`` and ``Schedule-Reply: F`` (``silent``), to Google through its API with
+    ``sendUpdates=none`` (``quiet``). Nothing is written when the source has that answer already."""
+    from . import events, invitations
+
+    mine = invitations.own_addresses(source)
+    parsed = ical.parse(row.ical)
+    wanted = invitations.PARTSTAT[answer]
+    changed = False
+    for component in ical.events_of(parsed):
+        part = invitations._self_part(component, mine)
+        if part is not None and str(part.params.get("PARTSTAT", "")).upper() != wanted:
+            part.params["PARTSTAT"] = wanted
+            part.params.pop("RSVP", None)
+            changed = True
+    if not changed:
+        return
+    events.write(db, row, ical.serialize(parsed), parsed, None)
+    events.record_change(db, calendar.id, row.href, remote=False)
+    if source.kind == SOURCE_GOOGLE:
+        db.add(RemoteChange(calendar_id=calendar.id, href=row.href, op="quiet", answer=answer, occurrence="",
+                            remote_etag=row.remote_etag, created_at=clock()))
+    else:
+        db.add(RemoteChange(calendar_id=calendar.id, href=row.href, op="silent", remote_etag=row.remote_etag,
+                            created_at=clock()))
+    row.waiting = True
+    db.info[_NUDGE] = True
+
+
+#: Sent with every write of an invitation entered from a mail: the server sends no answer of its own (RFC 6638).
+NO_REPLY = {"Schedule-Reply": "F"}
+
+
+def _outgoing(row: Event) -> str:
+    """The text that goes to the source. An invitation entered from a mail keeps ``SCHEDULE-AGENT=CLIENT`` at its
+    organizer whatever the source made of it meanwhile: the program that took it from the mail answers, the server
+    must not (RFC 6638)."""
+    if row.origin != ORIGIN_IMIP:
+        return row.ical
+    return client_scheduled(row.ical)
+
+
+def client_scheduled(text: str) -> str:
+    """``SCHEDULE-AGENT=CLIENT`` on the ORGANIZER of every part; the text as it was when nothing was missing."""
+    parsed = ical.parse(text)
+    missing = False
+    for component in ical.events_of(parsed):
+        organizer = component.get("ORGANIZER")
+        if organizer is not None and str(organizer.params.get("SCHEDULE-AGENT", "")).upper() != "CLIENT":
+            organizer.params["SCHEDULE-AGENT"] = "CLIENT"
+            missing = True
+    return ical.serialize(parsed) if missing else text
+
+
+def _send(db: Session, source: Source, remote: Remote, calendar: Calendar, row: Event, url: str, etag: str,
+          quiet: bool = False) -> str:
+    """The event to its source; the new ETag. An invitation from a mail goes to Google through ``events.import``
+    (keeps its UID, sends nothing), to iCloud and CalDAV with ``Schedule-Reply: F``; so does a ``quiet`` change (an
+    answer carried over from such a copy), once."""
+    from . import google
+
+    if row.origin == ORIGIN_IMIP and source.kind == SOURCE_GOOGLE:
+        google.import_event(db, source, calendar, row)
+        return ""
+    if quiet:
+        return remote.put(url, client_scheduled(row.ical), etag, NO_REPLY)
+    if row.origin == ORIGIN_IMIP:
+        return remote.put(url, _outgoing(row), etag, NO_REPLY)
+    return remote.put(url, row.ical, etag)
 
 
 def remove(db: Session, calendar: Calendar, href: str) -> None:
@@ -438,7 +545,7 @@ def push(db: Session, source: Source, remote: Remote) -> None:
 
     def kind_of(item: RemoteChange) -> str:
         # The object's latest state goes once; answers once per occurrence they are for (TIME-18 EC-6).
-        return f"reply:{item.occurrence}" if item.op == "reply" else "object"
+        return f"reply:{item.occurrence}" if item.op in ("reply", "quiet") else "object"
 
     for change in changes:
         kind = kind_of(change)
@@ -455,15 +562,22 @@ def push(db: Session, source: Source, remote: Remote) -> None:
             if kind != "object":
                 last = latest[-1]
                 if row is not None:
-                    google.reply(db, source, calendar, row, last.answer, last.occurrence)
+                    google.reply(db, source, calendar, row, last.answer, last.occurrence,
+                                 send=last.op != "quiet")
             elif row is not None:
                 etag = row.remote_etag if row.remote_of == calendar.id else ""
                 _put(db, source, remote, calendar, row, url, etag, latest[-1])
             else:
                 deletes = [item for item in latest if item.op == "delete"]
                 etag = deletes[-1].remote_etag if deletes else ""
-                _delete(db, source, remote, calendar, change.href, url, etag,
-                        deletes[-1].created_at if deletes else latest[-1].created_at)
+                gone = db.scalar(select(Event).where(Event.calendar_id == calendar.id, Event.href == change.href,
+                                                     Event.deleted_at.is_not(None)).order_by(Event.id.desc()))
+                if gone is not None and gone.origin == ORIGIN_IMIP and source.kind == SOURCE_GOOGLE:
+                    google.delete_imported(db, source, calendar, gone.uid)
+                else:
+                    _delete(db, source, remote, calendar, change.href, url, etag,
+                            deletes[-1].created_at if deletes else latest[-1].created_at,
+                            NO_REPLY if gone is not None and gone.origin == ORIGIN_IMIP else None)
         except RemoteError as exc:
             if exc.kind in (AUTH, DOWN):
                 for item in latest:
@@ -484,7 +598,7 @@ def push(db: Session, source: Source, remote: Remote) -> None:
 def _put(db: Session, source: Source, remote: Remote, calendar: Calendar, row: Event, url: str, etag: str,
          change: RemoteChange) -> None:
     try:
-        new_etag = remote.put(url, row.ical, etag)
+        new_etag = _send(db, source, remote, calendar, row, url, etag, change.op == "silent")
     except RemoteError as exc:
         if exc.kind != CONFLICT:
             raise
@@ -524,17 +638,17 @@ def _conflict(db: Session, source: Source, remote: Remote, calendar: Calendar, r
         db.add(EventConflict(event_id=row.id, account_id=source.account_id, by_id=None, mine_ical=mine,
                              theirs_etag=row.etag))
         return
-    new_etag = remote.put(url, row.ical, etag)
+    new_etag = _send(db, source, remote, calendar, row, url, etag, change.op == "silent")
     row.remote_etag, row.remote_of = new_etag, calendar.id
     events.record_change(db, calendar.id, row.href, remote=False)
 
 
 def _delete(db: Session, source: Source, remote: Remote, calendar: Calendar, href: str, url: str,
-            etag: str, deleted_at: datetime) -> None:
+            etag: str, deleted_at: datetime, extra: dict[str, str] | None = None) -> None:
     """The deletion goes out. Changed there meanwhile (412): as for a change, the later one wins (TIME-15 EC-3); a
     deletion that waited long loses against a newer version from the phone, which comes back with a notice."""
     try:
-        remote.delete(url, etag)
+        remote.delete(url, etag, *([extra] if extra else []))
     except RemoteError as exc:
         if exc.kind != CONFLICT:
             raise
@@ -552,7 +666,7 @@ def _delete(db: Session, source: Source, remote: Remote, calendar: Calendar, hre
             store(db, calendar, href, newer, text)
             live.touch_accounts(db, {source.account_id})
             return
-        remote.delete(url, newer)
+        remote.delete(url, newer, *([extra] if extra else []))
 
 
 def _refused(db: Session, source: Source, remote: Remote, calendar: Calendar, href: str, url: str,

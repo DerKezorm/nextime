@@ -16,6 +16,8 @@ type Common = {
   deleted_by: { self: boolean; name: string } | null
   /** Deleted through a key of a program (TIME-26 AC-10). */
   deleted_via?: string
+  /** Why it went when nobody deleted it: its source brought the same event, or its organizer cancelled it. */
+  reason?: 'source_has_it' | 'cancelled' | ''
 }
 
 export type TrashCalendar = Common & { kind: 'calendar'; events: number }

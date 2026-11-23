@@ -224,6 +224,8 @@ def listing(db: Session, account: Account, *, offset: int = 0, limit: int = PAGE
             "exceptions": exceptions,
             "deleted_by": _who(db, account, row.deleted_by, row.deleted_by_name, people),
             "deleted_via": row.deleted_via or "",
+            # Why it went when nobody deleted it (TIME-26): ``source_has_it``, ``cancelled``; "" otherwise.
+            "reason": row.deleted_reason or "",
             **_times(row.deleted_at, _deadline(row, days), now),
         })
     return {"now": now.isoformat(), "trash_days": days, "warn_days": WARN_DAYS, "total": len(entries),
@@ -322,8 +324,8 @@ def _claim_event(db: Session, account: Account, event_id: int, home_id: int, des
     from . import events, sync
 
     claimed = db.execute(update(Event).where(Event.id == event_id, Event.deleted_at.is_not(None)).values(
-        deleted_at=None, deleted_by=None, trash_until=None, deleted_by_name="", deleted_via="", calendar_id=destination,
-        updated_at=now))
+        deleted_at=None, deleted_by=None, trash_until=None, deleted_by_name="", deleted_via="", deleted_reason="",
+        calendar_id=destination, updated_at=now))
     if claimed.rowcount != 1:
         db.rollback()
         raise _not_in_trash()
