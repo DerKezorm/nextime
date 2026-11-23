@@ -9,7 +9,7 @@ import { forgetWorker } from './features/notify/browser'
 import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import i18n from './i18n'
 import { AuthProvider } from './state/auth'
-import { box, calls, click, me, ok, render, serve, signedIn, start, stop } from './testing'
+import { box, calls, click, me, ok, render, serve, settle, signedIn, start, stop } from './testing'
 
 const tester = me({ id: 1, name: 'tester', display_name: 'Tester', role: 'operator' })
 
@@ -182,6 +182,8 @@ describe('TIME-21 AC-4 a tapped notification', () => {
       }),
     )
     await render(<AuthProvider><App /></AuthProvider>, '/day?day=2026-12-03&event=12')
+    // Wait for the answers: on a slow runner the event is not there yet right after the first render.
+    await settle()
     expect(calls.some((call) => call.path.startsWith('/api/events/12'))).toBe(true)
     // The day of the notification is shown (its window asked for), and the event is open in the side panel.
     expect(calls.some((call) => call.path.startsWith('/api/events?') && call.path.includes('end=2026-12-03'))).toBe(true)
