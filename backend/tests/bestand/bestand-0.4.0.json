@@ -1,0 +1,132 @@
+{
+  "fassung": "0.4.0",
+  "testschluessel": "tests/conftest.py (NEXTIME_SECRET_KEY)",
+  "anbieter": {
+    "kuerzel": "sso",
+    "issuer": "https://sso.example.com",
+    "client_id": "nextime-bestand",
+    "client_geheimnis": "bestand-client"
+  },
+  "oeffentliche_adresse": "https://kalender.example.com",
+  "konten": [
+    {
+      "name": "betrieb",
+      "passwort": "Bestand-betr-26",
+      "email": "betrieb@example.com",
+      "operator": true,
+      "zweiter_faktor": "betrieb",
+      "wiederherstellungscodes": [
+        "hry7e-nv4bj",
+        "sz8fp-w5ckt",
+        "29gqx-6dmu3",
+        "ahry7-env4b",
+        "jsz8f-pw5ck",
+        "t29gq-x6dmu",
+        "3ahry-7env4",
+        "bjsz8-fpw5c"
+      ],
+      "fall": "operator from the setup, name made from the address, address, second factor"
+    },
+    {
+      "name": "erika-muster",
+      "passwort": "Bestand-erika26",
+      "email": "",
+      "sitzung": "bestand-sitzung-erika-4",
+      "fall": "invited without an address, name made from the display name, open browser session"
+    },
+    {
+      "name": "jonas",
+      "passwort": "Bestand-jonas26",
+      "email": "jonas@example.net",
+      "api_token": "nt_api_bestand-api-jonas-9",
+      "caldav": {
+        "passwort_name": "z8fn-v4bi-ry7e-mu3a",
+        "passwort_adresse": "hqx6-dkt2-9gpw-5cjs",
+        "kalender": "/dav/calendars/jonas/bestand-kalender-1/",
+        "termin": "/dav/calendars/jonas/bestand-kalender-1/bestand-termin.ics"
+      },
+      "fall": "address from the invitation, signs in by address, API key, two CalDAV devices (user = name, user = address), an event put through CalDAV"
+    },
+    {
+      "name": "kim",
+      "passwort": "Bestand-kim-26",
+      "email": "familie@example.net",
+      "doppelte_adresse": true,
+      "fall": "address shared with lou (two profile saves at once); 0.4.0 signs in the first by it"
+    },
+    {
+      "name": "lou",
+      "passwort": "Bestand-lou-26",
+      "email": "Familie@Example.net",
+      "doppelte_adresse": true,
+      "fall": "address shared with kim, in other case"
+    },
+    {
+      "name": "mona",
+      "passwort": "Bestand-mona-26",
+      "email": "mona@example.com",
+      "zweiter_faktor": "mona",
+      "wiederherstellungscodes": [
+        "t29gq-x6dmu",
+        "3ahry-7env4",
+        "bjsz8-fpw5c",
+        "kt29g-qx6dm",
+        "u3ahr-y7env",
+        "4bjsz-8fpw5",
+        "ckt29-gqx6d",
+        "mu3ah-ry7en"
+      ],
+      "geraet": "ntd_bestand-geraet-mona-23",
+      "fall": "password, second factor, paired iPhone"
+    },
+    {
+      "name": "sam",
+      "passwort": "Bestand-sam-26",
+      "email": "sam@example.org",
+      "email_source": "provider",
+      "anbieter": {
+        "sub": "bestand-sam",
+        "preferred_username": "sam",
+        "name": "Sam Beispiel",
+        "email": "sam@example.org"
+      },
+      "fall": "password and a linked provider; took the provider's address (email_source provider)"
+    },
+    {
+      "name": "robin.sso",
+      "email": "robin@sso.example.com",
+      "email_source": "provider",
+      "operator": true,
+      "anbieter": {
+        "sub": "bestand-robin",
+        "preferred_username": "Robin.SSO",
+        "name": "Robin Beispiel",
+        "email": "robin@sso.example.com"
+      },
+      "fall": "provider only, invited as operator, name from preferred_username, follows the provider's address"
+    },
+    {
+      "name": "gesperrt",
+      "passwort": "Bestand-sperr26",
+      "email": "gesperrt@example.com",
+      "gesperrt": true,
+      "fall": "blocked by the operator: hears so only after the right password"
+    },
+    {
+      "name": "weg",
+      "passwort": "Bestand-weg-26",
+      "email": "weg@example.com",
+      "geloescht": true,
+      "fall": "deleted by the operator, restorable for 30 days"
+    }
+  ],
+  "offene_einladung": {
+    "schluessel": "bestand-einladung-gast-36",
+    "email": "gast@example.org",
+    "role": "member"
+  },
+  "offener_ruecksetzlink": {
+    "schluessel": "bestand-ruecksetzen-erika-37",
+    "name": "erika-muster"
+  }
+}
