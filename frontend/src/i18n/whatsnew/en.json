@@ -1,4 +1,29 @@
 {
+  "0.4.0": {
+    "lead": "The ground for the nextime app on iPhone and iPad: connect, sync, keep working without a connection.",
+    "sections": [
+      {
+        "title": "Connect iPhone or iPad",
+        "where": "Settings › My account › On iPhone and co",
+        "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes. In the app tap “Add Server” and scan it, done, without a password. Without a camera, enter the address in the app and sign in as in the browser, passkeys included."
+      },
+      {
+        "title": "Devices",
+        "where": "Settings › My account › On iPhone and co",
+        "body": "The “Devices” card shows every connected iPhone and iPad with its last contact and whether notifications are on. “Disconnect” locks a device out at once; a new password or “Sign out everywhere else” disconnects them all."
+      },
+      {
+        "title": "Sync and offline",
+        "where": "nextime app",
+        "body": "The app keeps every event of every time on the device, also without a connection, and brings what was entered to the server exactly once afterwards. When two change the same event, the change that reaches the server later counts; whoever was overwritten sees both versions and can bring theirs back."
+      }
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "Set up the calendar account from the app on the same iPhone, and only the app reminds there: nothing rings twice.",
+      "Notifications of changes in shared calendars reach the app too; changes show up there on their own."
+    ]
+  },
   "0.3.0": {
     "lead": "A year at a glance, a new overview of the coming weeks and a tidier sidebar.",
     "sections": [

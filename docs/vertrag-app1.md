@@ -45,7 +45,7 @@ device token in api 1.
 `GET /api/app/1/hello` (no sign-in)
 
 ```json
-{"app": "nextime", "api": 1, "min_api": 1, "version": "0.3.0", "sign_in": ["password", "oidc"],
+{"app": "nextime", "api": 1, "min_api": 1, "version": "0.4.0", "sign_in": ["password", "oidc"],
  "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify"]}
 ```
 

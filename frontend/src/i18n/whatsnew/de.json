@@ -1,4 +1,29 @@
 {
+  "0.4.0": {
+    "lead": "Die Grundlage für die nextime-App auf iPhone und iPad: verbinden, abgleichen, ohne Netz weiterarbeiten.",
+    "sections": [
+      {
+        "title": "iPhone oder iPad verbinden",
+        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
+        "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt. In der App „Server hinzufügen“ tippen und scannen, fertig, ohne Passwort. Ohne Kamera gibst du in der App die Adresse ein und meldest dich an wie im Browser, auch mit Passkey."
+      },
+      {
+        "title": "Geräte",
+        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
+        "body": "Die Karte „Geräte“ zeigt jedes verbundene iPhone und iPad mit dem letzten Kontakt und ob Mitteilungen an sind. „Trennen“ sperrt ein Gerät sofort aus; ein neues Passwort oder „Überall sonst abmelden“ trennt alle."
+      },
+      {
+        "title": "Abgleich und ohne Netz",
+        "where": "nextime-App",
+        "body": "Die App hält alle Termine aller Zeiten auf dem Gerät, auch ohne Netz, und bringt Eingetragenes danach genau einmal zum Server. Ändern zwei denselben Termin, gilt die Änderung, die später am Server ankommt; wer überschrieben wurde, sieht beide Fassungen und kann „Meine zurückholen“."
+      }
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Richtest du das Kalenderkonto aus der App auf demselben iPhone ein, erinnert dort nur die App, nichts klingelt doppelt.",
+      "Mitteilungen bei Änderungen geteilter Kalender kommen auch in der App an; Änderungen erscheinen dort ohne Zutun."
+    ]
+  },
   "0.3.0": {
     "lead": "Ein Jahr auf einen Blick, eine neue Übersicht der kommenden Wochen und eine aufgeräumte Seitenleiste.",
     "sections": [
