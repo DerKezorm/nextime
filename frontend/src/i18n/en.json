@@ -455,9 +455,19 @@
     "week": "Week",
     "month": "Month",
     "calendar": "Calendar",
+    "upcoming": "Upcoming",
     "calendars": "Calendars",
     "noCalendars": "No calendars yet.",
     "newEvent": "New event"
+  },
+  "upcoming": {
+    "free_one": "1 day free",
+    "free_other": "{{count}} days free",
+    "empty_one": "Nothing tomorrow.",
+    "empty_other": "Nothing in the next {{count}} days.",
+    "more_one": "One more day",
+    "more_other": "{{count}} more days",
+    "filter": "Which events"
   },
   "notFound": {
     "home": "To the start",

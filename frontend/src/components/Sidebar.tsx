@@ -2,7 +2,7 @@
  * The sidebar, after the accepted mock-up and laid out as nexnotes' (its drawing "Seitenleiste"): the mark at the top,
  * then "New event" and the field "Suchen" (TIME-22), the collection, the places Heute (the overview) and Kalender (the
  * view this device showed last; Day, Week, Month or Year are chosen in the switch above, asked for while testing
- * 2026-11-24), the list of
+ * 2026-11-24) and Demnächst (the coming events as a list), the list of
  * calendars by source (TIME-4) and, under a line, "Papierkorb" (TIME-23); at the bottom the account with the way to
  * the settings: picture, name and the gear, marked while the settings are open (TIME-2 AC-7). Signing out is in the
  * profile. Beside the page it is as wide as set on this device (`lib/columns.ts`, the handle at its edge); the drawer
@@ -67,6 +67,11 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
           <li>
             <NavLink to={lastView} onClick={onNavigate} className={() => PLACE + (CALENDAR_PATHS.includes(path) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')} aria-current={CALENDAR_PATHS.includes(path) ? 'page' : undefined} data-testid="nav-calendar">
               {t('nav.calendar')}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to="/upcoming" onClick={onNavigate} className={({ isActive }) => PLACE + (isActive ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')} data-testid="nav-upcoming">
+              {t('nav.upcoming')}
             </NavLink>
           </li>
         </ul>

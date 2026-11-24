@@ -455,9 +455,19 @@
     "week": "Woche",
     "month": "Monat",
     "calendar": "Kalender",
+    "upcoming": "Demnächst",
     "calendars": "Kalender",
     "noCalendars": "Noch keine Kalender.",
     "newEvent": "Neuer Termin"
+  },
+  "upcoming": {
+    "free_one": "1 Tag frei",
+    "free_other": "{{count}} Tage frei",
+    "empty_one": "Morgen steht nichts an.",
+    "empty_other": "In den nächsten {{count}} Tagen steht nichts an.",
+    "more_one": "Einen weiteren Tag",
+    "more_other": "Weitere {{count}} Tage",
+    "filter": "Welche Termine"
   },
   "notFound": {
     "home": "Zur Startseite",
