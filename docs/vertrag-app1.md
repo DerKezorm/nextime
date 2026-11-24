@@ -627,9 +627,10 @@ So that later stages dock on; each comes with its name in `hello.features`.
 ## Test server for the app
 
 A throwaway server for the app's tests is a local tool beside the repository (not part of it): nextime with an empty
-database on port 8591, invented accounts on example.com, a pairing link and a device token printed at the start. The
-app's build machine reaches it through an SSH tunnel to that port; the address in the pairing link is then
-`http://localhost:8591` (no HTTPS: the calendar account answers `409 https_required` there).
+database on port 8591 (or a port given at the start), invented accounts on example.com, a pairing link and a device
+token printed at the start. Each port keeps its own data and access file, so several such servers run side by side.
+The app's build machine reaches it through an SSH tunnel to that port; the address in the pairing link is then
+`http://localhost:<port>` (no HTTPS: the calendar account answers `409 https_required` there).
 
 ## Differences from nexnotes
 
