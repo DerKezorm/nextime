@@ -25,7 +25,7 @@ import { useDisplay } from '../../lib/useDisplay'
 import { attachmentsApi, type AttachmentInfo, type Target } from '../attachments/api'
 import { Attachments, RemoteAttachments } from '../attachments/Attachments'
 import { busyFor, cancelAll } from '../attachments/uploads'
-import { suggestion, useShown } from '../collections/store'
+import { showsCalendar, suggestion, useOnly, useShown } from '../collections/store'
 import type { Point } from '../places/api'
 import { PlaceField, PlaceView } from '../places/Place'
 import { remindersApi } from '../reminders/api'
@@ -152,9 +152,21 @@ function EventPanel({ target }: { target: PanelTarget }) {
   const { zone: shown, twelve, language } = useDisplay()
   const { close, setDirty } = usePanel()
   const { list } = useCalendars()
-  const suggested = suggestion(list, useShown())
+  const showing = useShown()
+  const suggested = suggestion(list, showing)
+  const { setOnly } = useOnly()
   const location = useLocation()
   const [detail, setDetail] = useState<EventDetail | null>(null)
+  // Opened from an address: when the views do not show the event's calendar now (another calendar shown alone, a
+  // collection without it, a hidden calendar), it is shown alone; the bar above the views ends that, and the
+  // collection chosen stays as it was. Once per opened event.
+  const revealed = useRef<PanelTarget | null>(null)
+  useEffect(() => {
+    if (target.kind !== 'open' || !target.reveal || revealed.current === target || !detail || !list || showing.pending) return
+    revealed.current = target
+    const entry = list.calendars.find((candidate) => candidate.id === detail.calendar_id)
+    if (entry && !showsCalendar(showing, entry)) setOnly(entry.id)
+  }, [target, detail, list, showing, setOnly])
   const [loadProblem, setLoadProblem] = useState<string | null>(null)
   const [form, setForm] = useState<Form | null>(null)
   const [original, setOriginal] = useState<Form | null>(null)

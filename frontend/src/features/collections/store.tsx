@@ -128,6 +128,14 @@ export function shownOf(list: CalendarList | null, chosen: Collection | null, on
   return { calendars, hidden: false, only: null, collection: chosen, empty: visible.length === 0 }
 }
 
+/** Whether the views show the events of this calendar now: the one shown alone, or one of the choice that is not
+ * hidden; nothing while an area of nextasks is shown alone. */
+export function showsCalendar(shown: Shown, entry: CalendarEntry): boolean {
+  if (shown.only) return shown.only.id === entry.id
+  if (shown.onlyArea || entry.hidden) return false
+  return shown.calendars === null || shown.calendars.includes(entry.id)
+}
+
 /** What the views show now. A calendar shown alone that is gone (deleted, no longer shared) ends that (EC-19). */
 export function useShown(): Shown {
   const { list } = useCalendars()

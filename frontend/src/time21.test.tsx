@@ -8,6 +8,7 @@ import type { NotifySettings } from './features/notify/api'
 import { forgetWorker } from './features/notify/browser'
 import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import i18n from './i18n'
+import { forgetPrefs, prefKey } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
 import { box, calls, click, me, ok, render, serve, settle, signedIn, start, stop } from './testing'
 
@@ -196,6 +197,68 @@ describe('TIME-21 AC-4 a tapped notification', () => {
     expect([...document.querySelectorAll<HTMLInputElement>('input')].some((field) => field.value === 'Elternabend')).toBe(true)
     // The address loses its marks, so a reload does not open it again.
     expect(calls.filter((call) => call.path.startsWith('/api/events/12')).length).toBe(1)
+  })
+})
+
+describe('TIME-21 AC-4 the view behind an opened address shows the event\'s calendar', () => {
+  beforeEach(() => forgetPrefs())
+  afterEach(() => {
+    forgetPrefs()
+    try {
+      localStorage.clear()
+    } catch {
+      // nothing kept
+    }
+  })
+
+  const birthday = eventDetail({ id: 12, calendar_id: 5, title: 'Geburtstag Oma', all_day: true, start: '2026-12-03', end: '2026-12-03', recurring: true, occurrence: '20261203' })
+
+  async function openAddress(lists: ReturnType<typeof calendarList>, collections: unknown[] = [], at = '/day?day=2026-12-03&event=12&occurrence=20261203') {
+    serve(
+      signedIn(tester, (_method, path) => {
+        if (path === '/api/calendars') return ok(lists)
+        if (path === '/api/collections') return ok({ collections })
+        if (path.startsWith('/api/events/12')) return ok(birthday)
+        return undefined
+      }),
+    )
+    await render(<AuthProvider><App /></AuthProvider>, at)
+    await settle()
+  }
+  const windows = () => calls.filter((call) => call.path.startsWith('/api/events?')).map((call) => new URLSearchParams(call.path.split('?')[1]))
+  const last = () => windows().at(-1)!
+
+  it('TIME-21 AC-4 another calendar shown alone gives way to the event\'s calendar', async () => {
+    localStorage.setItem(prefKey('only', 1), '7')
+    await openAddress(calendarList([calendar(5, 'Geburtstage'), calendar(7, 'Arbeit')]))
+    expect(localStorage.getItem(prefKey('only', 1))).toBe('5')
+    expect(last().get('calendars')).toBe('5')
+    expect(box.querySelector('[data-testid="only-bar"]')!.textContent).toContain('Geburtstage')
+    // The occurrence of the yearly series is what the panel asks for.
+    expect(calls.some((call) => call.path.startsWith('/api/events/12') && call.path.includes('occurrence=20261203'))).toBe(true)
+  })
+
+  it('TIME-21 AC-4 an event of a hidden calendar shows that calendar alone, hidden ones included', async () => {
+    await openAddress(calendarList([calendar(5, 'Geburtstage', { hidden: true }), calendar(7, 'Arbeit', { default: true })]))
+    expect(last().get('calendars')).toBe('5')
+    expect(last().get('hidden')).toBe('true')
+  })
+
+  it('TIME-21 AC-4 a collection without the event\'s calendar gives way, and stays chosen for afterwards', async () => {
+    localStorage.setItem(prefKey('collection', 1), '3')
+    await openAddress(calendarList([calendar(5, 'Geburtstage'), calendar(7, 'Arbeit')]), [{ id: 3, name: 'Job', calendar_ids: [7], updated_at: '2026-11-20T10:00:00Z' }])
+    expect(last().get('calendars')).toBe('5')
+    expect(localStorage.getItem(prefKey('collection', 1))).toBe('3')
+    await click(box.querySelector('[data-testid="only-end"]'))
+    expect(last().get('calendars')).toBe('7')
+  })
+
+  it('TIME-21 AC-4 a calendar shown already leaves the choice as it is', async () => {
+    localStorage.setItem(prefKey('collection', 1), '3')
+    await openAddress(calendarList([calendar(5, 'Geburtstage'), calendar(7, 'Arbeit')]), [{ id: 3, name: 'Familie', calendar_ids: [5, 7], updated_at: '2026-11-20T10:00:00Z' }])
+    expect(localStorage.getItem(prefKey('only', 1))).toBeNull()
+    expect(last().get('calendars')).toBe('5,7')
+    expect(box.querySelector('[data-testid="only-bar"]')).toBeNull()
   })
 })
 

@@ -106,8 +106,9 @@ export type PanelTarget =
   /** A new event; `start` and `end` as `YYYY-MM-DDTHH:MM` (a click or a drag in the grid), or as dates for a whole day;
    * `title`, `calendarId` and `rule` from the quick field ("Mehr …", TIME-10 AC-2). */
   | { kind: 'new'; start?: string; end?: string; allDay?: boolean; title?: string; calendarId?: number; rule?: Rule | null }
-  /** An event; `sources` when it stands in several calendars and is shown once (TIME-14 AC-3). */
-  | { kind: 'open'; id: number; occurrence: string | null; sources?: Source[] }
+  /** An event; `sources` when it stands in several calendars and is shown once (TIME-14 AC-3); `reveal` when it opens
+   * from an address (a notification, a link from nexmail): the views behind then show its calendar. */
+  | { kind: 'open'; id: number; occurrence: string | null; sources?: Source[]; reveal?: boolean }
 
 type Panel = {
   target: PanelTarget | null

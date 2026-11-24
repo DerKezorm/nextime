@@ -43,7 +43,8 @@ export function OpenFromAddress() {
     const occurrence = params.get('occurrence')
     if (!day && !event) return
     if (day && DAY.test(day)) setViewDay(day)
-    if (Number.isInteger(event) && event > 0) open({ kind: 'open', id: event, occurrence: occurrence && OCCURRENCE.test(occurrence) ? occurrence : null })
+    // The view behind shows the event's calendar, also when it is hidden or outside the collection chosen.
+    if (Number.isInteger(event) && event > 0) open({ kind: 'open', id: event, occurrence: occurrence && OCCURRENCE.test(occurrence) ? occurrence : null, reveal: true })
     params.delete('day')
     params.delete('event')
     params.delete('occurrence')
