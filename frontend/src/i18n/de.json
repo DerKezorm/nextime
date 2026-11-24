@@ -393,7 +393,8 @@
     "app_address_missing": "nextime kennt seine Adresse nicht. Der Betreiber trägt sie unter Einstellungen, Server ein.",
     "browser_only": "Das geht nur im Browser.",
     "push_ticket_invalid": "Ticket oder Schlüssel für Mitteilungen sind nicht brauchbar.",
-    "too_many_ops": "Höchstens 50 Änderungen auf einmal."
+    "too_many_ops": "Höchstens 50 Änderungen auf einmal.",
+    "event_unknown": "Den Termin gibt es noch nicht. Die Datei wartet, bis er angelegt ist."
   },
   "me": {
     "emailDecline": "Nicht mehr fragen",

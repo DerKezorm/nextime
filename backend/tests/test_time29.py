@@ -288,7 +288,8 @@ def test_TIME29_AC6_after_a_pause_only_what_changed_comes(client: TestClient, ac
     client.delete(f"/api/events/{second['id']}")
     later, changed = all_changes(device["token"], quiet["cursor"])
     assert {row["id"] for row in changed} == {first["id"], third["id"]}
-    assert later["removed"] == [{"kind": "event", "calendar_id": shown["calendar_id"], "href": shown["href"]}]
+    assert later["removed"] == [{"kind": "event", "calendar_id": shown["calendar_id"], "href": shown["href"],
+                                 "trashed": True}]
 
 
 def test_TIME29_EC4_a_cursor_of_another_database_gets_everything(client: TestClient, account: Account) -> None:

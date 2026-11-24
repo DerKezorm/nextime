@@ -393,7 +393,8 @@
     "app_address_missing": "nextime does not know its address. The operator enters it under Settings, Server.",
     "browser_only": "This only works in a browser.",
     "push_ticket_invalid": "The ticket or the key for notifications is not usable.",
-    "too_many_ops": "At most 50 changes at once."
+    "too_many_ops": "At most 50 changes at once.",
+    "event_unknown": "The event is not there yet. The file waits until it has been made."
   },
   "me": {
     "emailDecline": "Don't ask again",

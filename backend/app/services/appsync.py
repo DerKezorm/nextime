@@ -97,6 +97,8 @@ def account_block(account: Account) -> dict[str, Any]:
 
 def _calendar_out(db: Session, item: calendars.Access, row: Any, default_id: int | None, people: _People
                   ) -> dict[str, Any]:
+    from . import reminders
+
     calendar = item.calendar
     own = item.right == calendars.OWNER
     state = None
@@ -108,7 +110,10 @@ def _calendar_out(db: Session, item: calendars.Access, row: Any, default_id: int
     return {
         "id": calendar.id, "name": calendar.name, "color": calendar.color, "icon": symbols.shown(calendar.icon),
         "background": calendar.background, "holiday": calendars.highlighted(calendar, row),
-        "reminder": calendar.reminder, "defaults": row.new_defaults or {}, "group": item.group, "kind": item.kind,
+        "reminder": calendar.reminder,
+        # The account's default for this calendar's events (0.5, TIME-7 AC-3): "none", "source" or minutes as text.
+        "reminder_default": reminders.default_choice(item, row.reminder_default or ""),
+        "defaults": row.new_defaults or {}, "group": item.group, "kind": item.kind,
         "right": item.right, "writable": item.writable, "read_only": calendar.read_only, "hidden": row.hidden,
         "position": row.position, "default": calendar.id == default_id,
         "owner": None if own else people(calendar.owner_id),
@@ -213,8 +218,32 @@ def _conflicts(db: Session, account_id: int, seen: set[int], people: _People) ->
     return out
 
 
+def extras(db: Session, account_id: int, rows: list[Event]) -> dict[int, dict[str, Any]]:
+    """What an event carries for this account besides its text (0.5): its own reminders (``None``: the calendar's
+    default) with those of single occurrences, and nextime's attachments. Read once per page."""
+    from ..models import Attachment, ReminderChoice
+    from . import attachments
+
+    ids = [row.id for row in rows]
+    found: dict[int, dict[str, Any]] = {event_id: {"reminders": None, "reminder_occurrences": {}, "attachments": []}
+                                        for event_id in ids}
+    for start in range(0, len(ids), 400):
+        part = ids[start:start + 400]
+        for choice in db.scalars(select(ReminderChoice).where(ReminderChoice.account_id == account_id,
+                                                              ReminderChoice.event_id.in_(part))):
+            entry = found[choice.event_id]
+            entry["reminders"] = None if choice.minutes is None else list(choice.minutes)
+            entry["reminder_occurrences"] = {key: list(value.get("minutes") or [])
+                                             for key, value in (choice.occurrences or {}).items()
+                                             if isinstance(value, dict)}
+        for item in db.scalars(select(Attachment).where(Attachment.event_id.in_(part))
+                               .order_by(Attachment.created_at, Attachment.id)):
+            found[item.event_id]["attachments"].append(attachments.out(item))
+    return found
+
+
 def event_out(row: Event, access: calendars.Access, people: _People, german: bool,
-              mine: set[str] | None = None) -> dict[str, Any] | None:
+              mine: set[str] | None = None, extra: dict[str, Any] | None = None) -> dict[str, Any] | None:
     """An event as the app gets it; ``None`` when the account does not see it (a free event of "busy only")."""
     from ..routers.dav import busy_view
     from . import alarms
@@ -235,7 +264,21 @@ def event_out(row: Event, access: calendars.Access, people: _People, german: boo
         "created_by": None if busy_only else people(row.created_by),
         "updated_by": None if busy_only else people(row.updated_by), "updated_at": iso(row.updated_at),
         "invitation": None if busy_only else invitation_of(row.ical, mine or set()),
+        # 0.5: the account's own reminders (TIME-7), attachments of nextime and of the source (TIME-9).
+        "reminders": (extra or {}).get("reminders"),
+        "reminder_occurrences": (extra or {}).get("reminder_occurrences") or {},
+        "attachments": [] if busy_only else (extra or {}).get("attachments") or [],
+        "remote_attachments": [] if busy_only else _remote(row, access),
     }
+
+
+def _remote(row: Event, access: calendars.Access) -> list[dict[str, Any]]:
+    """The attachments an event of iCloud or a CalDAV server carries (``ATTACH``), by their place in it."""
+    from . import attachments
+
+    if access.calendar.source_id is None or "ATTACH" not in row.ical:
+        return []
+    return attachments.remote_list(row)
 
 
 # --- The cursor -----------------------------------------------------------------------------------------------------
@@ -290,8 +333,10 @@ def changes(db: Session, account_id: int, cursor: str | None, only: set[int] | N
                                               Event.id > after).order_by(Event.id).limit(page + 1)).all() if ids else []
         more = len(rows) > page
         rows = rows[:page]
+        more_of = extras(db, account_id, list(rows))
         for row in rows:
-            shown = event_out(row, seen.access[row.calendar_id], seen.people, seen.german, seen.addresses(row))
+            shown = event_out(row, seen.access[row.calendar_id], seen.people, seen.german, seen.addresses(row),
+                              more_of.get(row.id))
             if shown is not None:
                 out.append(shown)
         next_cursor = _cursor(db, start, mark, rows[-1].id) if more else _cursor(db, start, mark)
@@ -314,18 +359,40 @@ def changes(db: Session, account_id: int, cursor: str | None, only: set[int] | N
                                                           Event.href.in_(hrefs[start:start + 400]),
                                                           Event.deleted_at.is_(None))):
                     live[(calendar_id, row.href)] = row
+        more_of = extras(db, account_id, list(live.values()))
+        gone = _trashed(db, [(calendar_id, href) for calendar_id, href, _last in found
+                             if (calendar_id, href) not in live])
         for calendar_id, href, _last in found:
             row = live.get((calendar_id, href))
             shown = event_out(row, seen.access[calendar_id], seen.people, seen.german,
-                               seen.addresses(row)) if row is not None else None
+                              seen.addresses(row), more_of.get(row.id)) if row is not None else None
             if shown is not None:
                 out.append(shown)
             else:
-                removed.append({"kind": "event", "calendar_id": calendar_id, "href": href})
+                removed.append({"kind": "event", "calendar_id": calendar_id, "href": href,
+                                "trashed": (calendar_id, href) in gone})
         last = found[-1][2] if found else number
         next_cursor = _cursor(db, last if more else max(head, last), mark)
         full = False
     return {"cursor": next_cursor, "full": full, "more": more, "events": out, "removed": removed, **seen.lists()}
+
+
+def _trashed(db: Session, pairs: list[tuple[int, str]]) -> set[tuple[int, str]]:
+    """Which of these gone events lie in the trash (0.5, ``removed[].trashed``): the newest row of each, deleted and
+    not yet gone for good."""
+    out: set[tuple[int, str]] = set()
+    by_calendar: dict[int, list[str]] = {}
+    for calendar_id, href in pairs:
+        by_calendar.setdefault(calendar_id, []).append(href)
+    for calendar_id, hrefs in by_calendar.items():
+        for start in range(0, len(hrefs), 400):
+            for href, trash_until in db.execute(
+                    select(Event.href, Event.trash_until).where(Event.calendar_id == calendar_id,
+                                                                Event.href.in_(hrefs[start:start + 400]),
+                                                                Event.deleted_at.is_not(None))):
+                if trash_until is None or trash_until > utcnow():
+                    out.add((calendar_id, href))
+    return out
 
 
 def changed_since(db: Session, account_id: int, cursor: str) -> str | None:
@@ -374,7 +441,8 @@ def _done(db: Session, account: Account, row: Event, **more: Any) -> dict[str, A
     shown = None
     if access is not None:
         mine = invitations.context_of(db, access, row)[0]
-        shown = event_out(row, access, _People(db, account), (account.language or "").startswith("de"), mine)
+        shown = event_out(row, access, _People(db, account), (account.language or "").startswith("de"), mine,
+                          extras(db, account.id, [row]).get(row.id))
     return {"state": "done", "event": shown, **more}
 
 
@@ -460,6 +528,18 @@ def _run(db: Session, account: Account, op: dict[str, Any]) -> dict[str, Any]:
             return _refused("invalid_input", "The input is not valid.", fields=["calendar_id", "hidden"])
         calendars.change(db, account, calendar_id, {"hidden": hidden})
         return {"state": "done"}
+    if kind == "reminders":
+        # The account's own reminders of an event (0.5, TIME-7 AC-2): minutes, or null for the calendar's default.
+        from . import reminders
+
+        event_id = _event_id(op)
+        minutes = op.get("minutes")
+        if minutes is not None and (not isinstance(minutes, list) or len(minutes) > 50):
+            return _refused("invalid_input", "The input is not valid.", fields=["minutes"])
+        reminders.set_for_event(db, account, event_id, minutes)
+        row = db.get(Event, event_id)
+        assert row is not None
+        return _done(db, account, row)
     if kind in ("collection_create", "collection_change", "collection_delete"):
         return _collection_op(db, account, kind, op)
     return _refused("op_unknown", "This change is not known.", op=str(kind)[:32])

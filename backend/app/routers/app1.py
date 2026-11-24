@@ -54,7 +54,8 @@ WAIT_SECONDS = 25.0
 WAIT_RECHECK = 5.0
 #: The parts of the interface this server has (``hello``): an app tells an older server by their absence.
 FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify",
-            "collections_write", "tasks", "deadlines", "invitations", "people", "year")
+            "collections_write", "tasks", "deadlines", "invitations", "people", "year", "reminders",
+            "attachments", "trash")
 
 
 def _refused(code: str, text: str, status: int, retry: int | None = None) -> HTTPException:
@@ -449,3 +450,155 @@ def year(found: Device_, year: int = Query(ge=1900, le=2200), zone: str | None =
                 raise error("not_found", "Not found.", 404)
             picked, hidden = {only}, True
         return yearmap.year_map(db, account, year, chosen, include_hidden=hidden, only=picked)
+
+
+# --- Attachments (0.5, TIME-9; as nexnotes' app1_files) -------------------------------------------------------------
+
+
+def _attachment_id(account_id: int, ref: str) -> str:
+    """The attachment's id from the app's ``ref``: the same upload sent again is the same attachment."""
+    import base64
+    import hashlib
+
+    digest = hashlib.sha256(f"nextime-app-upload:{account_id}:{ref}".encode()).digest()
+    return base64.urlsafe_b64encode(digest).decode("ascii")[:22]
+
+
+@router.post("/attachments", status_code=201, summary="A file at an event (the file as the body)")
+async def upload(found: Device_, request: Request, response: Response,
+                 event_id: Annotated[int | None, Query()] = None,
+                 event_ref: Annotated[str | None, Query(max_length=64)] = None,
+                 ref: Annotated[str | None, Query(max_length=64)] = None,
+                 name: Annotated[str, Query(max_length=2000)] = "") -> dict[str, Any]:
+    """``ref`` (or the header ``Idempotency-Key``) names the upload: sent again, nothing doubles. ``event_ref``: the
+    ``ref`` of the op that made the event offline; ``404 event_unknown`` while that op has not arrived."""
+    from ..models import Attachment, Event
+    from ..services import attachments
+
+    key = (ref or request.headers.get("idempotency-key") or "").strip()
+    if not appsync.REF.match(key):
+        raise error("invalid_input", "The input is not valid.", 422, fields=["ref"])
+    if (event_id is None) == (event_ref is None):
+        raise error("invalid_input", "The input is not valid.", 422, fields=["event_id", "event_ref"])
+    if event_ref is not None:
+        with SessionLocal() as db:
+            made = db.scalar(select(Event).where(Event.created_by == found.account.id,
+                                                 Event.client_ref == event_ref))
+            if made is None:
+                raise error("event_unknown", "The event is not there yet.", 404)
+            event_id = made.id
+    declared_text = request.headers.get("content-length")
+    declared = int(declared_text) if declared_text and declared_text.isdigit() else None
+    try:
+        with SessionLocal() as db:
+            started = attachments.begin(db, found.account, event_id=event_id, pending_ref=None,
+                                        attachment_id=_attachment_id(found.account.id, key), name=name,
+                                        declared=declared)
+        if isinstance(started, Attachment):
+            response.status_code = 200
+            return attachments.out(started)
+        work = await attachments.receive(started, request.stream())
+        row, new = await asyncio.to_thread(attachments.finish, started, work)
+    except attachments.AttachmentError as exc:
+        raise exc.http() from exc
+    if not new:
+        response.status_code = 200
+    return attachments.out(row)
+
+
+def _browser_attachments() -> Any:
+    from . import attachments as attachments_router
+
+    return attachments_router
+
+
+@router.get("/attachments/{attachment_id}/file", summary="The file of an attachment")
+def attachment_file(attachment_id: str, found: Device_, download: bool = False) -> Any:
+    with SessionLocal() as db:
+        return _browser_attachments().file(attachment_id, found.account, db, download)
+
+
+@router.get("/attachments/{attachment_id}/view", summary="A picture as every device shows it (WebP)")
+def attachment_view(attachment_id: str, found: Device_) -> Any:
+    with SessionLocal() as db:
+        return _browser_attachments().view(attachment_id, found.account, db)
+
+
+@router.get("/attachments/{attachment_id}/thumb", summary="The preview of an attachment")
+def attachment_thumb(attachment_id: str, found: Device_) -> Any:
+    with SessionLocal() as db:
+        return _browser_attachments().thumb(attachment_id, found.account, db)
+
+
+@router.delete("/attachments/{attachment_id}", status_code=204, summary="Remove an attachment for good")
+def attachment_remove(attachment_id: str, found: Device_) -> Response:
+    """With the right to change the event; one gone already (or never seen) is gone: ``204``."""
+    from ..services import attachments
+
+    with SessionLocal() as db:
+        try:
+            attachments.remove(db, found.account, attachment_id)
+        except HTTPException as exc:
+            if not (isinstance(exc.detail, dict) and exc.detail.get("code") == "not_found"):
+                raise
+    return Response(status_code=204)
+
+
+@router.get("/events/{event_id}/remote-attachments/{index}", summary="An attachment of an event of a source")
+def remote_attachment(event_id: int, index: int, found: Device_) -> Any:
+    with SessionLocal() as db:
+        return _browser_attachments().remote(event_id, index, found.account, db)
+
+
+# --- Trash (0.5, TIME-23) -------------------------------------------------------------------------------------------
+
+
+class TrashRestoreIn(BaseModel):
+    calendar_id: int | None = None
+
+
+class TrashEmptyIn(BaseModel):
+    until: str | None = Field(default=None, max_length=40)
+
+
+@router.get("/trash", summary="The trash as the browser shows it")
+def trash_listing(found: Device_, offset: int = Query(default=0, ge=0, le=10_000_000),
+                  limit: int = Query(default=100, ge=1, le=500)) -> dict[str, Any]:
+    from ..services import trash
+
+    with SessionLocal() as db:
+        return trash.listing(db, found.account, offset=offset, limit=min(limit, trash.PAGE_MAX))
+
+
+@router.post("/trash/events/{event_id}/restore", summary="Restore an event")
+def trash_restore_event(event_id: int, found: Device_, body: TrashRestoreIn | None = None) -> dict[str, Any]:
+    from . import trash as trash_router
+
+    with SessionLocal() as db:
+        return trash_router.restore_event(event_id, found.account, db,
+                                          trash_router.RestoreIn(calendar_id=body.calendar_id if body else None))
+
+
+@router.post("/trash/parts/{part_id}/restore", summary="Put an occurrence, or the following ones, back")
+def trash_restore_part(part_id: int, found: Device_) -> dict[str, Any]:
+    from . import trash as trash_router
+
+    with SessionLocal() as db:
+        return trash_router.restore_part(part_id, found.account, db)
+
+
+@router.post("/trash/calendars/{calendar_id}/restore", summary="Restore a calendar with its events")
+def trash_restore_calendar(calendar_id: int, found: Device_) -> dict[str, Any]:
+    from . import trash as trash_router
+
+    with SessionLocal() as db:
+        return trash_router.restore_calendar(calendar_id, found.account, db)
+
+
+@router.post("/trash/empty", summary="Empty the trash up to what the list showed")
+def trash_empty(found: Device_, body: TrashEmptyIn | None = None) -> dict[str, int]:
+    from . import trash as trash_router
+
+    with SessionLocal() as db:
+        gone = trash_router.empty(found.account, db, trash_router.EmptyIn(until=body.until if body else None))
+    return {"count": gone["events"] + gone["calendars"], **gone}

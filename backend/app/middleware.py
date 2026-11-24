@@ -173,6 +173,8 @@ LARGE_BODIES: dict[str, int] = {
     "/api/backups/upload": 64 * 1024**3,
     # Attachments (TIME-9): the operator's limit is at most 10,000 MB; the route checks the one set.
     "/api/attachments": 10_000 * 1024**2,
+    # The same from the iPhone app (TIME-29, interface 0.5).
+    "/api/app/1/attachments": 10_000 * 1024**2,
 }
 #: The same for paths with an id in them; this is the ceiling, the route checks the operator's limit.
 LARGE_BODY_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = ()

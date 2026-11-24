@@ -6,10 +6,30 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.4 (24.11.2026), server TIME-29 on nextime branch `ios-app2` (0.1 `dd89332`, after the review
-`6a158d7`, 0.2 `a857c14`, 0.3 `29a72a3`/`ae9393a`, released as nextime 0.4.0 `10f6f91`; 0.4 on `ios-app2`). Parts
+Status: draft 0.5 (24.11.2026), server TIME-29 on nextime branch `ios-app2` (0.1 `dd89332`, after the review
+`6a158d7`, 0.2 `a857c14`, 0.3 `29a72a3`/`ae9393a`, released as nextime 0.4.0 `10f6f91`; 0.4 and 0.5 on `ios-app2`). Parts
 marked **later** are named so that later stages dock on; the server does not have them yet and `hello.features` does
 not name them.
+
+Changes in 0.5 (24.11.2026, stage 4 of the app: TIMEIOS-11, 14, 20, TIME-10 for the app), each with the browser's
+rights:
+- Reminders (feature `reminders`, TIMEIOS-20): every event in `changes` and in the answers of `ops` carries the
+  account's own `reminders` (minutes before the start, `null`: the calendar's default) and `reminder_occurrences`
+  (single occurrences of a series with alarms of their own). `calendars[].reminder_default` is the account's default
+  per calendar (`"none"`, `"source"` or minutes); the defaults for new events per kind stay in `calendars[].defaults`
+  (`reminders`, `reminders_all_day`). Op `reminders` sets them, with any right, as `PUT /api/events/{id}/reminders`.
+  A change of only the reminders moves the cursor and wakes `wait` and the nudge of the account (not of others).
+- Attachments (feature `attachments`, TIMEIOS-11): every event carries `attachments` (nextime's own) and
+  `remote_attachments` (those of the source); `POST /attachments` with the file as the body (also for an event made
+  offline, by `event_ref`), `GET /attachments/{id}/file|view|thumb`, `GET /events/{id}/remote-attachments/{index}`,
+  `DELETE /attachments/{id}`. Adding or removing one moves the cursor.
+- Trash (feature `trash`, TIMEIOS-14): `GET /trash`, the three restores and `POST /trash/empty`, as the browser's
+  `/api/trash…`.
+- `removed[]` entries carry `trashed`: `true` when the event went into the trash (deleted, cancelled by the
+  organizer, gone at the source), `false` when it only left this calendar (moved, a share ended, a free event under
+  "busy only").
+- `docs/quick-tests.json` in nextime's repository: the sentences of quick entry with what the web understands (see
+  "Quick entry sentences"); a web test keeps the file true to `understand.ts`.
 
 Changes in 0.4 (24.11.2026, stage 3 of the app: TIMEIOS-8, 9, 16, 17, G9), each with the browser's rights:
 - Collections written from the app: ops `collection_create`, `collection_change`, `collection_delete` (feature
@@ -60,7 +80,8 @@ device token in api 1.
 ```json
 {"app": "nextime", "api": 1, "min_api": 1, "version": "0.4.0", "sign_in": ["password", "oidc"],
  "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify",
-              "collections_write", "tasks", "deadlines", "invitations", "people", "year"]}
+              "collections_write", "tasks", "deadlines", "invitations", "people", "year", "reminders",
+              "attachments", "trash"]}
 ```
 
 The app speaks `api` 1. If `min_api` > 1 the app says "update the app"; if `api` < 1 it says "update the server"
@@ -197,12 +218,17 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
      "busy_only": false, "waiting": false, "origin": "",
      "created_by": {"id": 7, "name": "Mika Example", "avatar": "2026-11-20T10:00:00Z", "color": 4},
      "updated_by": {"id": 7, "name": "Mika Example", "avatar": "2026-11-20T10:00:00Z", "color": 4},
-     "updated_at": "…", "invitation": null}
+     "updated_at": "…", "invitation": null,
+     "reminders": [60, 15], "reminder_occurrences": {"20261203T090000Z": [5]},
+     "attachments": [{"id": "Qm9vazEyMzQ1Njc4OTAxMg", "name": "Plan.pdf", "kind": "pdf",
+                      "mime": "application/pdf", "size": 48213, "pages": 2, "width": null, "height": null,
+                      "view": false, "thumb": true, "inline": true, "created_at": "2026-11-24T10:00:00+00:00"}],
+     "remote_attachments": []}
   ],
-  "removed": [{"kind": "event", "calendar_id": 3, "href": "old.ics"}],
+  "removed": [{"kind": "event", "calendar_id": 3, "href": "old.ics", "trashed": true}],
   "calendars": [
     {"id": 3, "name": "Home", "color": "green", "icon": "house", "background": false, "holiday": false,
-     "reminder": 0, "defaults": {}, "group": "own", "kind": "", "right": "owner", "writable": true,
+     "reminder": 0, "reminder_default": "none", "defaults": {}, "group": "own", "kind": "", "right": "owner", "writable": true,
      "read_only": false, "hidden": false, "position": 0, "default": true, "owner": null, "shared": false,
      "source_state": null, "synced_at": null}
   ],
@@ -222,8 +248,9 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
   included; the app rolls series out itself. The columns beside it (`title`, `starts_at` = first start, `ends_at` =
   last end, `null` for a series without end; an all-day event's dates at midnight UTC, `all_day`, `time_zone`,
   `recurring`, `busy`, `location`) are what the server derived, for lists and the search before parsing.
-  - `ical` carries no alarms (VALARM): the app plans reminders itself (G6); the account's own reminders come
-    **later** (follow-up 5).
+  - `ical` carries no alarms (VALARM): the app plans reminders itself (G6) from `reminders` (0.5, see
+    "Reminders").
+  - `attachments`, `remote_attachments` (0.5): see "Attachments"; both `[]` under "busy only".
   - A calendar shared as "busy only" (`right: "busy"`): `busy_only: true`, `ical` holds times and rule only with the
     summary „Belegt“/"Busy" (as the calendar account gives it), `title` and `location` are empty; free events of such
     a calendar never come.
@@ -239,7 +266,10 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
     an own calendar, as in the browser (TIME-18); never in a "busy only" calendar. Answering comes with op `answer`
     (**later**, TIMEIOS-16).
 - **removed**: an event that is gone from a calendar (deleted, moved to another calendar, a series' last occurrence
-  gone, a free event in a busy-only calendar): `{"kind": "event", "calendar_id", "href"}`. The app drops its event with
+  gone, a free event in a busy-only calendar): `{"kind": "event", "calendar_id", "href", "trashed"}`. `trashed`
+  (0.5): `true` when the event lies in the account's trash or the owner's now (deleted here, in the browser, by the
+  organizer's cancellation or at the source), `false` when it only left (moved, a free event under "busy only", gone
+  for good already); for "Gelöscht" versus a silent drop (TIMEIOS-14). The app drops its event with
   that `calendar_id` and `href`, if it still has it there; an event moved to another calendar comes again in `events`
   with its new `calendar_id` (same `id`). The app skips any `kind` it does not know.
 - **calendars**, **collections**, **conflicts**, **account**: complete on every page; each replaces what the app had.
@@ -255,7 +285,9 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
     for new events, as in the browser); `owner`: `{"id", "name"}` of a shared calendar's owner, else `null`; `shared`:
     an own calendar shared with somebody; `source_state`: `ok`, `expired`, `unreachable`, `paused` or `null` (only for
     the one who connected the source); `synced_at` (0.4) the last round with the source that worked, ISO in UTC, or
-    `null`.
+    `null`; `reminder_default` (0.5): the account's default reminder for this calendar's events, `"none"`,
+    `"source"` (as iCloud/Google/CalDAV say, only for the one who connected the source) or minutes as text (`"15"`;
+    for a whole-day event `"1440"` and up means the day before at 18:00, less on the day at 09:00, as TIME-7).
   - `collections`: the account's own collections (TIME-13), with the calendars it sees now.
   - `conflicts`: see "Conflicts".
 - **Paging**: at most 500 events (`limits.changes_page`) per page; `more: true` means ask again with the new `cursor`
@@ -329,6 +361,11 @@ connection or a restart never doubles anything). The server keeps the answers 30
   following. `trash` names the entry of the trash (`event` or `part`).
 - **resolve**: `id`, `restore`: „Meine zurückholen“ (`true`) or „So lassen“ (`false`), see "Conflicts".
 - **hide**: `calendar_id`, `hidden`: show or hide a calendar for this account (TIMEIOS-5 AC-14, offline).
+- **reminders** (0.5, TIMEIOS-20): `id`, `minutes` (`[minutes before the start]`, `[]` none at all, `null` back to the
+  calendar's default) → `done` with `event`. As `PUT /api/events/{id}/reminders`: with any right (also "read" and
+  "busy only", they are the account's own), for the whole series; occurrences with alarms of their own a device set
+  over the calendar account keep them. `change` does not take `reminders` (it needs the right to edit); `create`
+  does. One the account does not see: `not_found`; a value out of range: `invalid_reminder`.
 - **collection_create** (0.4): `collection` = `{"name", "calendar_ids": [ids], "with_tasks"?, "task_areas"?:
   [area ids of nextasks]}` → `done` with `collection` (as in `changes`, its `id`). The op's `ref` is the
   collection's `client_ref`: the same `ref` is the same collection.
@@ -464,6 +501,104 @@ without events left out. `zone` defaults to the account's. `collection` counts t
 one calendar ("Nur diesen", also a hidden one); both at once `422 invalid_input`; one the account does not have
 `404 not_found`. For the app's comparison test of its own count.
 
+## Reminders (0.5, TIMEIOS-20, TIME-7)
+
+Each event carries the account's own choice; nobody else sees it.
+
+- `reminders`: `null` = the calendar's default (`calendars[].reminder_default`; for a new event the kind's default in
+  `calendars[].defaults.reminders` / `reminders_all_day` decided at creation), `[]` = none, else minutes before the
+  start, largest first. Whole-day events: `360` the day before at 18:00, `-540` on the day at 09:00 (TIME-7).
+- `reminder_occurrences`: `{"<occurrence>": [minutes]}` for single occurrences of a series whose alarms a device set
+  apart over the calendar account (by the original start as everywhere, `20261203T090000Z`); `{}` otherwise. The app
+  shows and plans them for that occurrence; the browser and op `reminders` change only the series.
+- Op `reminders` sets the series' choice (see "Writing"). A change of only reminders comes as a changed event in
+  `changes` (other accounts with the calendar get the event again too, unchanged for them) and wakes `wait` and the
+  nudge of this account only.
+
+## Attachments (0.5, TIMEIOS-11, TIME-9)
+
+Per event in `changes` and in answers of `ops`:
+
+- `attachments`: nextime's own, oldest first, each as the browser's attachment: `{"id", "name", "kind"
+  (pdf|image|other), "mime", "size", "pages", "width", "height", "view" (a WebP to show exists), "thumb" (a preview
+  exists), "inline" (shown in the page rather than downloaded), "created_at"}`. Never under "busy only".
+- `remote_attachments`: those an event of iCloud, Google or CalDAV carries (`ATTACH`), read only:
+  `{"index", "name", "mime", "size" (or null), "link" (the https address, or "" for one carried inline)}`. Events of
+  a source take no attachments of nextime (`409 attachments_own_only`).
+
+`POST /api/app/1/attachments?event_id=<id>&name=<file name>` (or `event_ref=<ref>` instead of `event_id`), body = the
+file (`Content-Type: application/octet-stream`), with `ref=<ref>` in the query or the header
+`Idempotency-Key: <ref>` (same rules as an op's `ref`). → `201` with the attachment; the same `ref` again → `200`
+with the same attachment, nothing doubles (also after a broken upload that finished on the server).
+- `event_ref`: the `ref` of the `create` op that made the event offline; `404 event_unknown` while that op has not
+  reached the server (the app keeps the file queued and tries again after its ops went). Only the account's own ops.
+- The size limit is the operator's (`me.limits.upload_mb`): larger → `413 attachment_too_large` with `name`, `size`,
+  `max_mb`; storage full → `507 storage_limit_reached` or `507 storage_failed`. Rights as the browser: the right to
+  edit the event (`403 calendar_read_only` with `owner`), `404 not_found` for one the account does not see,
+  `409 attachments_own_only` for a source's event, `422 invalid_input` (`fields`) without a valid `ref` or with
+  neither or both of `event_id` and `event_ref`.
+
+`GET /api/app/1/attachments/{id}/file[?download=1]`, `…/view` (a picture as WebP), `…/thumb` (the preview; `404`
+while it is drawn) and `GET /api/app/1/events/{id}/remote-attachments/{index}` (the source's file through the server)
+answer as the browser's routes, with any right to see the event (not "busy only").
+
+`DELETE /api/app/1/attachments/{id}` → `204`, for good (attachments never go into the trash, TIME-9 AC-9); with the
+right to edit (`403 calendar_read_only`). One gone already (or never seen) answers `204` too.
+
+Adding or removing an attachment moves the cursor (the event comes again with its list) and wakes `wait`.
+
+## Trash (0.5, TIMEIOS-14, TIME-23)
+
+As the browser's `/api/trash…`, with the device token:
+
+- `GET /api/app/1/trash?offset=&limit=` (`limit` 1 to 500, default 100) → `{"now", "trash_days", "warn_days",
+  "total", "offset", "items": […]}`, newest first. `total` counts every entry; `limit=1` gives it cheaply. Items:
+  - `{"kind": "event", "id", "title", "color", "calendar": {"id", "name", "source"}, "calendar_gone", "all_day",
+    "start", "time_zone", "recurring", "exceptions", "deleted_by": {"self": true, "name"} | {"name"} | null,
+    "deleted_via", "reason", "deleted_at", "expires_at", "days_left", "warn"}`; `reason`: `cancelled` (the organizer
+    cancelled), `source_has_it` (iCloud/Google/CalDAV removed it), `""` when somebody deleted it.
+  - `{"kind": "part", …}` one occurrence (`part: "occurrence"`) or this and the following (`part: "following"`) of a
+    series, with `series_gone`.
+  - `{"kind": "calendar", "id", "title", "color", "events", "deleted_by", "deleted_at", "expires_at", "days_left",
+    "warn"}`.
+- `POST /api/app/1/trash/events/{id}/restore` with `{"calendar_id"?}` (needed when its calendar is gone) →
+  `{"id", "calendar_id"}`.
+- `POST /api/app/1/trash/parts/{id}/restore` → `{"id", "calendar_id"}` (the series).
+- `POST /api/app/1/trash/calendars/{id}/restore` → `{"id"}` with its events, shares and guest link.
+- `POST /api/app/1/trash/empty` with `{"until": "<now of the listing>"}` → `{"count", "events", "calendars"}`;
+  what was deleted after `until` stays (nothing goes unseen).
+- Errors as the browser: `404 not_in_trash` (restored already, gone for good, not the account's: there is no
+  separate "already back"), `409 target_needed` (its calendar is gone: send `calendar_id`), `403 calendar_read_only`,
+  `409 event_exists` (the target holds the same event), `409 source_busy` (the source's round holds it: again
+  later), `422 invalid_input`.
+- What comes back arrives in `changes` as usual (events and calendars again; the cursor moves).
+
+## Quick entry sentences (0.5, TIME-10)
+
+`docs/quick-tests.json` in nextime's repository is the list of sentences the web's quick entry is tested with,
+with what it understands. The app reads the file in its own tests and checks its parser against it (TIMEIOS: same
+sentence, same event). The web test `frontend/src/quickTests.test.ts` checks `understand.ts` against the same file;
+after a wanted change of the web's parser `QUICK_TESTS_WRITE=1 npx vitest run src/quickTests.test.ts` writes the
+answers anew (the app then follows).
+
+```json
+[{"now": "2026-11-26T15:05:00Z", "zone": "Europe/Berlin", "lang": "de", "text": "morgen 15 Uhr Zahnarzt",
+  "calendars": [{"id": 1, "name": "Familie", "writable": true}],
+  "expect": {"title": "Zahnarzt", "all_day": false, "start": "2026-11-27T15:00", "end": "2026-11-27T16:00",
+             "default_length": true, "rule": null, "calendar": null, "tag": null, "error": null}}]
+```
+
+- `now`: the moment (UTC), `zone`: the device's zone the sentence is read in; `lang`: the language the sentence is
+  written in (a hint for grouping only: the parser always reads German and English at once).
+- `calendars`: the calendars `#Name` may name (in the order of the list; `writable` false: "only read"); left out =
+  none.
+- `expect.start`/`end`: `YYYY-MM-DD` for a whole day (`end` its last day), else `YYYY-MM-DDTHH:MM` in `zone`;
+  `default_length`: no length was said (one hour); `rule` as in ops (`null`: no series); `calendar`: the id `#Name`
+  chose, or `null`; `tag`: `{"text", "problem": "unknown"|"readOnly"}` for a `#Name` that fits no writable calendar.
+- `expect.error`: `null`, `empty` (nothing typed), `no_date` (no date or an impossible one: the app opens a new event
+  with the text as title), `end_before_start`, `no_title`, `title_too_long` (over 200), `length_without_time`. With
+  `empty` and `no_date` every other field is `null`.
+
 ## Later (names fixed, not built)
 
 So that later stages dock on; each comes with its name in `hello.features`.
@@ -472,19 +607,15 @@ So that later stages dock on; each comes with its name in `hello.features`.
   (`PUT /profile`, `PUT`/`DELETE /avatar`; `GET /avatars/{id}` is there since 0.4), display (`PUT /display`), devices (built), calendars
   and accounts (create, change, order, delete; iCloud/CalDAV/subscription with check and preview; holidays; reconnect,
   disconnect), Google with the sign-in led back into the app, shares and guest links, invitations
-  (`POST /events/{id}/answer`), nextasks connection, trash (`GET /trash`, restore, empty), import, export and move as
-  jobs, `GET /upcoming`.
+  (`POST /events/{id}/answer`), nextasks connection, import, export and move as jobs, `GET /upcoming` (the trash is
+  there since 0.5).
 - `sync_more` (follow-up 2, rest): ops `answer`, `tick`, `calendar_order`.
-- `reminders` (follow-up 5, rest): the account's reminders per event in `changes` (`reminders: [minutes]` beside each
-  event, and per occurrence); switches „Erinnern“ and „Mitteilungen“ per app device; `offers.relay_ok` (the server
-  reaches the relay).
+- `reminder_switches` (follow-up 5, rest): switches „Erinnern“ und „Mitteilungen“ per app device;
+  `offers.relay_ok` (the server reaches the relay). The reminders themselves are there since 0.5.
 - `marks` (follow-up 6): marks per person and event that travel: `alarm` (Wecker, TIMEIOS-21), `leave_off` („Los um“
   off, TIMEIOS-22).
 - `links` (follow-up 7): `GET /.well-known/apple-app-site-association` for `/day?…&event=…`, `/calendar/*`; the
   browser's „In der App öffnen“.
-- `attachments` (follow-up 10): attachments of events (list, file, upload with the device token, for offline-made
-  events after them); `geo` from Apple's suggestions is taken already (`event.geo`).
-- `quick_tests` (follow-up 11): a shared list of sentences and what TIME-10 understands of them, as JSON in the repo.
 
 ## Browser: devices (TIME-29 AC-4, AC-7)
 
@@ -516,8 +647,8 @@ Only where a calendar needs it:
 6. **The browser's card "Geräte" stands in Settings › My account › On iPhone and co** (above the calendar account),
    not under Connections: TIME-29 AC-7 and TIMEIOS-4 AC-3 put it there. The QR dialog's step 2 names „Server
    hinzufügen“, the button of the app (nexnotes' web still says „Server verbinden“).
-7. **No device token on the browser's routes** in api 1 (nexnotes takes it for attachments); the member ways come as
-   `/api/app/1/…` routes later.
+7. **No device token on the browser's routes** in api 1 (nexnotes takes it for attachments); attachments (0.5) and
+   the member ways come as `/api/app/1/…` routes that do what the browser's do.
 8. Token prefix `ntd_`, schemes `nextime://connect` and `nextime://connected`.
 9. **A silent nudge on every change** of the account (`quiet`, 0.2): nexnotes sends only notifications with text;
    the calendar app keeps widgets and its copy current in the background (TIMEIOS-5 AC-12).
