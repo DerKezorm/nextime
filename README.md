@@ -121,6 +121,7 @@ proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
 | `NEXTIME_COOKIE_SUFFIX` | Keeps the sign-ins of two instances on one host apart. |
 | `NEXTIME_PLACES_URL` | The address search behind the suggestions in the place field, a [Photon](https://github.com/komoot/photon) service. Empty: the free one at photon.komoot.io. nextime asks it, not the browser, and sends only the typed place. The operator can switch suggestions and maps off. |
 | `NEXTIME_TILES_URL` | Where the small map of a place is drawn from, with `{z}/{x}/{y}` in it. Empty: the tiles of OpenStreetMap. |
+| `NEXTIME_PUSH_RELAY` | The push relay that wakes the nextime app on iPhone and iPad when something changed (only the device's ticket and an encrypted note go there, never the content). Empty: nothing goes out. Default `https://push.nexapps.dev`. |
 | `NEXTIME_MEDIA_MEMORY_MB` | Memory of the process that reads pictures and PDFs of attachments for their previews (1024 MB from the start). |
 | `TZ` | The server's time zone; the daily backup runs in it. |
 | `PUID`, `PGID` | Who owns the files in the data folder. |

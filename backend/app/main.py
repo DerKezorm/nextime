@@ -56,6 +56,7 @@ from .routers import trash as trash_router
 from .security import HashingBusy, purge_sessions
 from .services import (
     accounts,
+    apppush,
     backups,
     cleanup,
     locales,
@@ -166,6 +167,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(backups.run_forever(stop)))
         tasks.append(asyncio.create_task(cleanup.run_forever(stop)))
         tasks.append(asyncio.create_task(_sweep_forever(stop)))
+        # The silent nudges to the iPhone app (TIME-29).
+        tasks.append(asyncio.create_task(apppush.run_forever(stop)))
         # iCloud, Google, CalDAV servers, subscriptions and holidays (TIME-15 to TIME-17).
         tasks.append(asyncio.create_task(sync.run_forever(stop)))
         # Ticks of nextasks tasks that wait for nextasks (TIME-25 EC-12).

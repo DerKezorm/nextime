@@ -115,6 +115,9 @@ class Settings(BaseSettings):
     places_url: str = "https://photon.komoot.io/api/"
     #: The map tiles the small map of a place is drawn from, by the server (TIME-8), ``{z}/{x}/{y}`` in it.
     tiles_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    #: The push relay the iPhone app's silent nudges go through (TIME-29): it sees only the device's ticket and what is
+    #: encrypted for the device. Empty: nothing goes to iPhones and iPads.
+    push_relay: str = "https://push.nexapps.dev"
 
     @field_validator("data_dir", "frontend_dist", "locales_dir")
     @classmethod
@@ -164,7 +167,7 @@ class Settings(BaseSettings):
                                "https://time.example.com")
         return value
 
-    @field_validator("update_url", "internet_probe_url")
+    @field_validator("update_url", "internet_probe_url", "push_relay")
     @classmethod
     def _update_url(cls, value: str) -> str:
         if value.strip() and not _web_address(value.strip(), path=True):

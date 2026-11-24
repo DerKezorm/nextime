@@ -35,7 +35,7 @@ from ..errors import detail, error
 from ..models import Account as AccountRow
 from ..models import Device, utcnow
 from ..security import brake as sign_in_brake
-from ..services import appdevices, appsync, display, events, live, logs, settings_service
+from ..services import appdevices, apppush, appsync, display, events, live, logs, settings_service
 from ..services.appdevices import Caller, PairingError, Refusal
 from ..services.oidc_store import SqlStore
 from ..vendor.nexoidc import providers
@@ -43,6 +43,8 @@ from ..vendor.nexoidc import providers
 logger = logging.getLogger("nextime.app")
 
 router = APIRouter(prefix="/api/app/1", tags=["app"])
+# Every change the account hears of nudges its app devices (follow-up 3).
+apppush.register()
 
 #: The interface this server speaks, and the oldest one it still answers.
 API = 1
@@ -51,7 +53,7 @@ MIN_API = 1
 WAIT_SECONDS = 25.0
 WAIT_RECHECK = 5.0
 #: The parts of the interface this server has (``hello``): an app tells an older server by their absence.
-FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket")
+FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge")
 
 
 def _refused(code: str, text: str, status: int, retry: int | None = None) -> HTTPException:
@@ -194,8 +196,8 @@ def me(found: Device_) -> dict[str, Any]:
                        "title_chars": events.TITLE_MAX, "notes_chars": events.NOTES_MAX,
                        "location_chars": events.LOCATION_MAX, "upload_mb": settings_service.upload_max_mb(db),
                        "trash_days": settings_service.trash_days(db)},
-            # Nothing goes through the push relay yet (``docs/vertrag-app1.md``, Notifications): false until it does.
-            "offers": {"push": False},
+            # The server nudges devices with a ticket through the relay; empty relay: nothing goes out.
+            "offers": {"push": bool(apppush.relay_url())},
             "server_id": appdevices.server_id(),
             "calendar_account": _calendar_account(db, found.device.id),
         }
@@ -230,7 +232,7 @@ class PushIn(BaseModel):
 
 @router.put("/push", status_code=204, summary="Notifications for this device: the relay's ticket and the key")
 def push_on(found: Device_, body: PushIn) -> Response:
-    """Kept as nexnotes keeps it; nothing is sent yet (the relay does not know the app, ``docs/vertrag-app1.md``)."""
+    """Kept as nexnotes keeps it; the device gets the silent nudge on every change of the account."""
     with SessionLocal() as db:
         try:
             appdevices.remember_push(db, found.device.id, body.ticket, body.key)

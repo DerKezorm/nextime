@@ -6,9 +6,21 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.1 (24.11.2026), server TIME-29 on nextime branch `ios-app1`. Built now: everything the app's stage 2
-needs (TIMEIOS-4, TIMEIOS-5). Parts marked **later** are named so that later stages dock on; the server does not
-have them yet and `hello.features` does not name them.
+Status: draft 0.2 (24.11.2026), server TIME-29 on nextime branch `ios-app1` (0.1 `dd89332`, after the review
+`6a158d7`). Built: everything the app's stage 2 needs (TIMEIOS-4, TIMEIOS-5) and the silent nudge. Parts marked
+**later** are named so that later stages dock on; the server does not have them yet and `hello.features` does not
+name them.
+
+Changes in 0.2 (24.11.2026, follow-up 3):
+- The silent nudge through the push relay: on every change the account sees (an event, a calendar, a share, a
+  collection, its display), every app device of the account that handed over a ticket (`PUT /push`) gets a quiet push
+  (no alert) with `enc` = `{"type": "changed", "account", "server"}`; the app then asks `changes` for that account.
+  At most one nudge per account every 10 seconds, the first about 2 seconds after a change. See "Notifications".
+- `me.offers.push` is `true` while the operator leaves the relay on (`NEXTIME_PUSH_RELAY`, empty: off).
+- `hello.features` adds `nudge`.
+- A device disconnected (in the browser, by itself, a new password, a block) ends its running `wait` at once
+  (`401 device_disconnected` / `account_blocked`), as nexnotes closes its open connections.
+- `resolve` of an event the account does not see answers `not_found` (it said `done` for `restore: false`).
 
 Conventions: JSON in UTF-8, times as ISO 8601 UTC with `Z`. Errors are
 `{"detail": {"code": "<code>", "message": "<English text>"}}` with the HTTP status named below. The app sends
@@ -25,7 +37,7 @@ device token in api 1.
 
 ```json
 {"app": "nextime", "api": 1, "min_api": 1, "version": "0.3.0", "sign_in": ["password", "oidc"],
- "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket"]}
+ "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge"]}
 ```
 
 The app speaks `api` 1. If `min_api` > 1 the app says "update the app"; if `api` < 1 it says "update the server"
@@ -112,8 +124,8 @@ then. `avatar` is when the picture was set (empty for none); the picture is `GET
   - `language`: the account's chosen language (`de`, `en`) or empty (the app follows iOS anyway, G7).
   - `limits`: `{"ops": 50, "changes_page": 500, "wait_seconds": 25, "title_chars": 200, "notes_chars": 10000,
     "location_chars": 2000, "upload_mb", "trash_days"}` (the web's limits, TIME-29 AC-8).
-  - `offers`: `{"push": false}`: whether the server sends through the push relay; `false` until sending is built
-    (see "Notifications"). The app may hand its ticket over all the same (`PUT /push`).
+  - `offers`: `{"push": bool}`: whether the server sends through the push relay (the operator may switch it off);
+    see "Notifications".
   - `server_id`: a fixed mark of this server (16 hex characters), the same for every account and call.
   - `calendar_account`: see "Calendar account on this device".
 - `DELETE /api/app/1/device` → `204`: the device disconnects itself (TIMEIOS-4 AC-11, follow-up 9): the token goes, the
@@ -325,15 +337,26 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
 ## Notifications (TIME-29 AC-3; follow-ups 3, 5)
 
 - `PUT /api/app/1/push {"ticket", "key"}` → `204`: the relay's ticket and the device's X25519 public key (base64,
-  32 bytes), as nexnotes (`push_ticket_invalid` 422 when unusable). `DELETE /api/app/1/push` → `204`. The browser's
-  list shows „Mitteilungen an“ while a ticket is kept (TIME-29 AC-7, EC-8).
-- **Not sent yet.** Sending (the silent nudge on every change, TIMEIOS-5 AC-12; change notifications of shared
-  calendars, TIMEIOS-20) goes through the push relay (`https://push.nexapps.dev`), which takes only apps on its list:
-  `dev.nexapps.nextime` must be added there first (a change at the relay, the operator of the relay decides). Planned shape, as
-  nexnotes: `POST /v1/send` with the ticket, `quiet: true` and no text for the nudge; for a notification `enc` =
-  `{"title", "text", "event_id", "occurrence", "calendar_id", "type": "changed"|"deleted", "account", "server"}`
-  encrypted for the device (HKDF info `nextime-push-v1`, ChaCha20-Poly1305), `collapse` a keyed mark per event.
-  Reminders never go through the relay (G6): the app plans them itself.
+  32 bytes), as nexnotes (`422 push_ticket_invalid` when unusable). `DELETE /api/app/1/push` → `204`. The browser's
+  list shows „Mitteilungen an“ while a ticket is kept, else „Mitteilungen aus“ (TIME-29 AC-7, EC-8).
+- **The silent nudge (0.2, follow-up 3; TIMEIOS-5 AC-12):** the server calls the relay (`https://push.nexapps.dev`,
+  app `dev.nexapps.nextime`) with `POST /v1/send {"ticket", "enc", "quiet": true, "collapse"}` for every device of the
+  account with a ticket, whenever something the account sees changed: an event (also of its own calendars, also one
+  the device made itself), a calendar's properties, a share, a collection, its display. `enc` is
+  `{"type": "changed", "account": <account id>, "server": <me.server_id>}` encrypted for exactly that device as nexnotes
+  does (a fresh X25519 pair and 12-byte nonce per message, HKDF-SHA256 with empty salt and info `nextime-push-v1` to
+  32 bytes, ChaCha20-Poly1305; `enc` = base64 of ephemeral public key + nonce + ciphertext with tag). `collapse` is
+  `nt-<server_id>-<account id>`: a newer nudge replaces one Apple still holds. The app wakes in the background, finds
+  the account by `account` and `server`, and asks `changes` with its cursor; nothing about the change travels.
+  - Timing: the first nudge of a burst about 2 seconds after the first change, then at most one every 10 seconds per
+    account (the relay takes 30 a minute per device). Kept in memory: a restart of the server may drop a nudge; the
+    app still syncs when it opens.
+  - A `410` from the relay drops the device's ticket (the browser then shows „Mitteilungen aus“); the app brings a
+    new one with `PUT /push` on its next start. Other failures are logged without the ticket and not retried.
+- **Not yet (follow-up 5, later):** notifications with text of changes in shared calendars (TIMEIOS-20), switches
+  „Erinnern“ and „Mitteilungen“ per app device. Planned `enc` for them, as nexnotes:
+  `{"title", "text", "event_id", "occurrence", "calendar_id", "type": "changed"|"deleted", "account", "server"}`, an
+  alert instead of `quiet`. Reminders never go through the relay (G6): the app plans them itself.
 
 ## Later (names fixed, not built)
 
@@ -347,7 +370,6 @@ So that later stages dock on; each comes with its name in `hello.features`.
   move as jobs, `GET /upcoming`, `GET /year` (counted as the browser counts, TIMEIOS-8 AC-16).
 - `sync_more` (follow-up 2, rest): profile pictures of people, the state of invitations, nextasks tasks and nexpaper
   deadlines in `changes`; ops `answer`, `tick`, `collection_*`, `calendar_order`.
-- `nudge` (follow-up 3): the silent push on every change of the account (needs the relay, see "Notifications").
 - `reminders` (follow-up 5): the account's reminders per event in `changes` (`reminders: [minutes]` beside each
   event, and per occurrence), notifications of changes in shared calendars with „Öffnen“; switches „Erinnern“ and
   „Mitteilungen“ per app device; `offers.relay_ok` (the server reaches the relay).
@@ -392,4 +414,5 @@ Only where a calendar needs it:
 7. **No device token on the browser's routes** in api 1 (nexnotes takes it for attachments); the member ways come as
    `/api/app/1/…` routes later.
 8. Token prefix `ntd_`, schemes `nextime://connect` and `nextime://connected`.
-9. **Push is kept, not yet sent** (the relay needs `dev.nexapps.nextime` on its list).
+9. **A silent nudge on every change** of the account (`quiet`, 0.2): nexnotes sends only notifications with text;
+   the calendar app keeps widgets and its copy current in the background (TIMEIOS-5 AC-12).
