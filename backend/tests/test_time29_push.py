@@ -256,3 +256,52 @@ def test_TIME29_AC3_a_ticket_the_relay_forgot_stops_the_notifications(
     ticker.later(150)
     assert len(relay.sent) == 1
     assert client.get("/api/app-devices").json()[0]["push"] is False
+
+
+def test_TIME29_AC3_busy_only_tells_times_without_titles_names_or_events(
+        client: TestClient, account: Account, relay: Relay, ticker: Any) -> None:
+    from .test_time19 import from_source, put_share, source_calendar, vevent
+    from .test_time21 import prefs, switch
+
+    mika = make_account("mika")
+    prefs(mika.id)
+    work = source_calendar(account.id, "Arbeit")
+    assert put_share(client, work, mika.id, "busy").status_code == 200
+    with new_client(mika) as browser:
+        assert switch(browser, work).status_code == 200
+        phone = pair(browser)
+    private, public = keys()
+    call("PUT", "/push", phone["token"], json={"ticket": "1.mika", "key": public, "alerts": True})
+    from_source(work, vevent("kunde@example.com", "20261203T090000Z", "20261203T100000Z", "Kundentermin Geheim",
+                             location="Büro"))
+    ticker.later(150)
+    alerts = [body for _url, body in relay.sent if body["ticket"] == "1.mika"]
+    assert len(alerts) == 1
+    message = json.loads(push_crypto.decrypt(alerts[0]["enc"], private))
+    assert message["busy"] is True and message["who"] == [] and message["event_id"] is None
+    assert [(item["title"], item["event_id"]) for item in message["items"]] == [("", None)]
+    assert message["items"][0]["starts_at"] == "2026-12-03T09:00:00Z"
+    assert "Kundentermin" not in json.dumps(message, ensure_ascii=False)
+
+
+def test_TIME29_AC3_many_people_are_named_three_and_counted(client: TestClient, account: Account, relay: Relay,
+                                                            ticker: Any) -> None:
+    from .test_time19 import put_share
+    from .test_time21 import prefs, switch
+
+    prefs(account.id)
+    family = make_calendar(client, "Familie")
+    people = [make_account(name) for name in ("anna", "ben", "cleo", "dora")]
+    for person in people:
+        put_share(client, family, person.id, "edit")
+    assert switch(client, family).status_code == 200
+    phone = pair(client)
+    private, public = keys()
+    call("PUT", "/push", phone["token"], json={"ticket": "1.phone", "key": public, "alerts": True})
+    for person in people:
+        with new_client(person) as browser:
+            make_event(browser, f"Termin von {person.name}", calendar_id=family)
+    ticker.later(150)
+    message = json.loads(push_crypto.decrypt(relay.sent[0][1]["enc"], private))
+    assert message["who"] == ["Anna", "Ben", "Cleo"] and message["who_more"] == 1 and message["count"] == 4
+    assert len(relay.sent[0][1]["enc"]) < 3000

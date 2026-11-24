@@ -18,6 +18,7 @@ Changes in 0.3 (24.11.2026, follow-up 5, TIME-29 AC-3):
 - `PUT /push` takes `"alerts": true`: only a build whose notification service extension opens such messages says so.
   Without it (every build before 0.3) the device gets the silent nudge only, never an alert it cannot open.
 - `hello.features` adds `notify`. Reminders never go to app devices (G6: the app plans them itself).
+- After the review: `who` holds at most three names, `who_more` how many more.
 
 Changes in 0.2 (24.11.2026, follow-up 3):
 - The silent nudge through the push relay: on every change the account sees (an event, a calendar, a share, a
@@ -373,7 +374,7 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
 ```json
 {"type": "changes", "title": "Familie", "text": "Kim Example hat „Elternabend“ am Do, 3.12. um 19:00 eingetragen.",
  "account": 7, "server": "9c1d2e4b3f9a0c1d", "calendar_id": 3, "calendar": "Familie", "who": ["Kim Example"],
- "busy": false, "count": 1,
+ "who_more": 0, "busy": false, "count": 1,
  "items": [{"kind": "created", "event_id": 41, "title": "Elternabend", "starts_at": "2026-12-03T18:00:00Z",
             "all_day": false, "before_start": null, "recurring": false}],
  "day": "2026-12-03", "event_id": 41}
@@ -385,7 +386,8 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
   - `items`: the first three changes of the bundle (`count` is all of them), oldest first. `kind` is `created`,
     `changed`, `moved` (another time, `before_start` the time before) or `deleted`; `event_id` is `null` for a deleted
     one. A whole-day event's `starts_at` is its date at midnight UTC. `who`: the people who made the changes (not the
-    account itself); empty when only the calendar's source (iCloud and co) changed it.
+    account itself), at most three, each at most 40 characters, `who_more` how many more (so `enc` stays far below
+    the relay's 3000 characters); empty when only the calendar's source (iCloud and co) changed it.
   - „Busy only“ (`busy: true`): no titles, no names, no `event_id`; the times only.
   - Opening („Öffnen“, a tap): `day` and `event_id` as the browser's link `/day?day=…&event=…`; with several
     changes or a deleted event only `day`. `account` and `server` name the account in the app.

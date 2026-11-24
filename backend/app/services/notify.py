@@ -379,7 +379,10 @@ def _app_fields(calendar: Calendar, changes: list[NotifyChange], names: list[str
         "before_start": _iso(change.before_start) if _moved(change) else None,
         "recurring": bool(change.recurring),
     } for change in changes[:MAX_ITEMS]]
-    return {"calendar": _plain(calendar.name, TITLE_CHARS), "who": [] if busy else names, "busy": busy,
+    people = [] if busy else [_plain(name, TITLE_CHARS) for name in names]
+    # A few names and how many more: the encrypted message stays far below the relay's 3000 characters.
+    return {"calendar": _plain(calendar.name, TITLE_CHARS), "who": people[:WHO_MAX],
+            "who_more": max(0, len(people) - WHO_MAX), "busy": busy,
             "count": len(changes), "items": items, "day": query.get("day"),
             "event_id": int(query["event"]) if query.get("event") else None}
 
@@ -432,6 +435,8 @@ def _enqueue(db: Session, account: Account, calendar_id: int, payload: dict[str,
     return count
 
 
+#: Names in the app's message at most (``who``); the rest is counted (``who_more``).
+WHO_MAX = 3
 #: ``notify_outbox.kind`` of a notification for the iPhone app.
 APP = "app"
 
