@@ -884,14 +884,15 @@ def summary_in(component: icalendar.cal.Component, language: str) -> str:
 def occurrence_list(db: Session, account: Account, start: datetime, end: datetime,
                     include_hidden: bool = False, only: set[int] | None = None,
                     include_declined: bool = False,
-                    events_of: dict[int, set[str]] | None = None) -> list[dict[str, Any]]:
+                    events_of: dict[int, set[str]] | None = None,
+                    merge: bool | None = None) -> list[dict[str, Any]]:
     """Every occurrence in [start, end) in the calendars the account shows (hidden ones not, AC-3); series rolled
     out with their exceptions. "Busy only" calendars give blocks without title and leave out free events.
 
     ``only`` keeps the calendars of the collection chosen on the device (TIME-13 AC-3). Each occurrence brings what
     the views draw calmly (TIME-14): who entered it in a shared calendar (``person``, AC-2), its place and version;
     the same event in two of one person's calendars comes once with all its ``sources`` (AC-3), unless the account
-    switched that off (AC-4)."""
+    switched that off (AC-4); ``merge`` overrides that (the year counts duplicates once, TIME-12 AC-18)."""
     if end <= start or (end - start).days > MAX_RANGE_DAYS:
         raise error("invalid_range", "Ask for at most 400 days at once.", 422)
     listed = [(item, setting) for item, setting in calendars.ordered(db, account.id)
@@ -998,7 +999,8 @@ def occurrence_list(db: Session, account: Account, start: datetime, end: datetim
                 entry.update(all_day=True, start=begin.isoformat(), end=last.isoformat(), time_zone="")
             found.append((entry, item.calendar.owner_id, row.uid))
     found.sort(key=lambda trio: (trio[0]["start"], place[trio[0]["calendar_id"]], trio[0]["title"]))
-    merge = bool(display.view(account).get("merge_duplicates", True))
+    if merge is None:
+        merge = bool(display.view(account).get("merge_duplicates", True))
     result = _merged(found) if merge else [entry for entry, _owner, _uid in found]
     result.sort(key=lambda entry: (entry["start"], entry["title"]))
     return result

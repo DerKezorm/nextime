@@ -40,8 +40,10 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
   const { t } = useTranslation()
   const [setWidth] = useColumnWidth('sidebar')
   const width = resizable ? setWidth : COLUMNS.sidebar.fallback
-  // The day view belongs to "Woche" in the list, as in the bar on a phone.
-  const dayShown = useLocation().pathname === '/day'
+  // The day view belongs to "Woche" in the list, the year to "Monat", as in the bar on a phone.
+  const path = useLocation().pathname
+  const dayShown = path === '/day'
+  const yearShown = path === '/year'
   return (
     <nav aria-label={t('app.mainMenu')} style={{ width }} className="relative flex h-full flex-col border-r border-ink-700 bg-ink-900">
       <div className="px-4 pt-4 pb-3">
@@ -58,7 +60,7 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
         <ul className="mt-1">
           {VIEWS.map((view) => (
             <li key={view.to}>
-              <NavLink to={view.to} end={view.end} onClick={onNavigate} className={({ isActive }) => PLACE + (isActive || (view.to === '/week' && dayShown) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')}>
+              <NavLink to={view.to} end={view.end} onClick={onNavigate} className={({ isActive }) => PLACE + (isActive || (view.to === '/week' && dayShown) || (view.to === '/month' && yearShown) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')}>
                 {t(view.key)}
               </NavLink>
             </li>

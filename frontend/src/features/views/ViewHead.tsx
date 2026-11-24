@@ -2,7 +2,8 @@
  * The head of Day, Week and Month (TIME-12 AC-1, AC-13): ‹ and › step a day, a week (three days on a phone) or a
  * month, "Today" jumps back, the period in words as a button that opens the choice of a date (`DatePicker`, key G), the
  * calendar week as a button ("KW 48", or "Zu KW …" while week numbers are off) that opens "Zu Kalenderwoche springen"
- * (with a date field too), and the switch Day, Week, Month.
+ * (with a date field too), and the switch Day, Week, Month, Year (TIME-12 AC-16; the year steps a year and has no week
+ * button).
  */
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -12,10 +13,10 @@ import { Dialog } from '../../components/Dialog'
 import { isoWeekOf, mondayOfWeek, weeksInYear } from './dates'
 import { DatePicker } from './DatePicker'
 
-export type Kind = 'day' | 'week' | 'month'
+export type Kind = 'day' | 'week' | 'month' | 'year'
 
-const PATHS: Record<Kind, string> = { day: '/day', week: '/week', month: '/month' }
-const KEYS: Record<Kind, string> = { day: 'T', week: 'W', month: 'M' }
+const PATHS: Record<Kind, string> = { day: '/day', week: '/week', month: '/month', year: '/year' }
+const KEYS: Record<Kind, string> = { day: 'T', week: 'W', month: 'M', year: 'J' }
 
 export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, day, today, picking, onPicking, onPick }: {
   kind: Kind
@@ -36,8 +37,8 @@ export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, d
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
-  const steps = kind === 'day' ? ['views.previousDay', 'views.nextDay'] : kind === 'month' ? ['views.previousMonth', 'views.nextMonth'] : narrow ? ['views.previousThree', 'views.nextThree'] : ['views.previousWeek', 'views.nextWeek']
-  const names: Record<Kind, string> = { day: t('views.day'), week: t('nav.week'), month: t('nav.month') }
+  const steps = kind === 'day' ? ['views.previousDay', 'views.nextDay'] : kind === 'month' ? ['views.previousMonth', 'views.nextMonth'] : kind === 'year' ? ['views.previousYear', 'views.nextYear'] : narrow ? ['views.previousThree', 'views.nextThree'] : ['views.previousWeek', 'views.nextWeek']
+  const names: Record<Kind, string> = { day: t('views.day'), week: t('nav.week'), month: t('nav.month'), year: t('views.year') }
   const titleButton = useRef<HTMLButtonElement>(null)
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3" data-testid="view-head">
@@ -78,16 +79,26 @@ export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, d
           }}
         />
       )}
-      <button type="button" className="text-sm font-medium text-mist-500 hover:text-accent-400" title={t('views.jumpHint')} aria-label={t('views.jumpTitle')} onClick={onJump} data-testid="week-button">
-        <span data-testid={week !== null ? 'week-number' : undefined}>{week !== null ? t('views.weekNumber', { number: week }) : t('views.toWeek')}</span>
-      </button>
-      {narrow ? (
-        <button type="button" className="nt-btn nt-btn-quiet ml-auto text-sm" onClick={onToday} data-testid="to-today">
-          {t('nav.today')}
+      {kind !== 'year' && (
+        <button type="button" className="text-sm font-medium text-mist-500 hover:text-accent-400" title={t('views.jumpHint')} aria-label={t('views.jumpTitle')} onClick={onJump} data-testid="week-button">
+          <span data-testid={week !== null ? 'week-number' : undefined}>{week !== null ? t('views.weekNumber', { number: week }) : t('views.toWeek')}</span>
         </button>
+      )}
+      {narrow ? (
+        <span className="ml-auto inline-flex items-center gap-1">
+          {/* On a phone the bar below has no room for the year: the month leads there, and back by a month's name. */}
+          {kind === 'month' && (
+            <button type="button" className="nt-btn nt-btn-quiet text-sm" onClick={() => navigate(PATHS.year)} data-testid="to-year">
+              {t('views.year')}
+            </button>
+          )}
+          <button type="button" className="nt-btn nt-btn-quiet text-sm" onClick={onToday} data-testid="to-today">
+            {t('nav.today')}
+          </button>
+        </span>
       ) : (
         <span role="group" aria-label={t('app.views')} className="ml-auto inline-flex overflow-hidden rounded-[9px] border border-ink-700 text-sm" data-testid="view-switch">
-          {(['day', 'week', 'month'] as Kind[]).map((entry) => (
+          {(['day', 'week', 'month', 'year'] as Kind[]).map((entry) => (
             <button
               key={entry}
               type="button"

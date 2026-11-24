@@ -101,7 +101,7 @@ export function AppShell() {
           <OfflineHint />
           <TravelHint />
           <OnlyBar />
-          {['/', '/day', '/week', '/month'].includes(location.pathname) && <SourceHints />}
+          {['/', '/day', '/week', '/month', '/year'].includes(location.pathname) && <SourceHints />}
           <main className="min-h-0 flex-1 overflow-y-auto" id="main">
             <Outlet />
           </main>
@@ -137,7 +137,7 @@ function BottomBar() {
       end={view.end}
       className={({ isActive }) =>
         'flex min-h-14 min-w-0 flex-1 flex-col items-center justify-center gap-1 px-1 py-1.5 text-center text-xs leading-tight ' +
-        (isActive || (view.to === '/week' && location.pathname === '/day') ? 'nt-bar-current font-semibold text-accent-400' : 'text-mist-400')
+        (isActive || (view.to === '/week' && location.pathname === '/day') || (view.to === '/month' && location.pathname === '/year') ? 'nt-bar-current font-semibold text-accent-400' : 'text-mist-400')
       }
       data-testid={view.to === SEARCH_PATH ? 'bottom-search' : `bottom-${view.to === '/' ? 'today' : view.to.slice(1)}`}
     >
@@ -167,7 +167,7 @@ function BottomBar() {
   )
 }
 
-/** The keys of the views (TIME-12 AC-6, AC-13; TIME-11 AC-13): T day, W week, M month, H today, the arrows a step back or
+/** The keys of the views (TIME-12 AC-6, AC-13; TIME-11 AC-13): T day, W week, M month, J year (AC-16), H today, the arrows a step back or
  * on, K the jump to a calendar week, G the choice of a date, N a new event. Not while typing, nor while a dialog, a menu or the side panel is
  * open. */
 function ViewKeys() {
@@ -182,7 +182,7 @@ function ViewKeys() {
       if (element?.closest?.('input, textarea, select, [contenteditable="true"]')) return
       if (target || document.querySelector('[role="dialog"], [role="menu"]')) return
       const pressed = event.key.toLowerCase()
-      const views: Record<string, string> = { t: '/day', w: '/week', m: '/month', h: '/' }
+      const views: Record<string, string> = { t: '/day', w: '/week', m: '/month', j: '/year', h: '/' }
       if (views[pressed]) {
         event.preventDefault()
         navigate(views[pressed])
@@ -194,7 +194,7 @@ function ViewKeys() {
         if (viewCommand('jump')) event.preventDefault()
       } else if (pressed === 'g') {
         if (viewCommand('pick')) event.preventDefault()
-      } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && ['/day', '/week', '/month'].includes(location.pathname)) {
+      } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && ['/day', '/week', '/month', '/year'].includes(location.pathname)) {
         event.preventDefault()
         viewCommand(event.key === 'ArrowLeft' ? 'previous' : 'next')
       }

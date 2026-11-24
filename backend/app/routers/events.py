@@ -3,6 +3,7 @@
 | Method | Path | What |
 |---|---|---|
 | GET | ``/api/events?start=&end=&calendars=`` | every occurrence in the window, series rolled out (hidden ones not) |
+| GET | ``/api/events/year?year=&zone=&calendars=&hidden=`` | how many events each day of a year holds (TIME-12 AC-16) |
 | GET | ``/api/events/{id}?occurrence=`` | one event or one occurrence for the side panel |
 | POST | ``/api/events`` | a new event (201; the same ``client_ref`` again: 200 with the first one) |
 | PATCH | ``/api/events/{id}`` | what the member changed; ``scope`` this/following/all with ``occurrence`` |
@@ -25,7 +26,7 @@ from pydantic import BaseModel, Field
 
 from ..deps import Account, DbSession
 from ..errors import error
-from ..services import events, rules
+from ..services import display, events, rules, yearmap
 
 router = APIRouter(prefix="/api/events", tags=["events"])
 
@@ -163,6 +164,28 @@ def list_events(account: Account, db: DbSession, start: str = Query(max_length=4
             raise error("invalid_input", "The input is not valid.", 422, fields=["calendars"]) from None
     return events.occurrence_list(db, account, _moment(start, "start"), _moment(end, "end"), include_hidden=hidden,
                                   only=only, include_declined=declined)
+
+
+def _only(calendars: str | None) -> set[int] | None:
+    if calendars is None:
+        return None
+    try:
+        return {int(part) for part in calendars.split(",") if part.strip()}
+    except ValueError:
+        raise error("invalid_input", "The input is not valid.", 422, fields=["calendars"]) from None
+
+
+@router.get("/year", summary="How many events each day of a year holds (the year as a heat map)")
+def year_map(account: Account, db: DbSession, year: int = Query(ge=yearmap.FIRST_YEAR, le=yearmap.LAST_YEAR),
+             zone: str | None = Query(default=None, max_length=64), hidden: bool = False,
+             calendars: str | None = Query(default=None, max_length=4000)) -> dict[str, Any]:
+    """Counts only (TIME-12 AC-17, AC-18): ``days`` maps a date to its number of events, ``holidays`` lists the days
+    of calendars with "Tage hervorheben". ``zone`` is the zone the views show (default: the account's);
+    ``calendars`` and ``hidden`` as for the window above."""
+    chosen = zone or str(getattr(display.zone_of(account), "key", "") or "UTC")
+    if not display.valid_zone(chosen):
+        raise error("invalid_input", "The input is not valid.", 422, fields=["zone"])
+    return yearmap.year_map(db, account, year, chosen, include_hidden=hidden, only=_only(calendars))
 
 
 @router.get("/{event_id}", summary="One event or one occurrence of a series")

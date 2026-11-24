@@ -86,6 +86,10 @@ export type Person = { id: number; name: string; color: number | null; avatar: s
 /** One place an event stands in: its calendar, the event and occurrence there, whether the member may change it. */
 export type Source = { id: number; occurrence: string | null; calendar_id: number; writable: boolean; etag: string }
 
+/** The year as a heat map: the number of events of each day that has any, and the days of calendars with "Tage
+ * hervorheben" (TIME-12 AC-17, AC-20). */
+export type YearMap = { year: number; zone: string; days: Record<string, number>; holidays: string[] }
+
 export type Occurrence = {
   id: number
   occurrence: string | null
@@ -222,6 +226,17 @@ export const eventsApi = {
       query: {
         start: start.toISOString(),
         end: end.toISOString(),
+        calendars: only?.calendars ? only.calendars.join(',') : undefined,
+        hidden: only?.hidden ? 'true' : undefined,
+      },
+      signal,
+    }),
+  /** How many events each day of `year` holds in `zone`, for the calendars shown (TIME-12 AC-16 to AC-18). */
+  year: (year: number, zone: string, only?: { calendars: number[] | null; hidden?: boolean }, signal?: AbortSignal) =>
+    api<YearMap>('/api/events/year', {
+      query: {
+        year: String(year),
+        zone,
         calendars: only?.calendars ? only.calendars.join(',') : undefined,
         hidden: only?.hidden ? 'true' : undefined,
       },

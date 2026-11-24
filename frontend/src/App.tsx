@@ -13,6 +13,7 @@ import { InvitePage, LoginPage, ResetPage, SetupPage } from './pages/AuthPages'
 import { FormerSettingsAddress, SettingsPage } from './pages/SettingsPage'
 import { GridView } from './features/views/GridView'
 import { MonthView } from './features/views/MonthView'
+import { YearView } from './features/views/YearView'
 import { TodayView } from './features/views/TodayView'
 import { useAuth } from './state/auth'
 
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="day" element={<GridView kind="day" />} />
         <Route path="week" element={<GridView kind="week" />} />
         <Route path="month" element={<MonthView />} />
+        <Route path="year" element={<YearView />} />
         {/* The search (TIME-22) and the trash (TIME-23). */}
         <Route path="search" element={<SearchPage />} />
         <Route path="trash" element={<TrashPage />} />
