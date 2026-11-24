@@ -1,4 +1,35 @@
 {
+  "0.3.0": {
+    "lead": "Ein Jahr auf einen Blick, eine neue Übersicht der kommenden Wochen und eine aufgeräumte Seitenleiste.",
+    "sections": [
+      {
+        "title": "Jahr als Wärmekarte",
+        "where": "Kalender › Jahr (Taste J)",
+        "body": "Die zwölf Monate auf einer Seite, jeder Tag ein Feld, umso kräftiger, je mehr an ihm los ist. So siehst du volle Wochen und freie Strecken sofort. Ein Klick auf einen Tag öffnet ihn, ein Klick auf den Monatsnamen den Monat. Das Jahr passt sich dem Bildschirm an und kommt ohne Scrollen aus."
+      },
+      {
+        "title": "Demnächst",
+        "where": "Seitenleiste › Demnächst",
+        "body": "Oben steht, was als Nächstes kommt, und wie voll die nächsten 14 Tage sind, samt der nächsten ruhigen Strecke. Darunter liegen die kommenden Wochen als Spalten nebeneinander, mit den freien Tagen dazwischen; „Später“ zeigt nur Ganztägiges und Feiertage. Die Chips oben wählen wie die Sammlung, was du siehst."
+      },
+      {
+        "title": "Heute, Kalender, Demnächst",
+        "where": "Seitenleiste",
+        "body": "Links stehen jetzt Orte: die Übersicht „Heute“, „Kalender“ und „Demnächst“. Ob du Tag, Woche, Monat oder Jahr siehst, wählst du nur noch oben; „Kalender“ öffnet die Ansicht, die du zuletzt hattest. Ein Klick auf einen Kalender in der Seitenleiste bleibt in der Ansicht, in der du gerade bist."
+      },
+      {
+        "title": "Termine im Monat farbig",
+        "where": "Einstellungen › Darstellung",
+        "body": "Unter „Termine im Monat“ wählst du zwischen dem Punkt in der Kalenderfarbe und einer farbig hinterlegten Zeile."
+      }
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Ein Klick auf einen Tag im Monat oder auf „+ n weitere“ öffnet den Tag; einen neuen Termin legst du über das „+“ in der Ecke des Tages an.",
+      "Seiten laden ohne Flackern, und der Monat öffnet deutlich schneller.",
+      "Neben dem Jahr steht wie neben den anderen Ansichten die Spalte „Kommende Termine“."
+    ]
+  },
   "0.2.0": {
     "lead": "Feiertage aus iCloud, Google oder einem Abo fallen jetzt genauso auf wie die eingebauten, und nexmail kann deine Kalender lesen und Einladungen aus Mails eintragen.",
     "sections": [

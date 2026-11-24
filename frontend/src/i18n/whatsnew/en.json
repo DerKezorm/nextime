@@ -1,4 +1,35 @@
 {
+  "0.3.0": {
+    "lead": "A year at a glance, a new overview of the coming weeks and a tidier sidebar.",
+    "sections": [
+      {
+        "title": "The year as a heat map",
+        "where": "Calendar › Year (key J)",
+        "body": "The twelve months on one page, each day a field, the stronger the more is going on. Full weeks and free stretches show at once. A click on a day opens it, a click on a month's name opens the month. The year fits the screen without scrolling."
+      },
+      {
+        "title": "Upcoming",
+        "where": "Sidebar › Upcoming",
+        "body": "On top what comes next and how full the next 14 days are, with the next calm stretch. Below, the coming weeks as columns side by side, with the free days between them; “Later” shows whole days and holidays only. The chips on top choose what you see, as the collection does."
+      },
+      {
+        "title": "Today, Calendar, Upcoming",
+        "where": "Sidebar",
+        "body": "The sidebar now holds places: the “Today” overview, “Calendar” and “Upcoming”. Day, week, month or year is chosen on top only; “Calendar” opens the view you had last. A click on a calendar in the sidebar stays in the view you are in."
+      },
+      {
+        "title": "Events in the month in color",
+        "where": "Settings › Appearance",
+        "body": "Under “Events in the month” choose between the dot in the calendar's color and a row tinted in it."
+      }
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "A click on a day in the month or on “+ n more” opens the day; a new event comes from the “+” in the corner of the day.",
+      "Pages load without flicker, and the month opens much faster.",
+      "The column of coming events stands beside the year too, as beside the other views."
+    ]
+  },
   "0.2.0": {
     "lead": "Holidays from iCloud, Google or a subscription now stand out just like the built-in ones, and nexmail can read your calendars and enter invitations from mails.",
     "sections": [
