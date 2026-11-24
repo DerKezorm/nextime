@@ -117,7 +117,7 @@ describe('Demnächst as weeks', () => {
     expect(one('upcoming-more', week('this'))).toBeNull()
   })
 
-  it('four weeks side by side reach the bottom and show all their rows, each scrolling on its own', async () => {
+  it('four weeks side by side stand equally high to the bottom and show all their rows, no column scrolling on its own', async () => {
     vi.stubGlobal('ResizeObserver', class {
       observe() {}
       disconnect() {}
@@ -128,8 +128,9 @@ describe('Demnächst as weeks', () => {
     expect(one('view-upcoming')!.dataset.tall).toBe('true')
     expect(all('upcoming-event', week('this'))).toHaveLength(11)
     expect(one('upcoming-more', week('this'))).toBeNull()
-    expect(week('this').className).toContain('@[72rem]:overflow-y-auto')
+    expect(week('this').className).not.toContain('overflow')
     expect(one('upcoming-weeks')!.className).toContain('@[72rem]:flex-1')
+    expect(one('upcoming-weeks')!.className).toContain('@[72rem]:items-stretch')
     width.mockRestore()
     vi.unstubAllGlobals()
   })

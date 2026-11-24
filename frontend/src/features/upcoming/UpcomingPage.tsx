@@ -49,8 +49,9 @@ export function UpcomingPage() {
   const shown = useShown()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [goTo, setGoTo] = useState<string | null>(null)
-  // Four weeks side by side (from 72rem): each column reaches the bottom and shows all its rows, scrolling on its own
-  // (asked for while testing, 2026-11-24); narrower they stand below each other, eight rows and "+ n weitere".
+  // Four weeks side by side (from 72rem): the columns stand equally high, at least to the bottom, and show all their
+  // rows; a full week makes them all grow and the page scrolls, no column scrolls on its own (asked for while testing,
+  // 2026-11-24). Narrower they stand below each other, eight rows and "+ n weitere".
   const page = useRef<HTMLDivElement>(null)
   const [tall, setTall] = useState(false)
   useEffect(() => {
@@ -105,7 +106,7 @@ export function UpcomingPage() {
 
   return (
     <div ref={page} className="@container h-full min-h-0 w-full overflow-y-auto px-3 pt-3 pb-6 sm:px-6 sm:pt-5" data-testid="view-upcoming" data-tall={tall || undefined}>
-      <div className="flex flex-col gap-4 @[72rem]:h-full">
+      <div className="flex flex-col gap-4 @[72rem]:min-h-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-lg font-bold tracking-tight text-mist-100 sm:text-xl">{t('nav.upcoming')}</h1>
           <UpcomingFilter />
@@ -125,7 +126,7 @@ export function UpcomingPage() {
               <NextCard rows={loaded.rows ?? []} now={now} today={today} calendars={calendars} />
               <Strip today={today} counts={counts} onDay={showDay} />
             </div>
-            <div className="grid items-start gap-3 @[40rem]:grid-cols-2 @[72rem]:min-h-0 @[72rem]:flex-1 @[72rem]:grid-cols-4 @[72rem]:items-stretch" data-testid="upcoming-weeks">
+            <div className="grid items-start gap-3 @[40rem]:grid-cols-2 @[72rem]:flex-1 @[72rem]:grid-cols-4 @[72rem]:items-stretch" data-testid="upcoming-weeks">
               {columns.map((column) => (
                 <WeekColumn
                   key={column.first}
@@ -320,7 +321,7 @@ function WeekColumn({ column, days, counts, today, now, calendars, open, onOpen 
   if (!later && (open || hidden === 0)) parts.push(gap(before, addDays(column.last, 1), 'gap-end'))
 
   return (
-    <section className="nt-scroll min-h-0 min-w-0 rounded-[14px] border border-ink-700 bg-ink-850 px-3.5 pt-3 pb-3.5 @[72rem]:overflow-y-auto" aria-label={title} data-testid="upcoming-week" data-kind={column.kind}>
+    <section className="min-w-0 rounded-[14px] border border-ink-700 bg-ink-850 px-3.5 pt-3 pb-3.5" aria-label={title} data-testid="upcoming-week" data-kind={column.kind}>
       <div className="text-[15px] font-semibold text-mist-100">{title}</div>
       <div className="text-xs text-mist-500">{sub}</div>
       {shownDays.length === 0 ? <div className="pt-3 text-[13px] text-mist-500">{later ? t('upcoming.laterNothing') : t('upcoming.weekFree')}</div> : parts}
