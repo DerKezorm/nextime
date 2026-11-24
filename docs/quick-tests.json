@@ -1,0 +1,3061 @@
+[
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 uhr zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Morgen 15 Uhr Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "MORGEN 15 UHR ZAHNARZT",
+  "expect": {
+   "title": "ZAHNARZT",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 3 pm dentist",
+  "expect": {
+   "title": "Dentist",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 3pm dentist",
+  "expect": {
+   "title": "Dentist",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15:30 Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:30",
+   "end": "2026-11-27T16:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen um 15.30 Uhr Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:30",
+   "end": "2026-11-27T16:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow at 3:30 pm call with Ben",
+  "expect": {
+   "title": "Call with Ben",
+   "all_day": false,
+   "start": "2026-11-27T15:30",
+   "end": "2026-11-27T16:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 12 am night train",
+  "expect": {
+   "title": "Night train",
+   "all_day": false,
+   "start": "2026-11-27T00:00",
+   "end": "2026-11-27T01:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 12 pm lunch",
+  "expect": {
+   "title": "Lunch",
+   "all_day": false,
+   "start": "2026-11-27T12:00",
+   "end": "2026-11-27T13:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "übermorgen 8 Uhr Flug",
+  "expect": {
+   "title": "Flug",
+   "all_day": false,
+   "start": "2026-11-28T08:00",
+   "end": "2026-11-28T09:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "day after tomorrow 8 am flight",
+  "expect": {
+   "title": "Flight",
+   "all_day": false,
+   "start": "2026-11-28T08:00",
+   "end": "2026-11-28T09:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute 18 Uhr Training",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-26T18:00",
+   "end": "2026-11-26T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "today 6 pm training",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-26T18:00",
+   "end": "2026-11-26T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Fr 18 Uhr Kino mit Anna 2 Std #Familie",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Kino mit Anna",
+   "all_day": false,
+   "start": "2026-11-27T18:00",
+   "end": "2026-11-27T20:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": 1,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "Fri 6 pm cinema 2 hours",
+  "expect": {
+   "title": "Cinema",
+   "all_day": false,
+   "start": "2026-11-27T18:00",
+   "end": "2026-11-27T20:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 10 Uhr Workshop 90 min",
+  "expect": {
+   "title": "Workshop",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:30",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 10 Uhr Workshop 1,5 Std",
+  "expect": {
+   "title": "Workshop",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:30",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 10 Uhr Workshop für eine halbe Stunde",
+  "expect": {
+   "title": "Workshop",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T10:30",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 10 am workshop for 2h",
+  "expect": {
+   "title": "Workshop",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T12:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr Zahnarzt bis 17 Uhr",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T17:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15–17 Uhr Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T17:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen von 9 bis 11:30 Uhr Kurs",
+  "expect": {
+   "title": "Kurs",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T11:30",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 3-5 pm dentist",
+  "expect": {
+   "title": "Dentist",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T17:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 10 am until 1 pm workshop",
+  "expect": {
+   "title": "Workshop",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T13:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "27.11. 10 Uhr Termin",
+  "expect": {
+   "title": "Termin",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "am 24.12.2026 Heiligabend",
+  "expect": {
+   "title": "Heiligabend",
+   "all_day": true,
+   "start": "2026-12-24",
+   "end": "2026-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "24.12.27 Heiligabend",
+  "expect": {
+   "title": "Heiligabend",
+   "all_day": true,
+   "start": "2027-12-24",
+   "end": "2027-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "2026-12-24 Heiligabend",
+  "expect": {
+   "title": "Heiligabend",
+   "all_day": true,
+   "start": "2026-12-24",
+   "end": "2026-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "24. Dezember 2027 Fest",
+  "expect": {
+   "title": "Fest",
+   "all_day": true,
+   "start": "2027-12-24",
+   "end": "2027-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "December 24 Christmas",
+  "expect": {
+   "title": "Christmas",
+   "all_day": true,
+   "start": "2026-12-24",
+   "end": "2026-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "on Dec 24th Christmas",
+  "expect": {
+   "title": "Christmas",
+   "all_day": true,
+   "start": "2026-12-24",
+   "end": "2026-12-24",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "the 3rd of March birthday",
+  "expect": {
+   "title": "Birthday",
+   "all_day": true,
+   "start": "2027-03-03",
+   "end": "2027-03-03",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "in 3 Tagen Abgabe",
+  "expect": {
+   "title": "Abgabe",
+   "all_day": true,
+   "start": "2026-11-29",
+   "end": "2026-11-29",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "in 2 weeks review 9 am",
+  "expect": {
+   "title": "Review",
+   "all_day": false,
+   "start": "2026-12-10T09:00",
+   "end": "2026-12-10T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "in einer Woche Abgabe",
+  "expect": {
+   "title": "Abgabe",
+   "all_day": true,
+   "start": "2026-12-03",
+   "end": "2026-12-03",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "nächsten Montag 9 Uhr Elternabend",
+  "expect": {
+   "title": "Elternabend",
+   "all_day": false,
+   "start": "2026-11-30T09:00",
+   "end": "2026-11-30T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "next monday 9 am parents evening",
+  "expect": {
+   "title": "Parents evening",
+   "all_day": false,
+   "start": "2026-11-30T09:00",
+   "end": "2026-11-30T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "am Freitag um 18 Uhr Kino",
+  "expect": {
+   "title": "Kino",
+   "all_day": false,
+   "start": "2026-11-27T18:00",
+   "end": "2026-11-27T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Kino am Samstag 20 Uhr",
+  "expect": {
+   "title": "Kino",
+   "all_day": false,
+   "start": "2026-11-28T20:00",
+   "end": "2026-11-28T21:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "um 12 mittags Essen",
+  "expect": {
+   "title": "Mittags Essen",
+   "all_day": false,
+   "start": "2026-11-27T12:00",
+   "end": "2026-11-27T13:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen mittags Essen",
+  "expect": {
+   "title": "Essen",
+   "all_day": false,
+   "start": "2026-11-27T12:00",
+   "end": "2026-11-27T13:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Donnerstag 18 Uhr Kino",
+  "expect": {
+   "title": "Kino",
+   "all_day": false,
+   "start": "2026-11-26T18:00",
+   "end": "2026-11-26T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Donnerstag 15 Uhr Kino",
+  "expect": {
+   "title": "Kino",
+   "all_day": false,
+   "start": "2026-12-03T15:00",
+   "end": "2026-12-03T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "Thursday Cinema",
+  "expect": {
+   "title": "Cinema",
+   "all_day": true,
+   "start": "2026-12-03",
+   "end": "2026-12-03",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "15 Uhr Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "17:30 Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-26T17:30",
+   "end": "2026-11-26T18:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "um 15 Kaffee",
+  "expect": {
+   "title": "Kaffee",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Montag Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": true,
+   "start": "2026-11-30",
+   "end": "2026-11-30",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "3. März Geburtstag Oma",
+  "expect": {
+   "title": "Geburtstag Oma",
+   "all_day": true,
+   "start": "2027-03-03",
+   "end": "2027-03-03",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "26. November Jahrestag",
+  "expect": {
+   "title": "Jahrestag",
+   "all_day": true,
+   "start": "2026-11-26",
+   "end": "2026-11-26",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "25. November Jahrestag",
+  "expect": {
+   "title": "Jahrestag",
+   "all_day": true,
+   "start": "2027-11-25",
+   "end": "2027-11-25",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "  morgen 10 Uhr Kuchen 🎂 für Jürgen  ",
+  "expect": {
+   "title": "Kuchen 🎂 für Jürgen",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 10 Uhr äpfel pflücken",
+  "expect": {
+   "title": "Äpfel pflücken",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr\nZahnarzt\r\nmit Ben",
+  "expect": {
+   "title": "Zahnarzt mit Ben",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 19 Uhr Konzert in Köln",
+  "expect": {
+   "title": "Konzert in Köln",
+   "all_day": false,
+   "start": "2026-11-27T19:00",
+   "end": "2026-11-27T20:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "Do the dishes tomorrow 8 pm",
+  "expect": {
+   "title": "Do the dishes",
+   "all_day": false,
+   "start": "2026-11-27T20:00",
+   "end": "2026-11-27T21:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Do 18 Uhr Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": false,
+   "start": "2026-11-26T18:00",
+   "end": "2026-11-26T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen um 18:30 am Bahnhof Treffen",
+  "expect": {
+   "title": "Am Bahnhof Treffen",
+   "all_day": false,
+   "start": "2026-11-27T18:30",
+   "end": "2026-11-27T19:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "12:00 am Bahnhof",
+  "expect": {
+   "title": "Am Bahnhof",
+   "all_day": false,
+   "start": "2026-11-27T12:00",
+   "end": "2026-11-27T13:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "9:30 am Rathaus",
+  "expect": {
+   "title": "Am Rathaus",
+   "all_day": false,
+   "start": "2026-11-27T09:30",
+   "end": "2026-11-27T10:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Freitag 9:00 am Rathaus",
+  "expect": {
+   "title": "Am Rathaus",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 9:30 am meeting",
+  "expect": {
+   "title": "Meeting",
+   "all_day": false,
+   "start": "2026-11-27T09:30",
+   "end": "2026-11-27T10:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 9:30 am Meeting",
+  "expect": {
+   "title": "Meeting",
+   "all_day": false,
+   "start": "2026-11-27T09:30",
+   "end": "2026-11-27T10:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 9am Standup",
+  "expect": {
+   "title": "Standup",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Mo, Mi 9 Uhr Kurs",
+  "expect": {
+   "title": "Kurs",
+   "all_day": false,
+   "start": "2026-11-30T09:00",
+   "end": "2026-11-30T10:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO",
+     "WE"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute abend 19 Uhr Essen",
+  "expect": {
+   "title": "Essen",
+   "all_day": false,
+   "start": "2026-11-26T19:00",
+   "end": "2026-11-26T20:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute Abend 7 Uhr Essen",
+  "expect": {
+   "title": "Essen",
+   "all_day": false,
+   "start": "2026-11-26T19:00",
+   "end": "2026-11-26T20:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen nachmittag 3 Uhr Kaffee",
+  "expect": {
+   "title": "Kaffee",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute morgen 9 Uhr Joggen",
+  "expect": {
+   "title": "Joggen",
+   "all_day": false,
+   "start": "2026-11-26T09:00",
+   "end": "2026-11-26T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen früh 7 Uhr Bäcker",
+  "expect": {
+   "title": "Bäcker",
+   "all_day": false,
+   "start": "2026-11-27T07:00",
+   "end": "2026-11-27T08:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "abends 8 Uhr Kino morgen",
+  "expect": {
+   "title": "Kino",
+   "all_day": false,
+   "start": "2026-11-27T20:00",
+   "end": "2026-11-27T21:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen Pizza 9.50",
+  "expect": {
+   "title": "Pizza 9.50",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen um 9.50 Bus",
+  "expect": {
+   "title": "Bus",
+   "all_day": false,
+   "start": "2026-11-27T09:50",
+   "end": "2026-11-27T10:50",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9.50 Uhr Bus",
+  "expect": {
+   "title": "Bus",
+   "all_day": false,
+   "start": "2026-11-27T09:50",
+   "end": "2026-11-27T10:50",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "23 bis 1 Uhr Party",
+  "expect": {
+   "title": "Party",
+   "all_day": false,
+   "start": "2026-11-26T23:00",
+   "end": "2026-11-27T01:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute 22:00-02:00 Nachtschicht",
+  "expect": {
+   "title": "Nachtschicht",
+   "all_day": false,
+   "start": "2026-11-26T22:00",
+   "end": "2026-11-27T02:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "tomorrow 11-1 pm lunch",
+  "expect": {
+   "title": "Lunch",
+   "all_day": false,
+   "start": "2026-11-27T11:00",
+   "end": "2026-11-27T13:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr iPhone reparieren",
+  "expect": {
+   "title": "iPhone reparieren",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "eBay Abholung morgen 10 Uhr",
+  "expect": {
+   "title": "eBay Abholung",
+   "all_day": false,
+   "start": "2026-11-27T10:00",
+   "end": "2026-11-27T11:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr in Köln essen",
+  "expect": {
+   "title": "In Köln essen",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr Essen in Köln",
+  "expect": {
+   "title": "Essen in Köln",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr Zahnarzt 2 Std",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T17:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15 Uhr Zahnarzt bis 16 Uhr",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T16:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T22:59:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Arzt",
+  "expect": {
+   "title": "Arzt",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T22:59:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute 23:30 Telefonat",
+  "expect": {
+   "title": "Telefonat",
+   "all_day": false,
+   "start": "2026-11-26T23:30",
+   "end": "2026-11-27T00:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T22:59:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Freitag Ausflug",
+  "expect": {
+   "title": "Ausflug",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T22:59:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "9 Uhr Arzt",
+  "expect": {
+   "title": "Arzt",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T22:59:00Z",
+  "zone": "America/New_York",
+  "lang": "de",
+  "text": "19 Uhr Dinner",
+  "expect": {
+   "title": "Dinner",
+   "all_day": false,
+   "start": "2026-11-26T19:00",
+   "end": "2026-11-26T20:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "31. Februar Party",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "30.02. Party",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "28. März 2027 2:30 Uhr Nachtzug",
+  "expect": {
+   "title": "Nachtzug",
+   "all_day": false,
+   "start": "2027-03-28T03:30",
+   "end": "2027-03-28T04:30",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "29. Februar Schalttag",
+  "expect": {
+   "title": "Schalttag",
+   "all_day": true,
+   "start": "2028-02-29",
+   "end": "2028-02-29",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Kino irgendwann",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Zahnarzt Ben",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "empty"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "   \n ",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "empty"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "#familie morgen 9 Uhr Elternabend",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Elternabend",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 1,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Elternabend #FAMILIE",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Elternabend",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 1,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "#Verein alt morgen 9 Uhr Treffen",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 7,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "#Verein morgen 9 Uhr Treffen",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 9,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Treffen #Familie",
+  "calendars": [
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 8,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "#Garten morgen 9 Uhr Gießen",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "#Garten Gießen",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": {
+    "text": "#Garten",
+    "problem": "unknown"
+   },
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Treffen #Anna Arbeit",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Treffen #Anna Arbeit",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": {
+    "text": "#Anna",
+    "problem": "readOnly"
+   },
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Treffen",
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden Montag 18 Uhr Training",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "every Monday and Thursday 6:30 pm Training",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-26T18:30",
+   "end": "2026-11-26T19:30",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO",
+     "TH"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "täglich 7 Uhr Joggen",
+  "expect": {
+   "title": "Joggen",
+   "all_day": false,
+   "start": "2026-11-27T07:00",
+   "end": "2026-11-27T08:00",
+   "default_length": true,
+   "rule": {
+    "freq": "daily",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "werktags 8 Uhr Arbeit",
+  "expect": {
+   "title": "Arbeit",
+   "all_day": false,
+   "start": "2026-11-27T08:00",
+   "end": "2026-11-27T09:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO",
+     "TU",
+     "WE",
+     "TH",
+     "FR"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "alle 2 Wochen Montag 18 Uhr Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 2,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "monatlich 1. Dezember Miete",
+  "expect": {
+   "title": "Miete",
+   "all_day": true,
+   "start": "2026-12-01",
+   "end": "2026-12-01",
+   "default_length": false,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jedes Jahr 3. März Geburtstag Oma",
+  "expect": {
+   "title": "Geburtstag Oma",
+   "all_day": true,
+   "start": "2027-03-03",
+   "end": "2027-03-03",
+   "default_length": false,
+   "rule": {
+    "freq": "yearly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "montags 18 Uhr Training",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "wöchentlich morgen 9 Uhr Team",
+  "expect": {
+   "title": "Team",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "FR"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Team",
+  "expect": {
+   "title": "Team",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "15 Uhr bis 14 Uhr Treffen",
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T14:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "end_before_start"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 15:00-14:00 Treffen",
+  "expect": {
+   "title": "Treffen",
+   "all_day": false,
+   "start": "2026-11-27T15:00",
+   "end": "2026-11-27T14:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "end_before_start"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "expect": {
+   "title": "Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "title_too_long"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+  "expect": {
+   "title": "Xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr",
+  "expect": {
+   "title": "",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_title"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Zahnarzt 9.11",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Pizza 9.50",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-30T09:00:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "nächsten Montag 18 Uhr Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": false,
+   "start": "2026-12-07T18:00",
+   "end": "2026-12-07T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-30T09:00:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "next Monday 6 pm choir",
+  "expect": {
+   "title": "Choir",
+   "all_day": false,
+   "start": "2026-12-07T18:00",
+   "end": "2026-12-07T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-30T09:00:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Montag 18 Uhr Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-30T09:00:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "nächsten Montag Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": true,
+   "start": "2026-12-07",
+   "end": "2026-12-07",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "nächsten Freitag Chor",
+  "expect": {
+   "title": "Chor",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden 2. Dienstag 19 Uhr Stammtisch",
+  "expect": {
+   "title": "Stammtisch",
+   "all_day": false,
+   "start": "2026-12-08T19:00",
+   "end": "2026-12-08T20:00",
+   "default_length": true,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "nth",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "every last Friday 6 pm review",
+  "expect": {
+   "title": "Review",
+   "all_day": false,
+   "start": "2026-11-27T18:00",
+   "end": "2026-11-27T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "last",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden 5. Freitag Treffen",
+  "expect": {
+   "title": "Treffen",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "last",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden 4. Donnerstag 18 Uhr Rat",
+  "expect": {
+   "title": "Rat",
+   "all_day": false,
+   "start": "2026-11-26T18:00",
+   "end": "2026-11-26T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "nth",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden 4. Donnerstag 15 Uhr Rat",
+  "expect": {
+   "title": "Rat",
+   "all_day": false,
+   "start": "2026-12-24T15:00",
+   "end": "2026-12-24T16:00",
+   "default_length": true,
+   "rule": {
+    "freq": "monthly",
+    "interval": 1,
+    "weekdays": [],
+    "monthly": "nth",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "Training jeden Montag 18 Uhr bis 31.12.",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "until",
+    "until": "2026-12-31",
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "every Monday 6 pm training until December 31",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "until",
+    "until": "2026-12-31",
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden Montag 18 Uhr Training bis 1.11.2026",
+  "expect": {
+   "title": "Training",
+   "all_day": false,
+   "start": "2026-11-30T18:00",
+   "end": "2026-11-30T19:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "MO"
+    ],
+    "monthly": "date",
+    "end": "until",
+    "until": "2026-11-01",
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": "end_before_start"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden Montag Training bis 31.2.",
+  "expect": {
+   "title": null,
+   "all_day": null,
+   "start": null,
+   "end": null,
+   "default_length": null,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "no_date"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "jeden Di und Do 17 Uhr Schwimmen",
+  "expect": {
+   "title": "Schwimmen",
+   "all_day": false,
+   "start": "2026-11-26T17:00",
+   "end": "2026-11-26T18:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "TU",
+     "TH"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "en",
+  "text": "Sat and Sun 10 am brunch",
+  "expect": {
+   "title": "Brunch",
+   "all_day": false,
+   "start": "2026-11-28T10:00",
+   "end": "2026-11-28T11:00",
+   "default_length": true,
+   "rule": {
+    "freq": "weekly",
+    "interval": 1,
+    "weekdays": [
+     "SA",
+     "SU"
+    ],
+    "monthly": "date",
+    "end": "never",
+    "until": null,
+    "count": null
+   },
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "von Montag bis Mittwoch Urlaub",
+  "expect": {
+   "title": "Urlaub",
+   "all_day": true,
+   "start": "2026-11-30",
+   "end": "2026-12-02",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "27.11. bis 29.11. Ausflug",
+  "expect": {
+   "title": "Ausflug",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-29",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "vom 27.11. bis 29.11. 9 Uhr Messe",
+  "expect": {
+   "title": "Messe",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-29T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "29.11. bis 27.11. Ausflug",
+  "expect": {
+   "title": "Ausflug",
+   "all_day": true,
+   "start": "2026-11-29",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "end_before_start"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 2 Std Zahnarzt",
+  "expect": {
+   "title": "Zahnarzt",
+   "all_day": true,
+   "start": "2026-11-27",
+   "end": "2026-11-27",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "length_without_time"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute 22:00-02:00 Schicht",
+  "expect": {
+   "title": "Schicht",
+   "all_day": false,
+   "start": "2026-11-26T22:00",
+   "end": "2026-11-27T02:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "heute 12:00-02:00 Schicht",
+  "expect": {
+   "title": "Schicht",
+   "all_day": false,
+   "start": "2026-11-26T12:00",
+   "end": "2026-11-26T02:00",
+   "default_length": false,
+   "rule": null,
+   "calendar": null,
+   "tag": null,
+   "error": "end_before_start"
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "#familie, morgen 9 Uhr Elternabend",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Elternabend",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 1,
+   "tag": null,
+   "error": null
+  }
+ },
+ {
+  "now": "2026-11-26T15:05:00Z",
+  "zone": "Europe/Berlin",
+  "lang": "de",
+  "text": "morgen 9 Uhr Elternabend #Familie.",
+  "calendars": [
+   {
+    "id": 1,
+    "name": "Familie",
+    "writable": true
+   },
+   {
+    "id": 2,
+    "name": "Persönlich",
+    "writable": true
+   },
+   {
+    "id": 3,
+    "name": "Arbeit",
+    "writable": true
+   },
+   {
+    "id": 4,
+    "name": "Anna Arbeit",
+    "writable": false
+   },
+   {
+    "id": 9,
+    "name": "Verein",
+    "writable": true
+   },
+   {
+    "id": 7,
+    "name": "Verein alt",
+    "writable": true
+   },
+   {
+    "id": 8,
+    "name": "Familie",
+    "writable": true
+   }
+  ],
+  "expect": {
+   "title": "Elternabend .",
+   "all_day": false,
+   "start": "2026-11-27T09:00",
+   "end": "2026-11-27T10:00",
+   "default_length": true,
+   "rule": null,
+   "calendar": 1,
+   "tag": null,
+   "error": null
+  }
+ }
+]

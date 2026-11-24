@@ -31,6 +31,8 @@ os.environ["NEXTIME_DAV_ALLOW_HTTP"] = "1"
 # Never the address service or the map tiles from a test (TIME-8): the tests put a transport of their own.
 os.environ["NEXTIME_PLACES_URL"] = "https://photon.example.com/api/"
 os.environ["NEXTIME_TILES_URL"] = "https://tiles.example.com/{z}/{x}/{y}.png"
+# The tests record what would go to the push relay (``apppush.POST``); nothing reaches the real one.
+os.environ["NEXTIME_PUSH_RELAY"] = "https://push.example.com"
 
 import shutil  # noqa: E402
 from pathlib import Path  # noqa: E402

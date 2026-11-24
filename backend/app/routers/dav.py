@@ -187,6 +187,9 @@ class Caller:
     device_id: int
     #: The address devices reach nextime under (for the addresses of attachments, TIME-9 AC-4).
     base: str = ""
+    #: Set up from the nextime app on the same iPhone or iPad (TIME-29, TIMEIOS-4 AC-7): no alarms go there, the app
+    #: reminds by itself, and an event coming back without them changes nobody's reminders.
+    quiet: bool = False
 
     @property
     def name(self) -> str:
@@ -213,7 +216,7 @@ def _authenticate(request: Request, db: Session) -> Caller | Response:
     brake.succeeded(key)
     account, device = found
     db.expunge(account)
-    return Caller(account, device.id)
+    return Caller(account, device.id, quiet=device.app_device_id is not None)
 
 
 # --- Properties -----------------------------------------------------------------------------------------------------
@@ -448,6 +451,7 @@ class Personal:
         account_id = caller.account.id
         calendar_id = access.calendar.id
         self.busy = access.right == RIGHT_BUSY
+        self.quiet = getattr(caller, "quiet", False)
         self.choices = {row.event_id: row for row in db.scalars(
             select(ReminderChoice).join(Event, Event.id == ReminderChoice.event_id)
             .where(ReminderChoice.account_id == account_id, Event.calendar_id == calendar_id))}
@@ -460,6 +464,8 @@ class Personal:
         """The alarms as a device sent them, or as nextime makes them, and the attachments' lines."""
         chosen = self.choices.get(event_id)
         files = self.files.get(event_id, "")
+        if self.quiet:
+            return "", "", files
         if chosen is None or chosen.minutes is None:
             # The default; single occurrences a device gave alarms of their own keep them (review of TIME-7, finding 5).
             made = alarms.generated(reminders.default_leads(self.choice, all_day, etag, text), all_day, default=True)
@@ -828,7 +834,8 @@ def _put(db: Session, caller: Caller, parts: list[str], body: bytes, headers: di
     events.write(db, row, text, parsed, caller.account.id)
     events.record_change(db, row.calendar_id, row.href, row=row, by=caller.account.id)
     db.flush()
-    _keep_alarms(db, caller.account, access, row, taken, existed=status == 204)
+    if not caller.quiet:
+        _keep_alarms(db, caller.account, access, row, taken, existed=status == 204)
     db.commit()
     shown = _shown(row, access, caller, Personal(db, caller, access))
     # The device's own text comes back as it was sent: its ETag. Otherwise none, and the device reads it again.

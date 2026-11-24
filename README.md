@@ -4,7 +4,7 @@ A self-hosted calendar for families and small groups: your own calendars on your
 on iPhone and Android through CalDAV.
 
 > **Early days.** Everything below is built and in daily use; this is an early release, so keep a backup and open an
-> issue when something is wrong. Native apps for iPhone and iPad come later; until then phones connect through CalDAV.
+> issue when something is wrong. The native app for iPhone and iPad comes separately; until then phones connect through CalDAV.
 
 ![Today: the next event in a box of its own, the rest of the day below it, the next events of the coming days on the right](docs/screenshots/today.png)
 
@@ -55,6 +55,10 @@ address. On a phone the week shows three days, and nextime installs from the bro
   meetings; series daily, weekly, monthly or yearly with exceptions, stored as iCalendar objects.
 - **Calendar account.** A CalDAV server under `/dav/` for Apple Calendar, DAVx5, Thunderbird: a password per device,
   a QR code and a profile for the iPhone, each device locked out on its own. Needs HTTPS.
+- **Ready for the iPhone and iPad app.** Pair a device with a QR code (valid 10 minutes) or by signing in from the
+  app, see and disconnect devices, sync every event offline with changes taken exactly once, both versions after a
+  conflict, a silent nudge and notifications of shared calendars through a push relay that sees only ciphertext. The
+  app itself comes separately.
 - **Other sources.** iCloud (with an app-specific password), Google (with the operator's own Google Cloud client, or
   read only through a calendar's secret address) and other CalDAV servers such as Nextcloud, read and written, synced
   every minute; changes made while a source is away wait and go out later. Subscriptions to calendar links, fetched
@@ -121,6 +125,7 @@ proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
 | `NEXTIME_COOKIE_SUFFIX` | Keeps the sign-ins of two instances on one host apart. |
 | `NEXTIME_PLACES_URL` | The address search behind the suggestions in the place field, a [Photon](https://github.com/komoot/photon) service. Empty: the free one at photon.komoot.io. nextime asks it, not the browser, and sends only the typed place. The operator can switch suggestions and maps off. |
 | `NEXTIME_TILES_URL` | Where the small map of a place is drawn from, with `{z}/{x}/{y}` in it. Empty: the tiles of OpenStreetMap. |
+| `NEXTIME_PUSH_RELAY` | The push relay that wakes the nextime app on iPhone and iPad when something changed (only the device's ticket and an encrypted note go there, never the content). Empty: nothing goes out. Default `https://push.nexapps.dev`. |
 | `NEXTIME_MEDIA_MEMORY_MB` | Memory of the process that reads pictures and PDFs of attachments for their previews (1024 MB from the start). |
 | `TZ` | The server's time zone; the daily backup runs in it. |
 | `PUID`, `PGID` | Who owns the files in the data folder. |

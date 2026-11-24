@@ -160,6 +160,8 @@ CLIENT_HEADER = b"x-nextime-client"
 CLIENT_PATTERN = re.compile(rb"^[A-Za-z0-9_-]{8,64}$")
 #: The API for programs (TIME-26): a key in ``Authorization``, no tab.
 API_PREFIX = "/api/v1/"
+#: The iPhone app's interface (TIME-29): it never takes a cookie, only the device's token (or a pairing's secret).
+APP_PREFIX = "/api/app/"
 #: Routes programs call without a tab: MCP (TIME-26), with its key in ``Authorization``.
 PROGRAM_PATHS: frozenset[str] = frozenset({"/api/mcp"})
 #: Largest body an ordinary request may carry.
@@ -171,6 +173,8 @@ LARGE_BODIES: dict[str, int] = {
     "/api/backups/upload": 64 * 1024**3,
     # Attachments (TIME-9): the operator's limit is at most 10,000 MB; the route checks the one set.
     "/api/attachments": 10_000 * 1024**2,
+    # The same from the iPhone app (TIME-29, interface 0.5).
+    "/api/app/1/attachments": 10_000 * 1024**2,
 }
 #: The same for paths with an id in them; this is the ceiling, the route checks the operator's limit.
 LARGE_BODY_PATTERNS: tuple[tuple[re.Pattern[str], int], ...] = ()
@@ -221,7 +225,8 @@ class GuardMiddleware:
         # Programs and paired devices bring a token in ``Authorization`` instead: no other site can make a browser send
         # that header either.
         bearer = headers.get(b"authorization", b"")[:7].lower() == b"bearer "
-        exempt = scope["path"].startswith(API_PREFIX) or bearer or scope["path"] in PROGRAM_PATHS
+        exempt = (scope["path"].startswith((API_PREFIX, APP_PREFIX)) or bearer
+                  or scope["path"] in PROGRAM_PATHS)
         if scope.get("method") in CHANGING and not exempt and not CLIENT_PATTERN.match(headers.get(CLIENT_HEADER, b"")):
             for message in _refuse(400, "client_required", "Changes need the header X-Nextime-Client."):
                 await send(message)

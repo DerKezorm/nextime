@@ -710,6 +710,9 @@ class Device(Base):
     platform: Mapped[str] = mapped_column(String(8), default="", server_default="")
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: Set up from the nextime app on the same iPhone or iPad (TIME-29, TIMEIOS-4 AC-6): the app device it belongs to.
+    #: Such a device gets no alarms, the app reminds by itself (AC-7); ``None`` once that app device is gone.
+    app_device_id: Mapped[int | None] = mapped_column(Integer, nullable=True, index=True)
 
 
 class DeviceSetup(Base):
@@ -1028,3 +1031,87 @@ class NexpaperConnection(Base):
     hidden: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     problem: Mapped[str] = mapped_column(String(64), default="", server_default="")
     checked_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+# --- The nextime app for iPhone and iPad (TIME-29) --------------------------------------------------------------------
+
+
+class AppDevice(Base):
+    """A paired iPhone or iPad with the nextime app (TIME-29, ``/api/app/1``): its token (only the SHA-256 is kept),
+    name, kind and last contact. It acts as its account, never with more rights; it goes when its owner disconnects it
+    (in the browser or in the app), with a new password, "sign out everywhere", a reset second factor, a block or a
+    deletion of the account."""
+
+    __tablename__ = "app_devices"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(100))
+    #: ``ios``, ``ipados`` or ``mac``.
+    kind: Mapped[str] = mapped_column(String(8), default="ios")
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    #: The device whose token brought this one in (the connection handed on through iCloud).
+    via_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: The push relay's ticket and the device's X25519 public key (``PUT /push``); empty while off.
+    push_ticket: Mapped[str] = mapped_column(Text, default="", server_default="")
+    push_key: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    #: The app shows notifications with text (it said so with ``PUT /push``, ``alerts``): only then do the changes of
+    #: shared calendars go to it (TIME-21 through the relay); every device with a ticket gets the silent nudge.
+    push_alerts: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+
+
+class AppPairing(Base):
+    """A QR code of "iPhone oder iPad verbinden" (TIME-29 AC-1): ten minutes, one device. Only the SHA-256 of the
+    secret is kept; ``device_id`` is the device it made."""
+
+    __tablename__ = "app_pairings"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    secret_hash: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    device_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class AppCode(Base):
+    """The one-time code the page ``/app-connect`` hands back to the app (TIME-29 AC-5): five minutes, once. Only its
+    SHA-256 is kept."""
+
+    __tablename__ = "app_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    state: Mapped[str] = mapped_column(String(128), default="")
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class AppGoneDevice(Base):
+    """The SHA-256 of a device token that went with its account's block or deletion: such a device hears
+    ``account_blocked`` instead of ``device_disconnected`` (TIME-29 EC-5)."""
+
+    __tablename__ = "app_gone_devices"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class AppOp(Base):
+    """A change the app sent from its queue (``POST /api/app/1/ops``) and the answer it got: the same ``ref`` again
+    gets the same answer and changes nothing (TIME-29 EC-6). Kept 30 days."""
+
+    __tablename__ = "app_ops"
+    __table_args__ = (UniqueConstraint("account_id", "ref"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    ref: Mapped[str] = mapped_column(String(64))
+    op: Mapped[str] = mapped_column(String(16))
+    answer: Mapped[Any] = mapped_column(JSON, default=dict)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)

@@ -4,6 +4,7 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AppShell } from './components/AppShell'
 import { NotFoundPage } from './components/NotFound'
 import { FEATURE_ROUTES } from './extensions'
+import { AppConnectPage } from './features/app/AppConnectPage'
 import { SetupLinkPage } from './features/calendars/Devices'
 import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import { SearchPage } from './features/search/SearchPage'
@@ -47,6 +48,8 @@ export default function App() {
       <Route path="invite/:token" element={<InvitePage />} />
       <Route path="reset/:token" element={<ResetPage />} />
       <Route path="setup/:code" element={<SetupLinkPage />} />
+      {/* The iPhone app's sign-in sheet (TIME-29 AC-5): signs in, then hands the app a one-time code. */}
+      <Route path="app-connect" element={<AppConnectPage />} />
       {/* A guest's read link (TIME-19 AC-13): no account, nothing else of nextime. */}
       <Route path="abo/:token" element={<GuestPage />} />
       <Route

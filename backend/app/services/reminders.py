@@ -65,7 +65,7 @@ from ..models import (
     utcnow,
 )
 from ..security import account_out, server_key
-from . import alarms, calendars, display, webpush
+from . import alarms, calendars, display, live, webpush
 
 logger = logging.getLogger("nextime.reminders")
 
@@ -307,6 +307,8 @@ def choose(db: Session, account: Account, row: Event, minutes: list[int] | None,
         found.occurrences = occurrences or None
     _devices_learn(db, row.calendar_id, [row.href])
     touch(account_id=account.id)
+    # The account's own pages and app hear of it (a waiting ``changes`` of the iPhone app answers, TIME-29 0.5).
+    live.touch_accounts(db, {account.id})
 
 
 def set_for_event(db: Session, account: Account, event_id: int, minutes: list[Any] | None) -> None:
@@ -467,7 +469,9 @@ def apple_devices(db: Session, account_id: int, now: datetime | None = None) -> 
     the last ``DEVICE_RECENT`` (review of TIME-7, finding 3)."""
     since = (now or clock()) - DEVICE_RECENT
     return {kind_of(platform) for platform in db.scalars(select(Device.platform).where(
-        Device.account_id == account_id, Device.platform.in_((*APPLE, "ios")), Device.last_used_at >= since))}
+        Device.account_id == account_id, Device.platform.in_((*APPLE, "ios")), Device.last_used_at >= since,
+        # Set up from the nextime app on the same device: Apple Calendar gets no alarms there (TIMEIOS-4 AC-7).
+        Device.app_device_id.is_(None)))}
 
 
 def through_account(db: Session, account: Account) -> set[int]:

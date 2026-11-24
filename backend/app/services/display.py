@@ -101,6 +101,10 @@ def save(db: Session, account: Account, changes: dict[str, Any]) -> dict[str, An
     preferences = dict(account.preferences) if isinstance(account.preferences, dict) else {}
     preferences.update(clean)
     account.preferences = preferences
+    from . import live
+
+    # The account's other devices (the iPhone app's ``wait``) hear of it.
+    live.touch_accounts(db, {account.id})
     db.commit()
     from . import reminders
 

@@ -293,7 +293,7 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     ['mail', ['mail']],
     ['storage', ['backups']],
     ['google', ['google']],
-    ['devices', ['devices-new', 'devices-list']],
+    ['devices', ['app-devices', 'devices-new', 'devices-list']],
     ['accounts', ['accounts']],
     ['log', ['log']],
   ])('TIME-2 AC-7 %s shows its cards and no others', async (slug, ids) => {

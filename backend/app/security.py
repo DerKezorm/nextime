@@ -167,6 +167,10 @@ def end_all_sessions(db: Session, account_id: int, except_token: str | None = No
     db.execute(statement)
     # The browsers known from before are forgotten too (their device cookies); the one that stays gets a new one.
     db.execute(update(Account).where(Account.id == account_id).values(device_key=new_device_key()))
+    # The paired iPhones and iPads go as well (TIME-29): they sign in again.
+    from .services import appdevices
+
+    appdevices.end_all(db, account_id)
     db.commit()
     _sessions_ended()
 

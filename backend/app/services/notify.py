@@ -48,6 +48,7 @@ from ..errors import error
 from ..models import (
     RIGHT_BUSY,
     Account,
+    AppDevice,
     AuthSession,
     Calendar,
     CalendarSetting,
@@ -59,7 +60,7 @@ from ..models import (
     utcnow,
 )
 from ..security import account_out, server_key
-from . import display, webpush
+from . import apppush, display, webpush
 
 logger = logging.getLogger("nextime.notify")
 
@@ -355,8 +356,35 @@ def message(db: Session, receiver: Account, calendar: Calendar, right: str,
     from_source = [change for change in mine if change not in by_people]
     if busy:
         by_people, from_source = [], mine
-    shown = compose(words, heading, by_people, _names(db, by_people, receiver.id), busy, from_source)
-    return {**shown, "url": _url(words, mine, busy), "calendar_id": calendar.id}
+    names = _names(db, by_people, receiver.id)
+    shown = compose(words, heading, by_people, names, busy, from_source)
+    url = _url(words, mine, busy)
+    return {**shown, "url": url, "calendar_id": calendar.id, "app": _app_fields(calendar, mine, names, busy, url)}
+
+
+def _iso(value: datetime | None) -> str | None:
+    return value.isoformat().replace("+00:00", "Z") if value else None
+
+
+def _app_fields(calendar: Calendar, changes: list[NotifyChange], names: list[str], busy: bool,
+                url: str) -> dict[str, Any]:
+    """What the iPhone app gets besides the ready words (TIME-29, contract 0.3): enough to say it in the device's
+    language itself (G7 of TIMEIOS) and to open the event or the day. Nothing a "busy only" share hides."""
+    query = dict(part.split("=", 1) for part in url.split("?", 1)[1].split("&")) if "?" in url else {}
+    items = [{
+        "kind": "moved" if _moved(change) else change.kind,
+        "event_id": None if busy or change.kind == "deleted" else change.event_id,
+        "title": "" if busy else _plain(change.title, TITLE_CHARS),
+        "starts_at": _iso(change.starts_at), "all_day": bool(change.all_day),
+        "before_start": _iso(change.before_start) if _moved(change) else None,
+        "recurring": bool(change.recurring),
+    } for change in changes[:MAX_ITEMS]]
+    people = [] if busy else [_plain(name, TITLE_CHARS) for name in names]
+    # A few names and how many more: the encrypted message stays far below the relay's 3000 characters.
+    return {"calendar": _plain(calendar.name, TITLE_CHARS), "who": people[:WHO_MAX],
+            "who_more": max(0, len(people) - WHO_MAX), "busy": busy,
+            "count": len(changes), "items": items, "day": query.get("day"),
+            "event_id": int(query["event"]) if query.get("event") else None}
 
 
 def _bundle(db: Session, calendar_id: int) -> int:
@@ -396,7 +424,40 @@ def _enqueue(db: Session, account: Account, calendar_id: int, payload: dict[str,
         db.add(NotifyOutbox(account_id=account.id, target_id=row.id, calendar_id=calendar_id, payload=payload,
                             created_at=now, next_try_at=now))
         count += 1
+    if apppush.relay_url():
+        # The iPhone app (TIME-29 AC-3): its devices that show notifications with text. Never reminders (G6).
+        for device_id in db.scalars(select(AppDevice.id).where(AppDevice.account_id == account.id,
+                                                               AppDevice.push_ticket != "",
+                                                               AppDevice.push_alerts.is_(True))):
+            db.add(NotifyOutbox(account_id=account.id, kind=APP, target_id=device_id, calendar_id=calendar_id,
+                                payload=payload, created_at=now, next_try_at=now))
+            count += 1
     return count
+
+
+#: Names in the app's message at most (``who``); the rest is counted (``who_more``).
+WHO_MAX = 3
+#: ``notify_outbox.kind`` of a notification for the iPhone app.
+APP = "app"
+
+
+def _send_app(db: Session, account: Account, row: NotifyOutbox) -> None:
+    """One notification of changes to one app device, through the relay. ``LookupError`` when it must not go."""
+    from . import appdevices
+
+    device = db.get(AppDevice, row.target_id)
+    if device is None or device.account_id != row.account_id or not device.push_ticket or not device.push_alerts:
+        raise LookupError("no_target")
+    payload = dict(row.payload or {})
+    app = dict(payload.get("app") or {})
+    message = {"type": "changes", "title": _plain(str(payload.get("title") or ""), apppush.TITLE_MAX),
+               "text": _plain(str(payload.get("text") or ""), apppush.TEXT_MAX), "account": account.id,
+               "server": appdevices.server_id(), "calendar_id": row.calendar_id, **app}
+    try:
+        apppush.alert(device, message, f"nt-{opaque(row.calendar_id)}")
+    except apppush.Gone:
+        device.push_ticket, device.push_key, device.push_alerts = "", "", False
+        raise
 
 
 def flush_due(now: datetime | None = None) -> int:
@@ -477,27 +538,46 @@ def _send_round(now: datetime) -> int:
             try:
                 if account is None or account_out(account):
                     raise LookupError("account_out")
-                if reminder:
-                    target = db.get(WebPushSubscription, row.target_id)
-                    if target is None or target.account_id != row.account_id:
-                        raise LookupError("no_target")
-                    body = reminders.message_for(db, account, row, target, now)
-                    topic = reminders.topic_of(row)
-                else:
+                if row.kind == APP:
                     refused = _still_for(db, account, row)
                     if refused:
                         raise LookupError(refused)
-                    target = db.get(WebPushSubscription, row.target_id)
-                    if target is None or target.account_id != row.account_id:
-                        raise LookupError("no_target")
-                    payload = dict(row.payload or {})
-                    body = {"title": payload.get("title"), "body": payload.get("text"), "url": payload.get("url"),
-                            "tag": f"calendar-{row.calendar_id}"}
-                    topic = opaque(row.calendar_id)
-                webpush.deliver(db, target, json.dumps(body, ensure_ascii=False).encode("utf-8"), topic=topic)
-                target.last_ok_at = now
+                    _send_app(db, account, row)
+                else:
+                    if reminder:
+                        target = db.get(WebPushSubscription, row.target_id)
+                        if target is None or target.account_id != row.account_id:
+                            raise LookupError("no_target")
+                        body = reminders.message_for(db, account, row, target, now)
+                        topic = reminders.topic_of(row)
+                    else:
+                        refused = _still_for(db, account, row)
+                        if refused:
+                            raise LookupError(refused)
+                        target = db.get(WebPushSubscription, row.target_id)
+                        if target is None or target.account_id != row.account_id:
+                            raise LookupError("no_target")
+                        payload = dict(row.payload or {})
+                        body = {"title": payload.get("title"), "body": payload.get("text"), "url": payload.get("url"),
+                                "tag": f"calendar-{row.calendar_id}"}
+                        topic = opaque(row.calendar_id)
+                    webpush.deliver(db, target, json.dumps(body, ensure_ascii=False).encode("utf-8"), topic=topic)
+                    target.last_ok_at = now
             except LookupError as reason:
                 row.failed_at, row.last_error, row.payload = now, str(reason)[:40], {}
+            except apppush.Gone:
+                logger.info("The relay forgot an app device's ticket; removing it")
+                row.failed_at, row.last_error, row.payload = now, "gone", {}
+            except apppush.Failed as exc:
+                row.last_error = exc.code
+                if exc.final or row.attempts > len(RETRY_MINUTES):
+                    row.failed_at, row.payload = now, {}
+                    logger.warning("App notification given up account_id=%s tries=%s reason=%s", row.account_id,
+                                   row.attempts, exc.code)
+                else:
+                    row.next_try_at = now + timedelta(minutes=RETRY_MINUTES[row.attempts - 1])
+                    logger.warning("App notification not delivered, tried again later account_id=%s try=%s "
+                                   "reason=%s", row.account_id, row.attempts, exc.code)
             except webpush.Gone:
                 logger.info("A browser's push subscription is gone; removing it")
                 db.execute(delete(WebPushSubscription).where(WebPushSubscription.id == row.target_id))

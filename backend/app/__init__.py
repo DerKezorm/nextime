@@ -1,3 +1,3 @@
 """nextime: a calendar for families and small groups, self-hosted, in the browser and through CalDAV on every phone."""
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"

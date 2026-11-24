@@ -430,6 +430,7 @@ def block(db: Session, account: Account) -> None:
         return
     _keep_an_operator(db, account)
     account.blocked_at = utcnow()
+    _app_devices_out(db, account)
     db.commit()
     # The sessions stay as they are but count for nothing (``security.account_out``): an open window hears that it
     # is blocked instead of being sent to sign in. Live connections look again at once.
@@ -451,6 +452,15 @@ def unblock(db: Session, account: Account) -> None:
     logger.info("Account unblocked name=%s", account.name)
 
 
+def _app_devices_out(db: Session, account: Account) -> None:
+    """The paired iPhones and iPads go with a block or deletion and hear why (TIME-29 EC-5); unblocked, they sign in
+    again."""
+    from . import appdevices
+
+    db.flush()
+    appdevices.end_all(db, account.id)
+
+
 def delete_account(db: Session, account: Account) -> None:
     """Gone for everybody at once, blocked, and for ``DELETE_GRACE_DAYS`` days brought back by the operator."""
     from ..security import sessions_ended
@@ -460,6 +470,7 @@ def delete_account(db: Session, account: Account) -> None:
         return
     _keep_an_operator(db, account)
     account.deleted_at = utcnow()
+    _app_devices_out(db, account)
     db.commit()
     sessions_ended()
     content.account_deleted(db, account.id)

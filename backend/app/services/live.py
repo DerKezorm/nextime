@@ -8,6 +8,7 @@ again. Nothing about the change travels, only that there was one. A rolled-back 
 from __future__ import annotations
 
 import asyncio
+import logging
 import secrets
 import threading
 
@@ -58,7 +59,17 @@ def version(account_id: int) -> str:
         return f"{_boot}-{_counts.get(account_id, 0)}"
 
 
+#: Called with the accounts on every change they hear of, outside the lock (the iPhone app's nudge,
+#: ``services/apppush.py``).
+CHANGED: list = []
+
+
 def notify(account_ids: set[int], message: str = "changed") -> None:
+    for callback in CHANGED:
+        try:
+            callback(set(account_ids))
+        except Exception:  # a listener never stops a change from being told
+            logging.getLogger("nextime.live").exception("A listener of changes failed")
     with _lock:
         for account_id in account_ids:
             _counts[account_id] = _counts.get(account_id, 0) + 1
