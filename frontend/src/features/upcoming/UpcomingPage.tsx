@@ -26,7 +26,7 @@ import { useChosen, useCollections, useOnly, useShown } from '../collections/sto
 import { OutsideKept } from '../offline/OfflineHint'
 import { Dot, ListTitle, LoadProblem, useCalendarMap, useClock, useOpen, useSpan } from '../views/bits'
 import { addDays, daysBetween, format, isoWeekOf } from '../views/dates'
-import { daysOf, isBackground, isHoliday, multiDay } from '../views/layout'
+import { comingNext, daysOf, isBackground, isHoliday, multiDay, wholeDay } from '../views/layout'
 import { setViewDay, todayAt, useNow, useWindow } from '../views/state'
 import { heatStep } from '../views/year'
 import { calmStretch, columnsFrom, freeRuns, STRIP_DAYS, type Column } from './plan'
@@ -155,9 +155,9 @@ function NextCard({ rows, now, today, calendars }: { rows: Occurrence[]; now: nu
   const clock = useClock()
   const span = useSpan()
   const open = useOpen()
-  // What runs or comes next with a time; whole days and long events are not "next" (as in Heute).
-  const timed = rows.filter((row) => !isBackground(row, calendars) && !row.all_day && !multiDay(row, zone) && Date.parse(row.end) > now)
-  const next = timed[0]
+  // What runs or comes next, whole days included (asked for while testing, 2026-11-24).
+  const coming = comingNext(rows, now, today, zone, calendars)
+  const next = coming[0]
   if (!next) {
     return (
       <div className="rounded-[14px] border border-ink-700 bg-ink-850 px-4 py-3.5 text-sm text-mist-500" data-testid="upcoming-next">
@@ -166,14 +166,23 @@ function NextCard({ rows, now, today, calendars }: { rows: Occurrence[]; now: nu
     )
   }
   const start = Date.parse(next.start)
-  const day = daysOf(next, zone).first
-  const label =
-    start <= now
+  const whole = wholeDay(next, zone)
+  const { first: day, last } = daysOf(next, zone)
+  const dayWord = day === today ? t('views.column.today') : day === addDays(today, 1) ? t('views.column.tomorrow') : format(day, language, { weekday: 'short', day: 'numeric', month: 'short' })
+  const label = whole
+    ? t('upcoming.nextOn', { when: dayWord })
+    : start <= now
       ? t('upcoming.running', { span: span(Math.max(1, Math.round((Date.parse(next.end) - now) / 60_000))) })
       : day === today
         ? t('upcoming.nextIn', { span: span(Math.max(1, Math.round((start - now) / 60_000))) })
-        : t('upcoming.nextOn', { when: `${day === addDays(today, 1) ? t('views.column.tomorrow') : format(day, language, { weekday: 'short', day: 'numeric', month: 'short' })}, ${clock(start)}` })
-  const after = timed.find((row) => row !== next && daysOf(row, zone).first === day && Date.parse(row.start) >= Date.parse(next.end))
+        : t('upcoming.nextOn', { when: `${dayWord}, ${clock(start)}` })
+  const when = whole
+    ? last > day
+      ? t('upcoming.until', { day: format(last, language, { day: 'numeric', month: 'short' }) })
+      : t('views.allDay')
+    : `${clock(start)}–${clock(Date.parse(next.end))}`
+  // What follows on that day with a time: after a whole day the first timed one, else the first after its end.
+  const after = coming.find((row) => row !== next && !wholeDay(row, zone) && daysOf(row, zone).first === day && (whole || Date.parse(row.start) >= Date.parse(next.end)))
   const place = [calendars.get(next.calendar_id)?.name, next.location].filter(Boolean).join(' · ')
   return (
     <button type="button" className="nt-next-card text-left" onClick={() => open(next)} data-testid="upcoming-next">
@@ -182,7 +191,7 @@ function NextCard({ rows, now, today, calendars }: { rows: Occurrence[]; now: nu
         <ListTitle row={next} />
       </span>
       <span className="text-sm text-mist-300">
-        {clock(start)}–{clock(Date.parse(next.end))}
+        {when}
         {place ? ` · ${place}` : ''}
       </span>
       {after && <span className="pt-1 text-xs text-mist-400">{t('upcoming.afterToday', { title: after.busy_only ? t('views.busy') : after.title, time: clock(Date.parse(after.start)) })}</span>}

@@ -16,14 +16,13 @@ import { clockChange } from '../../lib/display'
 import { useTitle } from '../../lib/title'
 import { useDisplay } from '../../lib/useDisplay'
 import type { CalendarEntry, Occurrence } from '../calendars/api'
-import { wallOf } from '../calendars/time'
 import { EmptyCollection } from '../collections/CollectionMenu'
 import { useShown } from '../collections/store'
 import { QuickEntry } from '../quick/QuickEntry'
 import { InvitationSign } from '../sources/Invitations'
 import { BackgroundLine, Dot, ListTitle, LoadProblem, Marks, PersonMark, Twice, useCalendarMap, useClock, useOpen, useSpan, useTitleOf } from './bits'
 import { addDays, format, isoWeekOf } from './dates'
-import { dayOf, daysOf, isBackground, multiDay, touches } from './layout'
+import { comingNext, dayOf, daysOf, isBackground, multiDay, touches, wholeDay } from './layout'
 import { setViewDay, todayAt, useCompact, useNarrow, useNow, useViewCommands, useWindow } from './state'
 import { DatePicker } from './DatePicker'
 import { CalendarColumn, scopeKeyOf, scopeOf } from './CalendarColumn'
@@ -207,7 +206,12 @@ function TodayColumn({ rows, now, today, calendars, pastOpen, onPast }: {
     label = minutes < 60 ? t('views.nextIn', { count: minutes }) : t('views.nextAt', { time: clock(first) })
   }
   const rest = [...running.slice(1), ...coming.filter((row) => !next.includes(row))]
-  const later = rows.find((row) => !isBackground(row, calendars) && !row.all_day && Date.parse(row.start) > now && daysOf(row, zone).first > today)
+  // The next one after today, whole days included (asked for while testing, 2026-11-24).
+  const later = comingNext(rows, now, today, zone, calendars).find((row) => daysOf(row, zone).first > today)
+  const laterDay = later ? daysOf(later, zone).first : ''
+  const laterWhen = later
+    ? `${laterDay === addDays(today, 1) ? t('views.tomorrowWord') : format(laterDay, i18n.language, { weekday: 'short', day: 'numeric', month: 'numeric' })} ${wholeDay(later, zone) ? t('views.allDay') : clock(Date.parse(later.start))}`
+    : ''
 
   const pastLine = past.length > 0 && (
     <>
@@ -264,10 +268,7 @@ function TodayColumn({ rows, now, today, calendars, pastOpen, onPast }: {
           </strong>
           {later && (
             <span className="text-sm">
-              {t('views.nextLater', {
-                when: `${daysOf(later, zone).first === addDays(today, 1) ? t('views.tomorrowWord') : format(wallOf(Date.parse(later.start), zone).date, i18n.language, { weekday: 'short', day: 'numeric', month: 'numeric' })} ${clock(Date.parse(later.start))}`,
-                title: titleOf(later),
-              })}
+              {t('views.nextLater', { when: laterWhen, title: titleOf(later) })}
             </span>
           )}
         </div>

@@ -73,6 +73,22 @@ describe('Demnächst as weeks', () => {
     expect(one('event-panel')).not.toBeNull()
   })
 
+  it('"Als Nächstes": today\'s whole day does not push away what still comes today with a time', async () => {
+    await open({ rows: [...ROWS(), at(2, 'Gelber Sack', '2026-11-26', '2026-11-26')] })
+    expect(one('upcoming-next')!.textContent).toContain('Zahnarzt')
+  })
+
+  it('"Als Nächstes" counts whole days too: tomorrow\'s birthday before tomorrow\'s evening', async () => {
+    // 22:40, today is over.
+    vi.setSystemTime(new Date('2026-11-26T21:40:00Z'))
+    await open({ rows: [...ROWS(), at(2, 'Geburtstag Oma', '2026-11-27', '2026-11-27')] })
+    const card = one('upcoming-next')!
+    expect(card.textContent).toContain('Als Nächstes · morgen')
+    expect(card.textContent).toContain('Geburtstag Oma')
+    expect(card.textContent).toContain('ganztägig · Persönlich')
+    expect(card.textContent).toContain('Danach: Training um 18:30')
+  })
+
   it('the strip shows the next 14 days by fullness and names the calm stretch', async () => {
     await open()
     const bars = all('upcoming-bar')

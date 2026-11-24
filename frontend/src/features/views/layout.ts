@@ -63,6 +63,35 @@ export function isBackground(row: Occurrence, calendars: Map<number, CalendarEnt
   return !!calendars.get(row.calendar_id)?.background
 }
 
+/** Whole days or a long event: it has a day, not a time. */
+export function wholeDay(row: Occurrence, zone: string): boolean {
+  return row.all_day || multiDay(row, zone)
+}
+
+/**
+ * The occurrences that come next, in that order (asked for while testing, 2026-11-24: whole days count as well).
+ * A timed one counts until it ends, a whole day from the day it begins; one that began on an earlier day is no longer
+ * "next". On a later day the whole days come first, they hold the whole day; today the timed ones still to come stand
+ * before today's whole days, which are already on (TIME-11 EC-14). Background calendars never come next.
+ */
+export function comingNext(rows: Occurrence[], now: number, today: string, zone: string, calendars: Map<number, CalendarEntry>): Occurrence[] {
+  const found: { row: Occurrence; day: string; rank: number; start: number }[] = []
+  for (const row of rows) {
+    if (isBackground(row, calendars)) continue
+    const day = daysOf(row, zone).first
+    if (wholeDay(row, zone)) {
+      if (day < today) continue
+      found.push({ row, day, rank: day === today ? 1 : 0, start: 0 })
+    } else {
+      if (Date.parse(row.end) <= now) continue
+      // A night from yesterday still running counts as today's.
+      found.push({ row, day: day < today ? today : day, rank: day > today ? 1 : 0, start: Date.parse(row.start) })
+    }
+  }
+  found.sort((a, b) => a.day.localeCompare(b.day) || a.rank - b.rank || a.start - b.start)
+  return found.map((entry) => entry.row)
+}
+
 /** Whether one of `rows` is a public holiday, so the day stands out (TIME-17, decided while testing). */
 export function isHoliday(rows: Occurrence[], calendars: Map<number, CalendarEntry>): boolean {
   return rows.some((row) => !!calendars.get(row.calendar_id)?.holiday)

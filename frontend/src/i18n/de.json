@@ -479,7 +479,7 @@
     "more_one": "+ {{count}} weiterer",
     "more_other": "+ {{count}} weitere",
     "until": "bis {{day}}",
-    "nothingNext": "In den nächsten Wochen steht nichts mit Uhrzeit an.",
+    "nothingNext": "In den nächsten Wochen steht nichts an.",
     "running": "Läuft noch · {{span}}",
     "nextIn": "Als Nächstes · in {{span}}",
     "nextOn": "Als Nächstes · {{when}}",

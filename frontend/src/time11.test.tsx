@@ -181,6 +181,13 @@ describe('TIME-11 the edges', () => {
     expect(text('past')).toBe('Vorbei: 5 Termine ▾')
   })
 
+  it('TIME-11 EC-1 a whole day tomorrow counts as next too (asked for while testing, 2026-11-24)', async () => {
+    vi.setSystemTime(new Date('2026-11-26T21:40:00Z'))
+    views({ rows: [...theWeek(), at(2, 'Geburtstag Oma', '2026-11-27', '2026-11-27')] })
+    await open()
+    expect(one('nothing-more')!.textContent).toContain('Als Nächstes: morgen ganztägig, Geburtstag Oma')
+  })
+
   it('TIME-11 EC-2 a holiday of a week stands once at the top as "Tag 3 von 7", not on every day', async () => {
     views({ rows: [...theWeek(), at(2, 'Urlaub', '2026-11-24', '2026-11-30')] })
     await open()
