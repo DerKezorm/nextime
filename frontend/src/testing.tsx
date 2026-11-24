@@ -7,6 +7,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import { MemoryRouter } from 'react-router-dom'
 
 import type { Me } from './api/client'
+import { forgetCalendars } from './features/calendars/store'
 import { forgetShownWindows } from './features/views/state'
 
 export type Answer = { status: number; body: unknown }
@@ -86,6 +87,7 @@ export function stop(): void {
   root = null
   box.remove()
   forgetShownWindows()
+  forgetCalendars()
   vi.unstubAllGlobals()
 }
 

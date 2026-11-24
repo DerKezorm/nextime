@@ -27,12 +27,14 @@ const QUIET = 'text-mist-300 hover:bg-ink-800 hover:text-mist-100'
 /** A place in the list (a view), as nexnotes' "Alle Notizen" and its inbox. */
 const PLACE = 'flex h-[34px] items-center rounded-lg px-2.5 text-[13.5px] transition-colors '
 
-/** The views of the calendar, in the order of the sidebar and the bar on a phone. */
+/** The views of the calendar, in the order of the sidebar and the bar on a phone (the first three). */
 // eslint-disable-next-line react-refresh/only-export-components
 export const VIEWS = [
   { to: '/', key: 'nav.today', end: true },
   { to: '/week', key: 'nav.week', end: false },
   { to: '/month', key: 'nav.month', end: false },
+  // Only in the sidebar: the bar on a phone has no room for it (the head of the month leads there).
+  { to: '/year', key: 'views.year', end: false },
 ] as const
 
 /** `resizable`: beside the page, with the handle at its edge and the width of this device; never in the phone's drawer. */
@@ -40,10 +42,8 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
   const { t } = useTranslation()
   const [setWidth] = useColumnWidth('sidebar')
   const width = resizable ? setWidth : COLUMNS.sidebar.fallback
-  // The day view belongs to "Woche" in the list, the year to "Monat", as in the bar on a phone.
-  const path = useLocation().pathname
-  const dayShown = path === '/day'
-  const yearShown = path === '/year'
+  // The day view belongs to "Woche" in the list, as in the bar on a phone.
+  const dayShown = useLocation().pathname === '/day'
   return (
     <nav aria-label={t('app.mainMenu')} style={{ width }} className="relative flex h-full flex-col border-r border-ink-700 bg-ink-900">
       <div className="px-4 pt-4 pb-3">
@@ -60,7 +60,7 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
         <ul className="mt-1">
           {VIEWS.map((view) => (
             <li key={view.to}>
-              <NavLink to={view.to} end={view.end} onClick={onNavigate} className={({ isActive }) => PLACE + (isActive || (view.to === '/week' && dayShown) || (view.to === '/month' && yearShown) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')}>
+              <NavLink to={view.to} end={view.end} onClick={onNavigate} className={({ isActive }) => PLACE + (isActive || (view.to === '/week' && dayShown) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')}>
                 {t(view.key)}
               </NavLink>
             </li>

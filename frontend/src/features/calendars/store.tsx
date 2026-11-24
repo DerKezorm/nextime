@@ -8,6 +8,7 @@ import { createContext, useCallback, useContext, useEffect, useState, useSyncExt
 import { calendarsApi, type CalendarList, type Rule, type Source } from './api'
 import { isOffline, noteFailure } from '../offline/connection'
 import { keptNow } from '../offline/snapshot'
+import { onAccountChange } from '../../state/account'
 
 let revision = 0
 const listeners = new Set<() => void>()
@@ -27,37 +28,73 @@ export function useRevision(): number {
   return useSyncExternalStore(subscribe, () => revision)
 }
 
+// ---- The list of calendars, one for the whole page ---------------------------------------------------------------
+//
+// Every part of the page (sidebar, views, column, panel) reads the same list, asked once per change: before, each
+// asked on its own, six questions at a time, and the answers came at different moments, so the parts of a page
+// switched one by one (the views first showed everything, then only the calendar shown alone).
+
+type CalendarsState = { list: CalendarList | null; failed: boolean }
+let calendarsState: CalendarsState = { list: null, failed: false }
+/** The revision the list was last asked for and answered for; an older answer never replaces a newer one. */
+let askedAt = -1
+let answeredAt = -1
+/** Grows when the account changes: answers for the account before are dropped. */
+let generation = 0
+const calendarListeners = new Set<() => void>()
+
+function setCalendars(next: CalendarsState): void {
+  calendarsState = next
+  for (const listener of [...calendarListeners]) listener()
+}
+
+function subscribeCalendars(listener: () => void): () => void {
+  calendarListeners.add(listener)
+  return () => calendarListeners.delete(listener)
+}
+
+function askCalendars(at: number): void {
+  if (askedAt >= at) return
+  askedAt = at
+  const mine = generation
+  calendarsApi
+    .list()
+    .then((answer) => {
+      if (mine !== generation || at < answeredAt) return
+      answeredAt = at
+      if (!answer || !Array.isArray(answer.calendars)) return setCalendars({ ...calendarsState, failed: true })
+      setCalendars({ list: answer, failed: false })
+    })
+    .catch((error) => {
+      if (mine !== generation || at < answeredAt) return
+      answeredAt = at
+      noteFailure(error)
+      const kept = isOffline() ? keptNow() : null
+      if (kept) setCalendars({ list: calendarsState.list ?? kept.calendars, failed: false })
+      else setCalendars({ ...calendarsState, failed: true })
+    })
+}
+
+/** Forgets the list (another account; a test drawing anew). */
+export function forgetCalendars(): void {
+  generation += 1
+  askedAt = -1
+  answeredAt = -1
+  setCalendars({ list: null, failed: false })
+}
+onAccountChange(forgetCalendars)
+
 /** The account's calendars; `null` while they come. Without a connection, those the installed app kept (TIME-28). */
 export function useCalendars(): { list: CalendarList | null; failed: boolean; take: (list: CalendarList) => void } {
   const seen = useRevision()
-  const [list, setList] = useState<CalendarList | null>(() => (isOffline() ? (keptNow()?.calendars ?? null) : null))
-  const [failed, setFailed] = useState(false)
-  useEffect(() => {
-    let live = true
-    calendarsApi
-      .list()
-      .then((answer) => {
-        if (!live) return
-        if (!answer || !Array.isArray(answer.calendars)) return setFailed(true)
-        setList(answer)
-        setFailed(false)
-      })
-      .catch((error) => {
-        if (!live) return
-        noteFailure(error)
-        const kept = isOffline() ? keptNow() : null
-        if (kept) setList((before) => before ?? kept.calendars)
-        else setFailed(true)
-      })
-    return () => {
-      live = false
-    }
-  }, [seen])
+  const state = useSyncExternalStore(subscribeCalendars, () => calendarsState)
+  useEffect(() => askCalendars(seen), [seen])
   const take = useCallback((answer: CalendarList) => {
-    setList(answer)
+    setCalendars({ list: answer, failed: false })
     announce()
   }, [])
-  return { list, failed, take }
+  const list = state.list ?? (isOffline() ? (keptNow()?.calendars ?? null) : null)
+  return { list, failed: state.failed, take }
 }
 
 /**

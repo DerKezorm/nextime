@@ -109,6 +109,17 @@ describe('TIME-12 the year as a heat map', () => {
     expect(one('view-year')).not.toBeNull()
   })
 
+  it('TIME-12 AC-16 the sidebar has "Jahr" below "Monat", marked while the year is shown', async () => {
+    await open('/')
+    const links = [...one('sidebar-places')!.querySelectorAll<HTMLAnchorElement>('li > a')].filter((link) => ['/', '/week', '/month', '/year'].includes(link.getAttribute('href') ?? ''))
+    expect(links.map((link) => link.textContent)).toEqual(['Heute', 'Woche', 'Monat', 'Jahr'])
+    await click(links[3])
+    await settle()
+    expect(one('view-year')).not.toBeNull()
+    expect(one('sidebar-places')!.querySelector('a[href="/year"]')!.className).toContain('nt-chosen')
+    expect(one('sidebar-places')!.querySelector('a[href="/month"]')!.className).not.toContain('nt-chosen')
+  })
+
   it('TIME-12 EC-19 the weeks begin on the first weekday set; a leap year has a 29th of February', async () => {
     await open('/year')
     // 1 January 2026 is a Thursday: three places before it from Monday.

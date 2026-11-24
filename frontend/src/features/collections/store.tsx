@@ -118,6 +118,9 @@ export type Shown = {
 }
 
 export function shownOf(list: CalendarList | null, chosen: Collection | null, onlyId: number | null, area: TaskArea | null = null): Shown {
+  // A calendar shown alone, but the list has not come yet: wait instead of showing everything first (the views
+  // loaded all calendars, then dropped all but the one).
+  if (onlyId !== null && list === null) return { calendars: null, hidden: false, only: null, collection: chosen, empty: false, pending: true }
   const only = onlyId !== null ? (list?.calendars.find((entry) => entry.id === onlyId) ?? null) : null
   if (only) return { calendars: [only.id], hidden: true, only, collection: chosen, empty: false }
   if (area) return { calendars: [], hidden: false, only: null, collection: chosen, empty: false, onlyArea: area }
@@ -154,7 +157,8 @@ export function useShown(): Shown {
     if (gone) setOnly(null)
     if (areaGone) setOnlyArea(null)
   }, [gone, setOnly, areaGone, setOnlyArea])
-  return { ...shownOf(list, chosen, gone ? null : only, only === null || gone ? area : null), pending: pending && only === null && area === null }
+  const base = shownOf(list, chosen, gone ? null : only, only === null || gone ? area : null)
+  return { ...base, pending: !!base.pending || (pending && only === null && area === null) }
 }
 
 /**
