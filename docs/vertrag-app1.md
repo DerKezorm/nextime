@@ -6,10 +6,20 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.3 (24.11.2026), server TIME-29 on nextime branch `ios-app1` (0.1 `dd89332`, after the review
-`6a158d7`, 0.2 `a857c14`). Built: everything the app's stage 2 needs (TIMEIOS-4, TIMEIOS-5), the silent nudge and the
-notifications of changes. Parts marked **later** are named so that later stages dock on; the server does not have them
-yet and `hello.features` does not name them.
+Status: draft 0.4 (24.11.2026), server TIME-29 on nextime branch `ios-app2` (0.1 `dd89332`, after the review
+`6a158d7`, 0.2 `a857c14`, 0.3 `29a72a3`/`ae9393a`, released as nextime 0.4.0 `10f6f91`; 0.4 on `ios-app2`). Parts
+marked **later** are named so that later stages dock on; the server does not have them yet and `hello.features` does
+not name them.
+
+Changes in 0.4 (24.11.2026, stage 3 of the app: TIMEIOS-8, 9, 16, 17, G9), each with the browser's rights:
+- Collections written from the app: ops `collection_create`, `collection_change`, `collection_delete` (feature
+  `collections_write`, TIMEIOS-9 AC-1, EC-8). `collections` in `changes` carry `task_areas`.
+- `GET /tasks?from=&to=` as the browser's `GET /api/tasks` (feature `tasks`, TIMEIOS-17), `GET /deadlines?from=&to=`
+  as `GET /api/deadlines` (feature `deadlines`, G9).
+- Every event in `changes` (and in the answers of `ops`) carries `invitation` (feature `invitations`, TIMEIOS-16).
+- People (`created_by`, `updated_by`, `calendars[].owner`, `conflicts[].by`) carry `avatar` and `color`;
+  `GET /avatars/{id}` with the device's token (feature `people`, TIMEIOS-9).
+- `GET /year?year=&zone=&collection=|only=` with the browser's count (feature `year`, TIMEIOS-8 AC-16).
 
 Changes in 0.3 (24.11.2026, follow-up 5, TIME-29 AC-3):
 - Notifications of changes in shared calendars (TIME-21) reach the app through the relay, as nexnotes sends its
@@ -46,7 +56,8 @@ device token in api 1.
 
 ```json
 {"app": "nextime", "api": 1, "min_api": 1, "version": "0.4.0", "sign_in": ["password", "oidc"],
- "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify"]}
+ "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify",
+              "collections_write", "tasks", "deadlines", "invitations", "people", "year"]}
 ```
 
 The app speaks `api` 1. If `min_api` > 1 the app says "update the app"; if `api` < 1 it says "update the server"
@@ -121,7 +132,7 @@ own. At most 5 per account and hour (`429 too_many_attempts`, `Retry-After`).
 
 `operator` (TIME-29 follow-up 8): whether the account runs the server; the app names the browser's server pages only
 then. `avatar` is when the picture was set (empty for none); the picture is `GET /api/app/1/avatars/{account id}`
-(**later**, with TIMEIOS-19; until then the app shows initials).
+(0.4, see "People").
 
 ## The own device
 
@@ -181,8 +192,9 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
      "title": "Dentist", "all_day": false, "starts_at": "2026-11-26T09:00:00Z", "ends_at": "2026-11-26T09:45:00Z",
      "time_zone": "Europe/Berlin", "recurring": false, "busy": true, "location": "Main Street 1",
      "busy_only": false, "waiting": false, "origin": "",
-     "created_by": {"id": 7, "name": "Mika Example"}, "updated_by": {"id": 7, "name": "Mika Example"},
-     "updated_at": "…"}
+     "created_by": {"id": 7, "name": "Mika Example", "avatar": "2026-11-20T10:00:00Z", "color": 4},
+     "updated_by": {"id": 7, "name": "Mika Example", "avatar": "2026-11-20T10:00:00Z", "color": 4},
+     "updated_at": "…", "invitation": null}
   ],
   "removed": [{"kind": "event", "calendar_id": 3, "href": "old.ics"}],
   "calendars": [
@@ -191,7 +203,7 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
      "read_only": false, "hidden": false, "position": 0, "default": true, "owner": null, "shared": false,
      "source_state": null}
   ],
-  "collections": [{"id": 2, "name": "Family", "calendar_ids": [3, 5], "with_tasks": false}],
+  "collections": [{"id": 2, "name": "Family", "calendar_ids": [3, 5], "with_tasks": false, "task_areas": []}],
   "conflicts": [
     {"event_id": 41, "mine": "BEGIN:VCALENDAR…", "by": {"id": 9, "name": "Kim Example"}, "at": "…"}
   ],
@@ -215,7 +227,14 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
   - `waiting`: a change made in nextime still has to reach iCloud, Google or CalDAV ("wartet", TIMEIOS-5 AC-8, EC-4).
   - `origin`: `imip` for a copy entered from an invitation mail (TIMEIOS-16 AC-16), else empty.
   - `etag` is the version; the app sends it back with a change (see "Writing").
-  - `created_by`, `updated_by`: `{"id", "name"}` or `null`.
+  - `created_by`, `updated_by`: a person (see "People", 0.4) or `null`.
+  - `invitation` (0.4, TIMEIOS-16): `null`, or the account's invitation in this event:
+    `{"state": "needs-action"|"accepted"|"tentative"|"declined", "from": "<organizer's name or address>",
+    "cancelled": bool, "occurrences": {"20261210T090000Z": "declined", …}}`. `occurrences` names the changed
+    occurrences of a series whose state differs from the series' (by the original start, as everywhere). Only where
+    the account connected the calendar's source (its addresses there) or for an invitation entered from a mail into
+    an own calendar, as in the browser (TIME-18); never in a "busy only" calendar. Answering comes with op `answer`
+    (**later**, TIMEIOS-16).
 - **removed**: an event that is gone from a calendar (deleted, moved to another calendar, a series' last occurrence
   gone, a free event in a busy-only calendar): `{"kind": "event", "calendar_id", "href"}`. The app drops its event with
   that `calendar_id` and `href`, if it still has it there; an event moved to another calendar comes again in `events`
@@ -306,8 +325,16 @@ connection or a restart never doubles anything). The server keeps the answers 30
   following. `trash` names the entry of the trash (`event` or `part`).
 - **resolve**: `id`, `restore`: „Meine zurückholen“ (`true`) or „So lassen“ (`false`), see "Conflicts".
 - **hide**: `calendar_id`, `hidden`: show or hide a calendar for this account (TIMEIOS-5 AC-14, offline).
-- Later in the same queue (**later**, names fixed now): `collection_create`, `collection_change`,
-  `collection_delete`, `answer` (invitation), `tick` (nextasks), `calendar_order`.
+- **collection_create** (0.4): `collection` = `{"name", "calendar_ids": [ids], "with_tasks"?, "task_areas"?:
+  [area ids of nextasks]}` → `done` with `collection` (as in `changes`, its `id`). The op's `ref` is the
+  collection's `client_ref`: the same `ref` is the same collection.
+- **collection_change** (0.4): `id`, `collection` with only what changed (`name`, `calendar_ids`, `with_tasks`,
+  `task_areas`) → `done` with `collection`. The later change wins.
+- **collection_delete** (0.4): `id` → `done` (calendars and events stay). One gone already is `done` too.
+- Collections keep the browser's rules (TIME-13): `name_missing`, `name_too_long` (with `max`),
+  `collection_name_taken` (the same name in any case), `calendar_unknown` (a calendar the account does not see),
+  `collection_gone` (not the account's, or deleted: for `collection_change`), `invalid_input`.
+- Later in the same queue (**later**, names fixed now): `answer` (invitation), `tick` (nextasks), `calendar_order`.
 
 **Who wins** (TIME-29 AC-2, TIME-5 EC-2): the change that reaches the server later counts, whatever the clock of the
 device said (EC-13). A change whose `etag` is older than the event's version still goes through; the account whose
@@ -398,18 +425,52 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
 - Reminders never go through the relay (G6): the app plans them itself from its copy. Switches „Erinnern“ and
   „Mitteilungen“ per app device and the app devices in the browser's list of TIME-21 stay **later**.
 
+## People (0.4, TIMEIOS-9)
+
+A person, wherever the interface names one (`created_by`, `updated_by`, `calendars[].owner`, `conflicts[].by`):
+`{"id", "name", "avatar", "color"}`. `avatar` is when the picture was set (`2026-11-20T10:00:00Z`), empty when there is
+none, when the account may not see it (the browser's rule: the account itself, the operator, or somebody who shares
+a calendar with it) or when the person is blocked or deleted (TIME-14 EC-8). `color` is the index (0 to 10) of the
+color of the person's initial circle, the same as in the browser. Names and pictures are those of the moment of the
+page: a new picture of a calendar's owner comes with the next page (the cursor changes with it); at an event with
+the event's next change or a full listing, as in nexnotes (the app may load the picture of a known person anew when
+an owner's `avatar` changed).
+
+- `GET /api/app/1/avatars/{account id}` → the picture (WebP), with the device's token; the browser's rules;
+  else `404 not_found`. The app adds `?v=<avatar>` to the address and keeps it.
+
+## Tasks and deadlines (0.4, TIMEIOS-17, G9)
+
+- `GET /api/app/1/tasks?to=<YYYY-MM-DD>[&from=<YYYY-MM-DD>][&previews=true]` → exactly the browser's `GET /api/tasks`
+  for the account: `{"connected", "hidden", "problem", "tasks": [...], "areas": [...], "notices": [...], "level"}`
+  (`notices` and `level` only when connected; fields as nextime's web
+  gets them, TIME-25). Without `from` the overdue ones come too; at most about a year at once. Ticking off stays
+  **later** (op `tick`, TIMEIOS-17).
+- `GET /api/app/1/deadlines?to=<YYYY-MM-DD>[&from=<YYYY-MM-DD>]` → exactly the browser's `GET /api/deadlines`:
+  `{"connected", "hidden", "problem", "deadlines": [{"id", "document_id", "kind", "what", "title", "sender",
+  "amount", "currency", "note", "day", "status", "link"}]}`; to look at only.
+- Both answer `{"connected": false, …}` while the account has not connected nextasks or nexpaper in the browser; the
+  app never sees keys or addresses beyond what the browser sees.
+
+## The year (0.4, TIMEIOS-8 AC-16)
+
+`GET /api/app/1/year?year=<1900…2200>[&zone=<IANA>][&collection=<id> | &only=<calendar id>]` → the browser's count
+(`GET /api/events/year`): `{"year", "zone", "days": {"2026-03-03": 4, …}, "holidays": ["2026-01-01", …]}`, days
+without events left out. `zone` defaults to the account's. `collection` counts that collection's calendars, `only`
+one calendar ("Nur diesen", also a hidden one); both at once `422 invalid_input`; one the account does not have
+`404 not_found`. For the app's comparison test of its own count.
+
 ## Later (names fixed, not built)
 
 So that later stages dock on; each comes with its name in `hello.features`.
 
 - `member` (follow-up 1, TIMEIOS-13 to 19, 28): the browser's member ways with the device token — profile and picture
-  (`PUT /profile`, `PUT`/`DELETE /avatar`, `GET /avatars/{id}`), display (`PUT /display`), devices (built), calendars
+  (`PUT /profile`, `PUT`/`DELETE /avatar`; `GET /avatars/{id}` is there since 0.4), display (`PUT /display`), devices (built), calendars
   and accounts (create, change, order, delete; iCloud/CalDAV/subscription with check and preview; holidays; reconnect,
   disconnect), Google with the sign-in led back into the app, shares and guest links, invitations
-  (`POST /events/{id}/answer`), nextasks, nexpaper deadlines, trash (`GET /trash`, restore, empty), import, export and
-  move as jobs, `GET /upcoming`, `GET /year` (counted as the browser counts, TIMEIOS-8 AC-16).
-- `sync_more` (follow-up 2, rest): profile pictures of people, the state of invitations, nextasks tasks and nexpaper
-  deadlines in `changes`; ops `answer`, `tick`, `collection_*`, `calendar_order`.
+  (`POST /events/{id}/answer`), nextasks connection, trash (`GET /trash`, restore, empty), import, export and move as
+  jobs, `GET /upcoming`.
+- `sync_more` (follow-up 2, rest): ops `answer`, `tick`, `calendar_order`.
 - `reminders` (follow-up 5, rest): the account's reminders per event in `changes` (`reminders: [minutes]` beside each
   event, and per occurrence); switches „Erinnern“ and „Mitteilungen“ per app device; `offers.relay_ok` (the server
   reaches the relay).

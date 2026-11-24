@@ -339,7 +339,7 @@ def test_TIME29_AC8_the_app_sees_what_the_account_sees_with_the_right(client: Te
     rights = {row["id"]: (row["right"], row["writable"]) for row in body["calendars"]}
     assert rights[family] == ("read", False) and rights[busy] == ("busy", False) and private not in rights
     owner = next(row for row in body["calendars"] if row["id"] == family)["owner"]
-    assert owner == {"id": account.id, "name": "Tester"}
+    assert (owner["id"], owner["name"]) == (account.id, "Tester")
 
 
 def test_TIME29_AC8_a_share_ended_drops_the_calendar_from_the_list(client: TestClient, account: Account) -> None:
@@ -480,7 +480,7 @@ def test_TIME29_AC2_the_later_arrival_wins_and_the_other_account_gets_both_versi
     body, _events = all_changes(device["token"])
     conflict = body["conflicts"]
     assert len(conflict) == 1 and conflict[0]["event_id"] == made["id"]
-    assert "Elternabend 20:30 Uhr" in conflict[0]["mine"] and conflict[0]["by"] == {"id": account.id, "name": "Tester"}
+    assert "Elternabend 20:30 Uhr" in conflict[0]["mine"] and (conflict[0]["by"]["id"], conflict[0]["by"]["name"]) == (account.id, "Tester")
     back = ops(device["token"], {"ref": ref(), "op": "resolve", "id": made["id"], "restore": True})[0]
     assert back["state"] == "done" and back["event"]["title"] == "Elternabend 20:30 Uhr"
     assert all_changes(device["token"])[0]["conflicts"] == []
@@ -495,7 +495,7 @@ def test_TIME29_AC2_EC13_the_device_clock_does_not_decide(client: TestClient, ac
                                    "updated_at": "2020-01-01T00:00:00Z", "event": {"title": "Zahnarzt (iPhone)"}})
     assert answer[0]["event"]["title"] == "Zahnarzt (iPhone)"
     body, _events = all_changes(device["token"])
-    assert body["conflicts"][0]["by"] == {"id": account.id, "name": "Tester"}
+    assert body["conflicts"][0]["by"]["id"] == account.id
 
 
 def test_TIME29_AC2_a_change_after_a_delete_brings_the_event_back(client: TestClient, account: Account) -> None:

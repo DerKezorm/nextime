@@ -51,16 +51,31 @@ RETRY_CODES = {"source_busy"}
 
 
 class _People:
-    def __init__(self, db: Session) -> None:
+    """A person as the app shows them (0.4, ``people``): name, the color of the initial's circle (an index into the
+    eleven person colors) and when the picture was set; ``avatar`` empty where the viewer may not see it
+    (``avatars.may_see``) or the person is blocked or deleted (TIME-14 EC-8)."""
+
+    def __init__(self, db: Session, viewer: Account | None = None) -> None:
         self.db = db
+        self.viewer = viewer
         self.known: dict[int, dict[str, Any] | None] = {}
 
     def __call__(self, account_id: int | None) -> dict[str, Any] | None:
         if account_id is None:
             return None
         if account_id not in self.known:
+            from . import accounts, avatars
+
             row = self.db.get(Account, account_id)
-            self.known[account_id] = {"id": row.id, "name": row.shown_name} if row is not None else None
+            if row is None:
+                self.known[account_id] = None
+            else:
+                gone = row.blocked_at is not None or row.deleted_at is not None
+                seen = self.viewer is None or avatars.may_see(self.db, self.viewer, row.id)
+                own = self.viewer is not None and self.viewer.id == row.id
+                picture = iso(row.avatar_at) if row.avatar_at and seen and (own or not gone) else ""
+                self.known[account_id] = {"id": row.id, "name": row.shown_name, "avatar": picture or "",
+                                          "color": accounts.person_color(self.db, row)}
         return self.known[account_id]
 
 
@@ -110,15 +125,33 @@ class Seen:
         default_id = chosen.calendar.id if chosen.calendar else None
         rows = calendars.ordered(db, account_id)
         db.commit()
-        people = _People(db)
+        people = _People(db, account)
         self.people = people
         self.access = {item.calendar.id: item for item, _row in rows}
+        # The account's addresses per calendar, for its invitations (0.4, TIME-18): only where it connected the source.
+        from . import invitations
+
+        self.mine = {item.calendar.id: invitations.context(db, item)[0] for item, _row in rows}
+        self._mail: set[str] | None = None
+        self._db = db
         self.calendars = [_calendar_out(db, item, row, default_id, people) for item, row in rows]
-        self.collections = [{"id": entry["id"], "name": entry["name"], "calendar_ids": entry["calendar_ids"],
-                             "with_tasks": entry["with_tasks"]} for entry in collections.view(db, account_id)]
+        self.collections = [collection_out(entry) for entry in collections.view(db, account_id)]
         self.conflicts = _conflicts(db, account_id, set(self.access), people)
         self.account_block = account_block(account)
         self.german = (account.language or account.browser_language or "").lower().startswith("de")
+
+    def addresses(self, row: Event) -> set[str]:
+        """The account's addresses for this event's invitation: its source's, and for one entered from a mail into an
+        own calendar its own and every source's (as ``events.occurrence_list``)."""
+        from . import invitations
+
+        mine = self.mine.get(row.calendar_id, set())
+        item = self.access.get(row.calendar_id)
+        if invitations.by_mail(row) and item is not None and item.right == calendars.OWNER:
+            if self._mail is None:
+                self._mail = invitations.account_addresses(self._db, self.account.id)
+            mine = invitations.mail_addresses(row, mine | self._mail)
+        return mine
 
     def lists(self) -> dict[str, Any]:
         return {"calendars": self.calendars, "collections": self.collections, "conflicts": self.conflicts,
@@ -127,6 +160,37 @@ class Seen:
     def mark(self) -> str:
         text = json.dumps(self.lists(), sort_keys=True, ensure_ascii=False, default=str)
         return hashlib.sha256(text.encode("utf-8")).hexdigest()[:8]
+
+
+def collection_out(entry: dict[str, Any]) -> dict[str, Any]:
+    return {"id": entry["id"], "name": entry["name"], "calendar_ids": entry["calendar_ids"],
+            "with_tasks": entry["with_tasks"], "task_areas": entry["task_areas"]}
+
+
+#: The app's names of the states of an invitation (the browser says ``open`` for the first).
+INVITATION_STATES = {"open": "needs-action", "accepted": "accepted", "tentative": "tentative", "declined": "declined"}
+
+
+def invitation_of(text: str, mine: set[str]) -> dict[str, Any] | None:
+    """The account's invitation in this event (0.4, TIME-18): its state, who invites, whether it was cancelled, and
+    the occurrences of a series whose state differs from the series'. ``None`` when it is no invitation to it."""
+    from . import ical, invitations
+
+    if not mine or "ATTENDEE" not in text.upper():
+        return None
+    parsed = ical.parse(text)
+    master = ical.master_of(parsed)
+    found = invitations.state_of(master, mine)
+    if found is None:
+        return None
+    occurrences: dict[str, str] = {}
+    for component in ical.overrides_of(parsed):
+        state = invitations.state_of(component, mine)
+        if state is not None and state["state"] != found["state"]:
+            key = ical.recurrence_key(component.decoded("RECURRENCE-ID"))
+            occurrences[key] = INVITATION_STATES.get(state["state"], "needs-action")
+    return {"state": INVITATION_STATES.get(found["state"], "needs-action"), "from": found["by"],
+            "cancelled": bool(found["cancelled"]), "occurrences": occurrences}
 
 
 def _conflicts(db: Session, account_id: int, seen: set[int], people: _People) -> list[dict[str, Any]]:
@@ -144,7 +208,8 @@ def _conflicts(db: Session, account_id: int, seen: set[int], people: _People) ->
     return out
 
 
-def event_out(row: Event, access: calendars.Access, people: _People, german: bool) -> dict[str, Any] | None:
+def event_out(row: Event, access: calendars.Access, people: _People, german: bool,
+              mine: set[str] | None = None) -> dict[str, Any] | None:
     """An event as the app gets it; ``None`` when the account does not see it (a free event of "busy only")."""
     from ..routers.dav import busy_view
     from . import alarms
@@ -164,6 +229,7 @@ def event_out(row: Event, access: calendars.Access, people: _People, german: boo
         "busy_only": busy_only, "waiting": row.waiting, "origin": row.origin,
         "created_by": None if busy_only else people(row.created_by),
         "updated_by": None if busy_only else people(row.updated_by), "updated_at": iso(row.updated_at),
+        "invitation": None if busy_only else invitation_of(row.ical, mine or set()),
     }
 
 
@@ -220,7 +286,7 @@ def changes(db: Session, account_id: int, cursor: str | None, only: set[int] | N
         more = len(rows) > page
         rows = rows[:page]
         for row in rows:
-            shown = event_out(row, seen.access[row.calendar_id], seen.people, seen.german)
+            shown = event_out(row, seen.access[row.calendar_id], seen.people, seen.german, seen.addresses(row))
             if shown is not None:
                 out.append(shown)
         next_cursor = _cursor(db, start, mark, rows[-1].id) if more else _cursor(db, start, mark)
@@ -245,7 +311,8 @@ def changes(db: Session, account_id: int, cursor: str | None, only: set[int] | N
                     live[(calendar_id, row.href)] = row
         for calendar_id, href, _last in found:
             row = live.get((calendar_id, href))
-            shown = event_out(row, seen.access[calendar_id], seen.people, seen.german) if row is not None else None
+            shown = event_out(row, seen.access[calendar_id], seen.people, seen.german,
+                               seen.addresses(row)) if row is not None else None
             if shown is not None:
                 out.append(shown)
             else:
@@ -296,8 +363,13 @@ def _from_validation(exc: ValidationError) -> dict[str, Any]:
 
 
 def _done(db: Session, account: Account, row: Event, **more: Any) -> dict[str, Any]:
+    from . import invitations
+
     access = calendars.access(db, account.id, row.calendar_id)
-    shown = event_out(row, access, _People(db), (account.language or "").startswith("de")) if access else None
+    shown = None
+    if access is not None:
+        mine = invitations.context_of(db, access, row)[0]
+        shown = event_out(row, access, _People(db, account), (account.language or "").startswith("de"), mine)
     return {"state": "done", "event": shown, **more}
 
 
@@ -383,7 +455,42 @@ def _run(db: Session, account: Account, op: dict[str, Any]) -> dict[str, Any]:
             return _refused("invalid_input", "The input is not valid.", fields=["calendar_id", "hidden"])
         calendars.change(db, account, calendar_id, {"hidden": hidden})
         return {"state": "done"}
+    if kind in ("collection_create", "collection_change", "collection_delete"):
+        return _collection_op(db, account, kind, op)
     return _refused("op_unknown", "This change is not known.", op=str(kind)[:32])
+
+
+def _collection_out(db: Session, account: Account, collection_id: int) -> dict[str, Any] | None:
+    return next((collection_out(entry) for entry in collections.view(db, account.id) if entry["id"] == collection_id),
+                None)
+
+
+def _collection_op(db: Session, account: Account, kind: str, op: dict[str, Any]) -> dict[str, Any]:
+    """Collections from the app (0.4, TIMEIOS-9 AC-1): the browser's rules and codes (TIME-13)."""
+    from ..routers.collections import CollectionChange, CollectionIn
+
+    fields = op.get("collection") if isinstance(op.get("collection"), dict) else {}
+    if kind == "collection_create":
+        body = CollectionIn.model_validate({**fields, "client_ref": op["ref"]})
+        row, _new = collections.create(db, account, name=body.name, calendar_ids=body.calendar_ids,
+                                       client_ref=op["ref"], with_tasks=body.with_tasks, task_areas=body.task_areas)
+        return {"state": "done", "collection": _collection_out(db, account, row.id)}
+    collection_id = op.get("id")
+    if not isinstance(collection_id, int) or isinstance(collection_id, bool) or collection_id <= 0:
+        return _refused("invalid_input", "The input is not valid.", fields=["id"])
+    if kind == "collection_change":
+        change = CollectionChange.model_validate(fields)
+        collections.change(db, account, collection_id, name=change.name, calendar_ids=change.calendar_ids,
+                           with_tasks=change.with_tasks, task_areas=change.task_areas)
+        return {"state": "done", "collection": _collection_out(db, account, collection_id)}
+    try:
+        collections.remove(db, account, collection_id)
+    except HTTPException as exc:
+        if isinstance(exc.detail, dict) and exc.detail.get("code") == "collection_gone":
+            # Deleted already (another device, the browser): what the device wanted is so.
+            return {"state": "done"}
+        raise
+    return {"state": "done"}
 
 
 def _zone(account: Account) -> str:

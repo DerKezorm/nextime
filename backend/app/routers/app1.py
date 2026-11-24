@@ -20,7 +20,7 @@ import itertools
 import logging
 import threading
 import time
-from datetime import timedelta
+from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
@@ -53,7 +53,8 @@ MIN_API = 1
 WAIT_SECONDS = 25.0
 WAIT_RECHECK = 5.0
 #: The parts of the interface this server has (``hello``): an app tells an older server by their absence.
-FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify")
+FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify",
+            "collections_write", "tasks", "deadlines", "invitations", "people", "year")
 
 
 def _refused(code: str, text: str, status: int, retry: int | None = None) -> HTTPException:
@@ -378,3 +379,73 @@ def ops(found: Device_, body: OpsIn) -> dict[str, Any]:
     with SessionLocal() as db:
         cursor = appsync.current(db, found.account.id)
     return {"ops": answers, "cursor": cursor}
+
+
+# --- What the browser shows beside the events (0.4) ---------------------------------------------------------------
+#
+# The browser's own answers, with the device's account: the same rights, the same limits (``routers/nextasks.py``,
+# ``routers/nexpaper.py``, ``routers/avatars.py``, ``routers/events.py``).
+
+
+Day = Annotated[date, Query()]
+
+
+@router.get("/tasks", summary="The tasks of nextasks due in those days, as the browser gets them")
+def tasks(found: Device_, to: Day, start: Annotated[date | None, Query(alias="from")] = None,
+          previews: bool = False) -> dict[str, Any]:
+    """TIMEIOS-17: ``GET /api/tasks`` with the device's account (no ``from``: overdue ones too)."""
+    from . import nextasks as nextasks_router
+
+    with SessionLocal() as db:
+        return nextasks_router.tasks(found.account, db, to, start, previews)
+
+
+@router.get("/deadlines", summary="The open deadlines of nexpaper in those days, as the browser gets them")
+def deadlines(found: Device_, to: Day, start: Annotated[date | None, Query(alias="from")] = None) -> dict[str, Any]:
+    """TIMEIOS-6, TIMEIOS-7 (G9): ``GET /api/deadlines`` with the device's account."""
+    from . import nexpaper as nexpaper_router
+
+    with SessionLocal() as db:
+        return nexpaper_router.deadlines(found.account, db, to, start)
+
+
+@router.get("/avatars/{account_id}", summary="A profile picture, for those who may see it")
+def avatar(account_id: int, found: Device_) -> Response:
+    """TIMEIOS-9 (people): the browser's rules (``avatars.may_see``; a blocked or deleted person only for itself and
+    the operator). The address carries ``?v=<avatar>``, so a new picture is a new address."""
+    from .avatars import get_avatar
+
+    with SessionLocal() as db:
+        return get_avatar(account_id, found.account, db)
+
+
+@router.get("/year", summary="How many events each day of a year holds, as the browser counts")
+def year(found: Device_, year: int = Query(ge=1900, le=2200), zone: str | None = Query(default=None, max_length=64),
+         collection: int | None = None, only: int | None = None) -> dict[str, Any]:
+    """TIMEIOS-8 AC-16: the browser's count (``yearmap.year_map``) for comparing; ``collection`` or ``only`` (one
+    calendar, "Nur diesen", hidden or not) narrow it as in the browser."""
+    from ..services import calendars as calendar_service
+    from ..services import collections, yearmap
+
+    if collection is not None and only is not None:
+        raise error("invalid_input", "The input is not valid.", 422, fields=["collection", "only"])
+    if not yearmap.FIRST_YEAR <= year <= yearmap.LAST_YEAR:
+        raise error("invalid_input", "The input is not valid.", 422, fields=["year"])
+    with SessionLocal() as db:
+        account = db.get(AccountRow, found.account.id)
+        assert account is not None
+        chosen = zone or str(getattr(display.zone_of(account), "key", "") or "UTC")
+        if not display.valid_zone(chosen):
+            raise error("invalid_input", "The input is not valid.", 422, fields=["zone"])
+        picked: set[int] | None = None
+        hidden = False
+        if collection is not None:
+            entry = next((item for item in collections.view(db, account.id) if item["id"] == collection), None)
+            if entry is None:
+                raise error("not_found", "Not found.", 404)
+            picked = set(entry["calendar_ids"])
+        elif only is not None:
+            if calendar_service.access(db, account.id, only) is None:
+                raise error("not_found", "Not found.", 404)
+            picked, hidden = {only}, True
+        return yearmap.year_map(db, account, year, chosen, include_hidden=hidden, only=picked)
