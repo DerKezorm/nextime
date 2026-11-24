@@ -137,6 +137,17 @@ describe('TIME-12 the year as a heat map', () => {
     expect(one('view-year')).not.toBeNull()
   })
 
+  it('TIME-12 AC-16 with room enough the column of coming events stands beside the year, foldable as beside the month', async () => {
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('1200'), addEventListener: () => undefined, removeEventListener: () => undefined }))
+    await open('/year')
+    expect(one('view-year')).not.toBeNull()
+    expect(one('calendar-column')).not.toBeNull()
+    await click(one('column-fold'))
+    await settle()
+    expect(one('calendar-column')).toBeNull()
+    expect(one('column-unfold')).not.toBeNull()
+  })
+
   it('TIME-12 EC-19 the weeks begin on the first weekday set; a leap year has a 29th of February', async () => {
     await open('/year')
     // 1 January 2026 is a Thursday: three places before it from Monday.

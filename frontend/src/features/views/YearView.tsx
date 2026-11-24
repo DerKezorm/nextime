@@ -8,6 +8,7 @@
  * A click on a day opens it in Day, a click on a month's name that month in Month. For a screen reader each day says
  * its date and how full it is, the months are groups; the days are one stop of the Tab key, the arrows go from day to
  * day and week to week, Enter or Space opens the day. Without a connection the year says it shows once connected.
+ * With room enough, the column of coming events stands beside it, as beside the other views.
  */
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -23,6 +24,7 @@ import { useShown } from '../collections/store'
 import { useOffline, watchSlow } from '../offline/connection'
 import { OutsideKept } from '../offline/OfflineHint'
 import { LoadProblem } from './bits'
+import { useWide, ViewColumn } from './CalendarColumn'
 import { addDays, format, monthWeeks } from './dates'
 import { setViewDay, todayAt, useNarrow, useNow, useViewCommands, useViewDay } from './state'
 import { ViewHead } from './ViewHead'
@@ -84,6 +86,9 @@ export function YearView() {
   const [picking, setPicking] = useState(false)
   const navigate = useNavigate()
   const shown = useShown()
+  // Room enough: the coming events of what is shown in a column beside the year, as beside Month, Week and Day.
+  const wide = useWide()
+  const column = !narrow && wide && !shown.empty && !shown.pending
   const year = Number(day.slice(0, 4))
   const { map, failed, offline, retry } = useYear(year)
   const holidays = useMemo(() => new Set(map?.holidays ?? []), [map])
@@ -131,7 +136,8 @@ export function YearView() {
   ]
 
   return (
-    <div className="flex h-full min-h-0 w-full min-w-0 flex-col gap-3 overflow-y-auto px-3 pt-3 pb-4 sm:px-6 sm:pt-5" data-testid="view-year">
+    <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pt-3 pb-4 sm:px-6 sm:pt-5" data-testid="view-year">
       <ViewHead kind="year" title={String(year)} week={null} narrow={narrow} onStep={step} onToday={() => setDay(today)} onJump={() => undefined} day={day} today={today} picking={picking} onPicking={setPicking} onPick={setDay} />
       {failed && <LoadProblem onRetry={retry} />}
       {shown.empty && <EmptyCollection />}
@@ -217,6 +223,8 @@ export function YearView() {
           </ul>
         </>
       )}
+    </div>
+    {column && <ViewColumn shown={shown} now={now} />}
     </div>
   )
 }
