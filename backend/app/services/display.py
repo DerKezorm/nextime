@@ -1,5 +1,6 @@
 """How the account sees its times: first day of the week, week numbers, 12 or 24 hours, its time zone (TIME-3);
-and whether the same event in two of one person's calendars shows once (TIME-14 AC-4).
+whether the same event in two of one person's calendars shows once (TIME-14 AC-4); and whether events in the month
+stand with a dot or tinted in their calendar's color.
 
 Stored in the account's preferences, so they travel to every device (EC-7). Light or dark is not here: it stays per
 device, in the browser (AC-4). The home time zone is the device's zone at the first sign-in (AC-11); the page shows
@@ -20,6 +21,8 @@ from ..models import Account
 #: 0 Sunday … 6 Saturday, as JavaScript's ``getDay``; Monday from the start (AC-2).
 DEFAULT_WEEK_START = 1
 CLOCKS = ("auto", "24", "12")
+#: How an event stands in the month: with a dot in its calendar's color, or on a ground tinted with it.
+MONTH_STYLES = ("dot", "tint")
 DEFAULTS: dict[str, Any] = {
     "week_start": DEFAULT_WEEK_START,
     "week_numbers": True,
@@ -28,6 +31,9 @@ DEFAULTS: dict[str, Any] = {
     "home_zone": "",
     #: The same event in two calendars of one person shows once (TIME-14 AC-3, AC-4); on from the start.
     "merge_duplicates": True,
+    #: Events in the month with a dot (as from the start) or tinted in their calendar's color (asked for while testing,
+    #: 2026-11-24).
+    "month_style": "dot",
 }
 
 
@@ -73,6 +79,9 @@ def _check(changes: dict[str, Any]) -> dict[str, Any]:
         elif key == "merge_duplicates":
             if not isinstance(value, bool):
                 raise DisplayError(key, "Merging duplicates is on or off.")
+        elif key == "month_style":
+            if value not in MONTH_STYLES:
+                raise DisplayError(key, "Events in the month stand with a dot or tinted.")
         elif key == "clock":
             if value not in CLOCKS:
                 raise DisplayError(key, "The clock is auto, 24 or 12.")

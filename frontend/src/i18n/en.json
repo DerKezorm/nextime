@@ -937,7 +937,10 @@
     "duplicates": "Duplicate events",
     "duplicatesOnce": "show once",
     "duplicatesEach": "show in each calendar",
-    "duplicatesHint": "When the same event is in two of your calendars, it shows once with “in 2 calendars”."
+    "duplicatesHint": "When the same event is in two of your calendars, it shows once with “in 2 calendars”.",
+    "monthStyle": "Events in the month",
+    "monthStyleDot": "with a dot",
+    "monthStyleTint": "tinted"
   },
   "calendars": {
     "groups": {

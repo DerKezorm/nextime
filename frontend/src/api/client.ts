@@ -188,6 +188,8 @@ export type Display = {
   home_zone: string
   /** The same event in two calendars of one person shows once (TIME-14 AC-4); missing counts as on. */
   merge_duplicates?: boolean
+  /** Events in the month with a dot in their calendar's color, or tinted in it; missing counts as the dot. */
+  month_style?: 'dot' | 'tint'
 }
 
 export type SetupState = {

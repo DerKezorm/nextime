@@ -711,6 +711,14 @@
   @apply flex w-full min-w-0 items-center gap-1.5 rounded text-left text-[11.5px] text-mist-100 hover:bg-ink-800;
   min-height: 0;
 }
+/* Tinted in the calendar's color instead of the dot (Einstellungen › Darstellung › Termine im Monat). */
+.nt-month-event.nt-tint {
+  @apply px-1.5 py-px;
+  border-radius: 5px;
+}
+.nt-month-event.nt-tint:hover {
+  background: color-mix(in srgb, var(--k) 26%, transparent);
+}
 
 .nt-skeleton {
   @apply block animate-pulse rounded-md bg-ink-800;

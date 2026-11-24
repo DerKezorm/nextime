@@ -414,6 +414,8 @@ class DisplayIn(BaseModel):
     week_numbers: StrictBool | None = None
     #: The same event in two calendars of one person once (TIME-14 AC-4).
     merge_duplicates: StrictBool | None = None
+    #: Events in the month: "dot" or "tint".
+    month_style: str | None = Field(default=None, max_length=8)
     clock: str | None = Field(default=None, max_length=8)
     #: "" follows the device; otherwise an IANA name.
     time_zone: str | None = Field(default=None, max_length=64)

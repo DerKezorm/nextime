@@ -937,7 +937,10 @@
     "duplicates": "Doppelte Termine",
     "duplicatesOnce": "einmal zeigen",
     "duplicatesEach": "in jedem Kalender zeigen",
-    "duplicatesHint": "Steht derselbe Termin in zwei deiner Kalender, erscheint er einmal mit „in 2 Kalendern“."
+    "duplicatesHint": "Steht derselbe Termin in zwei deiner Kalender, erscheint er einmal mit „in 2 Kalendern“.",
+    "monthStyle": "Termine im Monat",
+    "monthStyleDot": "mit Punkt",
+    "monthStyleTint": "farbig hinterlegt"
   },
   "calendars": {
     "groups": {

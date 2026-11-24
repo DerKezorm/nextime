@@ -13,6 +13,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { weekdayNames } from '../../lib/display'
 import { useTitle } from '../../lib/title'
+import { colorVar } from '../calendars/Swatch'
 import { useDisplay } from '../../lib/useDisplay'
 import type { Occurrence } from '../calendars/api'
 import { usePanel } from '../calendars/store'
@@ -79,6 +80,8 @@ export function MonthView() {
   }
   const clock = useClock()
   const month = day.slice(0, 7)
+  // Events with a dot, or on a ground in their calendar's color (Einstellungen › Darstellung); the phone keeps its dots.
+  const tinted = display.month_style === 'tint'
 
   const step = (direction: -1 | 1) => setDay(addMonths(day, direction))
   useViewCommands((command) => {
@@ -198,13 +201,15 @@ export function MonthView() {
                           <button
                             key={`${row.id}-${row.occurrence}`}
                             type="button"
-                            className={'nt-month-event ' + (row.busy_only ? 'text-mist-500' : '')}
+                            className={'nt-month-event ' + (tinted ? 'nt-tint ' : '') + (row.busy_only ? 'text-mist-500' : '')}
+                            style={tinted ? ({ '--k': colorVar(row.busy_only ? 'gray' : (calendars.get(row.calendar_id)?.color ?? 'gray')) } as CSSProperties) : undefined}
+                            data-style={tinted ? 'tint' : 'dot'}
                             title={titleOf(row)}
                             onClick={() => open(row)}
                             data-long={ends > begins ? `${begins === date ? 'start' : ''}${ends === date ? 'end' : ''}` || 'middle' : undefined}
                             data-testid="month-event"
                           >
-                            <Dot color={calendars.get(row.calendar_id)?.color ?? 'gray'} size={6} />
+                            {!tinted && <Dot color={calendars.get(row.calendar_id)?.color ?? 'gray'} size={6} />}
                             {!row.all_day && begins === date && <span className="shrink-0 text-mist-500">{clock(Date.parse(row.start))}</span>}
                             <span className={'min-w-0 truncate ' + (invited(row) ? 'nt-invitation-text' : '')}>{titleOf(row)}</span>
                             {row.waiting && <span className="nt-waiting">{t('views.waiting')}</span>}

@@ -88,6 +88,12 @@ export function DisplayFields() {
         </select>
       </Row>
       <p className="text-xs leading-relaxed text-mist-500">{t('display.duplicatesHint')}</p>
+      <Row id="display-month-style" label={t('display.monthStyle')}>
+        <select id="display-month-style" className="nt-field" disabled={busy} value={display.month_style === 'tint' ? 'tint' : 'dot'} onChange={(event) => void save({ month_style: event.target.value as Display['month_style'] })}>
+          <option value="dot">{t('display.monthStyleDot')}</option>
+          <option value="tint">{t('display.monthStyleTint')}</option>
+        </select>
+      </Row>
       <Problem text={problem} />
     </div>
   )
