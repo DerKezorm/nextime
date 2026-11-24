@@ -1,10 +1,13 @@
-/** "Demnächst" (asked for while testing, 2026-11-24): the coming events day by day, with the free days between, the
- * chips that set the same choice as "Sammlung" and "Nur diesen", "Weitere 30 Tage", and a click opening an event.
- * Today is Thursday 26 November 2026, 16:05 in Berlin (`viewFakes`). */
+/** "Demnächst" as weeks (asked for while testing, 2026-11-24, the concept "Wochen" chosen): "Als Nächstes" with what
+ * follows, the strip of the next 14 days with the calm stretch, this week, the next, the one after and "Später" with
+ * whole days only, free days between (an event over several days keeps its days busy), "+ n weitere", and the chips
+ * setting the same choice as "Sammlung" and "Nur diesen". Today is Thursday 26 November 2026, 16:05 in Berlin
+ * (`viewFakes`), the week begins on Monday. */
 import App from './App'
+import { calmStretch, columnsFrom, freeRuns } from './features/upcoming/plan'
+import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs } from './lib/devicePref'
-import { setViewDay } from './features/views/state'
 import { AuthProvider } from './state/auth'
 import { box, calls, click, render, settle, start, stop } from './testing'
 import { at, NOW, views, type Fake } from './viewFakes'
@@ -27,79 +30,121 @@ afterEach(() => {
 const ROWS = () => [
   at(3, 'Planung', '2026-11-26 09:00', '2026-11-26 10:00'),
   at(2, 'Zahnarzt', '2026-11-26 18:00', '2026-11-26 19:00'),
+  at(2, 'Kino', '2026-11-26 20:00', '2026-11-26 22:00'),
   at(7, 'Training', '2026-11-27 18:30', '2026-11-27 20:00'),
   at(2, 'Urlaub', '2026-12-01', '2026-12-03'),
   at(6, 'Gelbe Tonne', '2026-12-01', '2026-12-01'),
+  at(1, 'Weihnachtsfeier', '2026-12-18 19:00', '2026-12-18 23:00'),
+  at(2, 'Heiligabend bei Oma', '2026-12-24', '2026-12-24'),
+  at(5, '1. Weihnachtstag', '2026-12-25', '2026-12-25'),
 ]
 
-async function open(where: string, fake: Partial<Fake> = {}): Promise<void> {
+async function open(fake: Partial<Fake> = {}): Promise<void> {
   views({ rows: ROWS(), ...fake })
   await render(
     <AuthProvider>
       <App />
     </AuthProvider>,
-    where,
+    '/upcoming',
   )
   await settle()
 }
 
-const one = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
-const all = (id: string) => [...box.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)]
+const one = (id: string, scope: ParentNode = document) => scope.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+const all = (id: string, scope: ParentNode = box) => [...scope.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)]
+const week = (kind: string) => box.querySelector<HTMLElement>(`[data-testid="upcoming-week"][data-kind="${kind}"]`)!
 const windows = () => calls.filter((call) => call.method === 'GET' && call.path.startsWith('/api/events?')).map((call) => new URL(call.path, 'http://x').searchParams)
 
-describe('Demnächst', () => {
-  it('stands in the sidebar below "Kalender" and lists the coming days with their events and the free days between', async () => {
-    await open('/')
-    const places = [...one('sidebar-places')!.querySelectorAll('[data-testid^="nav-"]')].map((link) => link.textContent)
-    expect(places).toEqual(['Heute', 'Kalender', 'Demnächst'])
-    await click(one('nav-upcoming'))
-    expect(one('view-upcoming')).not.toBeNull()
+describe('Demnächst as weeks', () => {
+  it('stands in the sidebar below "Kalender"', async () => {
+    await open()
+    expect([...one('sidebar-places')!.querySelectorAll('[data-testid^="nav-"]')].map((link) => link.textContent)).toEqual(['Heute', 'Kalender', 'Demnächst'])
     expect(one('nav-upcoming')!.className).toContain('nt-chosen')
-    const days = all('upcoming-day')
-    expect(days.map((day) => day.dataset.date)).toEqual(['2026-11-26', '2026-11-27', '2026-12-01'])
-    expect(days[0].textContent).toContain('Donnerstag, 26. November')
-    expect(days[0].textContent).toContain('heute')
-    expect(days[1].textContent).toContain('morgen')
-    // Today: the past event quiet, both with time and calendar.
-    const today = [...days[0].querySelectorAll<HTMLElement>('[data-testid="upcoming-event"]')]
-    expect(today.map((event) => event.textContent)).toEqual(['09:00PlanungArbeit', '18:00ZahnarztPersönlich'])
-    expect(today[0].className).toContain('opacity-50')
-    // The holiday over three days on its first day, "bis 3. Dezember"; the waste collection quiet beside the day.
-    expect(days[2].querySelector('[data-testid="upcoming-event"]')!.textContent).toContain('bis 3. Dezember')
-    expect(days[2].querySelector('[data-testid="upcoming-background"]')!.textContent).toBe('Gelbe Tonne')
-    // Free days between: 28 to 30 November.
-    expect(all('upcoming-gap').map((gap) => gap.textContent)).toContain('3 Tage frei')
-    // Thirty days asked for from today.
+  })
+
+  it('"Als Nächstes" names what comes next, how soon, when and where, and what follows that day', async () => {
+    await open()
+    const card = one('upcoming-next')!
+    expect(card.textContent).toContain('Als Nächstes · in 1 Std 55 Min')
+    expect(card.textContent).toContain('Zahnarzt')
+    expect(card.textContent).toContain('18:00–19:00 · Persönlich')
+    expect(card.textContent).toContain('Danach: Kino um 20:00')
+    await click(card)
+    expect(one('event-panel')).not.toBeNull()
+  })
+
+  it('the strip shows the next 14 days by fullness and names the calm stretch', async () => {
+    await open()
+    const bars = all('upcoming-bar')
+    expect(bars).toHaveLength(14)
+    // Today three events (2–3), tomorrow one, the holiday over 1 to 3 December on each of its days.
+    expect(bars.slice(0, 8).map((bar) => bar.dataset.step)).toEqual(['2', '1', '0', '0', '0', '1', '1', '1'])
+    expect(bars[0].getAttribute('aria-label')).toBe('Donnerstag, 26. November, 3 Termine')
+    expect(one('upcoming-calm')!.textContent).toBe('Ruhe: Sa 28. bis Mo 30. frei')
+  })
+
+  it('the weeks stand as columns with their days, free days between and "Später" with whole days only', async () => {
+    await open()
+    expect(all('upcoming-week').map((column) => column.dataset.kind)).toEqual(['this', 'next', 'week', 'later'])
+    expect(week('this').textContent).toContain('Diese Woche')
+    expect(week('this').textContent).toContain('KW 48 · 4 Termine')
+    expect(all('upcoming-day', week('this')).map((day) => day.dataset.date)).toEqual(['2026-11-26', '2026-11-27'])
+    expect(all('upcoming-gap', week('this')).map((gap) => gap.textContent)).toEqual(['Sa 28. bis So 29. · 2 Tage frei'])
+    // The holiday keeps 2 and 3 December busy: free only Monday before and 4 to 6 after.
+    expect(week('next').textContent).toContain('KW 49 · 1 Termin')
+    expect(all('upcoming-gap', week('next')).map((gap) => gap.textContent)).toEqual(['Mo 30. · frei', 'Fr 4. bis So 6. · 3 Tage frei'])
+    const first = all('upcoming-day', week('next'))[0]
+    expect(first.textContent).toContain('Gelbe Tonne')
+    expect(first.textContent).toContain('bis 3. Dez.')
+    expect(week('week').textContent).toContain('KW 50')
+    expect(week('week').textContent).toContain('Die ganze Woche frei.')
+    // Later: whole days and the background, the evening of 18 December only counted.
+    expect(all('upcoming-event', week('later')).map((event) => event.textContent)).toEqual(['ganzt.Heiligabend bei Oma'])
+    expect(week('later').textContent).toContain('1. Weihnachtstag')
+    expect(one('upcoming-later-more', week('later'))!.textContent).toBe('und 1 weiterer Termin im Kalender')
+    // From the column's start to four weeks after the third: one question for it all.
     const asked = windows().at(-1)!
-    expect(Date.parse(asked.get('end')!) - Date.parse(asked.get('start')!)).toBe(30 * 86_400_000)
+    expect(Date.parse(asked.get('end')!) - Date.parse(asked.get('start')!)).toBeGreaterThan(40 * 86_400_000)
+  })
+
+  it('a long week shows eight rows and "+ n weitere", which opens it', async () => {
+    const many = [9, 10, 11, 12, 13, 14, 15].map((hour) => at(3, `Termin ${hour}`, `2026-11-27 ${hour}:00`, `2026-11-27 ${hour}:30`))
+    await open({ rows: [...ROWS(), ...many] })
+    expect(all('upcoming-event', week('this'))).toHaveLength(8)
+    expect(one('upcoming-more', week('this'))!.textContent).toBe('+ 3 weitere')
+    await click(one('upcoming-more', week('this')))
+    expect(all('upcoming-event', week('this'))).toHaveLength(11)
+    expect(one('upcoming-more', week('this'))).toBeNull()
   })
 
   it('the chips set the same choice as "Sammlung" and "Nur diesen"', async () => {
-    await open('/upcoming', { collections: [{ id: 9, name: 'Job', calendar_ids: [3], updated_at: '2026-11-20T10:00:00Z' }] })
+    await open({ collections: [{ id: 9, name: 'Job', calendar_ids: [3], updated_at: '2026-11-20T10:00:00Z' }] })
     expect(one('upcoming-all')!.getAttribute('aria-pressed')).toBe('true')
     await click(all('upcoming-calendar').find((chip) => chip.textContent?.includes('Persönlich'))!)
     expect(windows().at(-1)!.get('calendars')).toBe('2')
     expect(one('only-bar')).not.toBeNull()
-    expect(all('upcoming-event').map((event) => event.textContent)).toEqual(['18:00ZahnarztPersönlich', 'ganzt.UrlaubPersönlich · bis 3. Dezember'])
     await click(all('upcoming-collection')[0])
     expect(one('only-bar')).toBeNull()
     expect(windows().at(-1)!.get('calendars')).toBe('3')
-    expect(one('collection-button')!.textContent).toContain('Job')
     await click(one('upcoming-all'))
     expect(windows().at(-1)!.get('calendars')).toBeNull()
-    expect(one('upcoming-all')!.getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('"Weitere 30 Tage" asks for thirty days more; an empty span says so; a click opens the event', async () => {
-    await open('/upcoming', { rows: [] })
-    expect(one('upcoming-empty')!.textContent).toBe('In den nächsten 30 Tagen steht nichts an.')
-    await click(one('upcoming-more'))
-    const asked = windows().at(-1)!
-    expect(Date.parse(asked.get('end')!) - Date.parse(asked.get('start')!)).toBe(60 * 86_400_000)
-    stop()
-    start()
-    await open('/upcoming')
-    await click(all('upcoming-event')[1])
-    expect(one('event-panel')).not.toBeNull()
+  it('the plan: columns from the first weekday set, the first calm stretch, runs of free days', () => {
+    expect(columnsFrom('2026-11-26', 1).map((column) => [column.kind, column.first, column.last])).toEqual([
+      ['this', '2026-11-26', '2026-11-29'],
+      ['next', '2026-11-30', '2026-12-06'],
+      ['week', '2026-12-07', '2026-12-13'],
+      ['later', '2026-12-14', '2027-01-10'],
+    ])
+    expect(columnsFrom('2026-11-26', 0)[0]).toEqual({ kind: 'this', first: '2026-11-26', last: '2026-11-28' })
+    const days = (counts: number[]) => counts.map((count, index) => ({ date: `2026-12-${String(index + 1).padStart(2, '0')}`, count }))
+    expect(calmStretch(days([1, 0, 2, 0, 0, 0, 1]))).toEqual({ from: '2026-12-04', to: '2026-12-06' })
+    expect(calmStretch(days([1, 0, 2, 1]))).toEqual({ from: '2026-12-02', to: '2026-12-02' })
+    expect(calmStretch(days([1, 2]))).toBeNull()
+    expect(freeRuns('2026-12-01', '2026-12-07', (date) => (date === '2026-12-03' ? 1 : 0))).toEqual([
+      { first: '2026-12-02', last: '2026-12-02', count: 1 },
+      { first: '2026-12-04', last: '2026-12-06', count: 3 },
+    ])
   })
 })

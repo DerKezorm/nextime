@@ -21,7 +21,7 @@ import { EmptyCollection } from '../collections/CollectionMenu'
 import { useShown } from '../collections/store'
 import { QuickEntry } from '../quick/QuickEntry'
 import { InvitationSign } from '../sources/Invitations'
-import { BackgroundLine, Dot, ListTitle, LoadProblem, Marks, PersonMark, Twice, useCalendarMap, useClock, useOpen, useTitleOf } from './bits'
+import { BackgroundLine, Dot, ListTitle, LoadProblem, Marks, PersonMark, Twice, useCalendarMap, useClock, useOpen, useSpan, useTitleOf } from './bits'
 import { addDays, format, isoWeekOf } from './dates'
 import { dayOf, daysOf, isBackground, multiDay, touches } from './layout'
 import { setViewDay, todayAt, useCompact, useNarrow, useNow, useViewCommands, useWindow } from './state'
@@ -174,15 +174,6 @@ function Skeleton() {
 }
 
 /** "in 40 minutes", "1 hour", "2 h 15 min". */
-function useSpan(): (minutes: number) => string {
-  const { t } = useTranslation()
-  return (minutes) => {
-    if (minutes < 60) return t('views.minutes', { count: minutes })
-    if (minutes % 60 === 0) return t('views.hours', { count: minutes / 60 })
-    return t('views.hoursMinutes', { hours: Math.floor(minutes / 60), minutes: minutes % 60 })
-  }
-}
-
 function TodayColumn({ rows, now, today, calendars, pastOpen, onPast }: {
   rows: Occurrence[]
   now: number

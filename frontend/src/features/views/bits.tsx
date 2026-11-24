@@ -43,6 +43,16 @@ export function useTitleOf(): (row: Occurrence, withName?: boolean) => string {
     row.busy_only ? (withName && row.person ? t('views.busyBy', { name: row.person.name }) : t('views.busy')) : row.title
 }
 
+/** A span of minutes in words: "25 Minuten", "2 Stunden", "1 Std 55 Min". */
+export function useSpan(): (minutes: number) => string {
+  const { t } = useTranslation()
+  return (minutes) => {
+    if (minutes < 60) return t('views.minutes', { count: minutes })
+    if (minutes % 60 === 0) return t('views.hours', { count: minutes / 60 })
+    return t('views.hoursMinutes', { hours: Math.floor(minutes / 60), minutes: minutes % 60 })
+  }
+}
+
 /** Times of the day on the account's clock in the zone shown. */
 export function useClock(): (ms: number) => string {
   const { zone, twelve, language } = useDisplay()
