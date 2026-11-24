@@ -840,6 +840,7 @@
     "yearHoliday": "Holiday",
     "yearLegend": "Key",
     "keyHint": "{{name}} (key {{key}})",
+    "newOn": "New event on {{day}}",
     "dayAria": "Show {{day}} as a day",
     "weekAria": "Show week {{number}}",
     "allDay": "all day",

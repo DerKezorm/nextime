@@ -840,6 +840,7 @@
     "yearHoliday": "Feiertag",
     "yearLegend": "Legende",
     "keyHint": "{{name}} (Taste {{key}})",
+    "newOn": "Neuer Termin am {{day}}",
     "dayAria": "{{day}} als Tag zeigen",
     "weekAria": "KW {{number}} als Woche zeigen",
     "allDay": "ganztägig",

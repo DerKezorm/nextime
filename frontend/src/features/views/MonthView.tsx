@@ -3,11 +3,13 @@
  * button to that week; background entries small beside the day's number; days outside the month quiet; the first of
  * the next month names it ("1. Dez."); each event with its dot, time and title, at most three, then "+n more". A
  * month takes as many rows as it needs, six at most. On a phone each day shows dots and below the list of the day
- * chosen. A click on the free space of a day opens "Neuer Termin" on that day (TIME-12, "in einen freien Platz
- * klicken"): today at the next full hour, other days at 09:00, the usual length; not on a phone (the plus of the bar
+ * chosen. A click on the free space of a day, or on "+n more", opens that day in Day; the "+" in the corner of a day
+ * (on hovering it) opens "Neuer Termin" on that day (TIME-12, "in einen freien Platz klicken", changed while testing
+ * 2026-11-24): today at the next full hour, other days at 09:00, the usual length; not on a phone (the plus of the bar
  * there), not without a connection (TIME-28 AC-3).
  */
 import { useMemo, useState, type CSSProperties } from 'react'
+import { Plus } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -21,17 +23,15 @@ import { nextFullHour } from '../calendars/time'
 import { useOffline } from '../offline/connection'
 import { EmptyCollection } from '../collections/CollectionMenu'
 import { useShown } from '../collections/store'
-import { DayList, Dot, invited, LoadProblem, useCalendarMap, useClock, useOpen, useTitleOf } from './bits'
+import { Dot, invited, LoadProblem, useCalendarMap, useClock, useOpen, useTitleOf } from './bits'
 import { addDays, addMonths, format, isoWeekOf, isWeekend, monthWeeks, weekday } from './dates'
 import { daysOf, isBackground, isHoliday } from './layout'
 import { setViewDay, todayAt, useNarrow, useNow, useViewCommands, useViewDay, useWindow } from './state'
 import { useWide, ViewColumn } from './CalendarColumn'
 import { ViewHead, WeekJump } from './ViewHead'
 import { OutsideKept } from '../offline/OfflineHint'
-import type { Task } from '../nextasks/api'
 import { useTasks } from '../nextasks/hooks'
 import { TaskBox, TaskRow, TaskTitle } from '../nextasks/TaskItem'
-import type { Deadline } from '../nexpaper/api'
 import { DeadlineRow, MonthDeadline } from '../nexpaper/DeadlineItem'
 import { useDeadlines } from '../nexpaper/hooks'
 
@@ -48,7 +48,6 @@ export function MonthView() {
   const [day, setDay] = useViewDay(today)
   const [jumping, setJumping] = useState(false)
   const [picking, setPicking] = useState(false)
-  const [list, setList] = useState<{ date: string; rows: Occurrence[]; tasks: Task[]; deadlines: Deadline[] } | null>(null)
   const navigate = useNavigate()
   const weeks = monthWeeks(day, display.week_start)
   const first = weeks[0][0]
@@ -114,6 +113,12 @@ export function MonthView() {
     navigate('/week')
   }
   const chosen = rowsOf(day)
+  // A click on a day, or on "+n weitere", shows it in Day (asked for while testing, 2026-11-24): looking at a full
+  // day is what a click on it means; a new event comes from the "+" in its corner.
+  const toDay = (date: string) => {
+    setViewDay(date)
+    navigate('/day')
+  }
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
@@ -160,11 +165,11 @@ export function MonthView() {
                   data-date={date}
                   data-outside={outside || undefined}
                   data-holiday={holiday || undefined}
-                  data-addable={!narrow && !offline ? '' : undefined}
+                  data-openable={!narrow ? '' : undefined}
                   onClick={(event) => {
-                    // The day's number, an event, "+n" are buttons of their own; the free space makes a new event.
-                    if (narrow || offline || (event.target as HTMLElement).closest('button, [data-task], [data-deadline]')) return
-                    newOn(date)
+                    // The day's number, an event, "+n", the "+" are buttons of their own; the free space opens the day.
+                    if (narrow || (event.target as HTMLElement).closest('button, [data-task], [data-deadline]')) return
+                    toDay(date)
                   }}
                   data-testid="month-day"
                 >
@@ -179,6 +184,18 @@ export function MonthView() {
                     >
                       {number}
                     </button>
+                    {!narrow && !offline && (
+                      <button
+                        type="button"
+                        className="nt-month-add"
+                        aria-label={t('views.newOn', { day: format(date, language, { weekday: 'long', day: 'numeric', month: 'long' }) })}
+                        title={t('views.newOn', { day: format(date, language, { day: 'numeric', month: 'numeric' }) })}
+                        onClick={() => newOn(date)}
+                        data-testid="month-add"
+                      >
+                        <Plus className="h-3.5 w-3.5" strokeWidth={2.2} aria-hidden />
+                      </button>
+                    )}
                     {!narrow && (
                       <span className={'min-w-0 truncate text-[10.5px] ' + (holiday ? 'nt-holiday-name' : 'text-mist-500')} title={background.map((row) => row.title).join(' · ')} data-testid="month-background">
                         {background.map((row) => row.title).join(' · ')}
@@ -226,7 +243,7 @@ export function MonthView() {
                         <MonthDeadline key={deadline.id} deadline={deadline} />
                       ))}
                       {hiddenCount > 0 && (
-                        <button type="button" className="text-left text-[11px] font-semibold text-accent-400" onClick={() => setList({ date, rows: entries, tasks: dayTasks, deadlines: dayDeadlines })} data-testid="month-more">
+                        <button type="button" className="text-left text-[11px] font-semibold text-accent-400" onClick={() => toDay(date)} data-testid="month-more">
                           {t('views.moreCount', { count: hiddenCount })}
                         </button>
                       )}
@@ -263,7 +280,6 @@ export function MonthView() {
           ))}
         </section>
       )}
-      {list && <DayList date={list.date} rows={list.rows} tasks={list.tasks} deadlines={list.deadlines} onClose={() => setList(null)} onDay={() => (setList(null), setViewDay(list.date), navigate('/day'))} />}
       {jumping && (
         <WeekJump
           from={addDays(weeks[0][0], 3)}

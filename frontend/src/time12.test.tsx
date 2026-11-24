@@ -397,7 +397,7 @@ describe('TIME-12 the month', () => {
     expect(text('week-button')).toBe('Zu KW …')
   })
 
-  it('TIME-12 AC-5 more than three events show three and "+n weitere"; a click shows all', async () => {
+  it('TIME-12 AC-5 more than three events show three and "+n weitere"; a click shows all of them in the day', async () => {
     const rows = ['Eins', 'Zwei', 'Drei', 'Vier', 'Fünf'].map((name, index) => at(1, name, `2026-11-27 ${10 + index}:00`, `2026-11-27 ${10 + index}:30`))
     rows.push(...['A', 'B', 'C', 'D'].map((name, index) => at(1, name, `2026-11-30 ${10 + index}:00`, `2026-11-30 ${10 + index}:30`)))
     await open('/month', { rows })
@@ -406,7 +406,8 @@ describe('TIME-12 the month', () => {
     expect(all('month-more', day('2026-11-27'))[0].textContent).toBe('+2 weitere')
     expect(all('month-more', day('2026-11-30'))[0].textContent).toBe('+1 weiterer')
     await click(all('month-more', day('2026-11-27'))[0])
-    expect(all('day-list', document)[0].querySelectorAll('li')).toHaveLength(5)
+    expect(one('view-day')).not.toBeNull()
+    expect(text('period')).toContain('27. November 2026')
   })
 
   it('TIME-12 AC-14 a week number in the month shows that week', async () => {

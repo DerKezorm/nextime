@@ -1,5 +1,5 @@
-/** TIME-12, a new event by a click into free room (asked for while testing): the free space of a day in the month opens "Neuer Termin" on that day, today at the next full hour, other
- * days at 09:00, an hour long; not on the day's number, an event or "+n", not on a phone, not without a connection. The
+/** TIME-12, a new event by a click into free room (asked for while testing): the "+" in the corner of a day in the month opens "Neuer Termin" on that day, today at the next full hour,
+ * other days at 09:00, an hour long; the free space of a day and "+n" open the day (changed while testing, 2026-11-24); no "+" on a phone or without a connection. The
  * all-day row of Day and Week makes an all-day event. And the side panel shows start and end one below the other, each
  * with date and time (the year was cut off). Today is Thursday 26 November 2026, 16:05 in Berlin (`viewFakes`). */
 import { act } from 'react'
@@ -50,10 +50,10 @@ async function tap(element: Element | null): Promise<void> {
 }
 
 describe('TIME-12 create by click', () => {
-  it('TIME-12 create by click the free space of today in the month opens a new event at the next full hour', async () => {
+  it('TIME-12 create by click the "+" of today in the month opens a new event at the next full hour', async () => {
     await open('/month', { rows: [] })
-    expect(cell('2026-11-26').hasAttribute('data-addable')).toBe(true)
-    await tap(cell('2026-11-26'))
+    expect(cell('2026-11-26').querySelector('[data-testid="month-add"]')!.getAttribute('aria-label')).toBe('Neuer Termin am Donnerstag, 26. November')
+    await tap(cell('2026-11-26').querySelector('[data-testid="month-add"]'))
     expect(one('event-panel')).not.toBeNull()
     expect(value('field-start-date')).toBe('2026-11-26')
     expect(value('field-start-time')).toBe('17:00')
@@ -61,20 +61,27 @@ describe('TIME-12 create by click', () => {
     expect(one('switch-all-day')?.getAttribute('aria-checked')).toBe('false')
   })
 
-  it('TIME-12 create by click another day starts at 09:00, an hour long', async () => {
+  it('TIME-12 create by click the "+" of another day starts at 09:00, an hour long', async () => {
     await open('/month', { rows: [] })
-    await tap(cell('2026-12-03'))
+    await tap(cell('2026-12-03').querySelector('[data-testid="month-add"]'))
     expect(value('field-start-date')).toBe('2026-12-03')
     expect(value('field-start-time')).toBe('09:00')
     expect(value('field-end-time')).toBe('10:00')
   })
 
-  it('TIME-12 create by click the day number, an event and "+n" keep their own way', async () => {
+  it('TIME-12 create by click the free space of a day, "+n" and the day number open the day; an event opens itself', async () => {
     const many = [1, 2, 3, 4].map((hour) => at(1, `Termin ${hour}`, `2026-11-24T0${hour}:00:00Z`, `2026-11-24T0${hour}:30:00Z`, { id: 50 + hour }))
     await open('/month', { rows: many })
+    await tap(cell('2026-11-27'))
+    expect(one('event-panel')).toBeNull()
+    expect(one('view-day')).not.toBeNull()
+    expect(one('period')!.textContent).toContain('27. November 2026')
+    await tap(box.querySelector('[data-testid="view-switch"] button:nth-child(3)'))
     await tap(cell('2026-11-24').querySelector('[data-testid="month-more"]'))
     expect(one('event-panel')).toBeNull()
-    await tap(document.querySelector('[data-testid="panel-close"]') ?? document.body)
+    expect(one('view-day')).not.toBeNull()
+    expect(one('period')!.textContent).toContain('24. November 2026')
+    await tap(box.querySelector('[data-testid="view-switch"] button:nth-child(3)'))
     await tap(cell('2026-11-24').querySelector('[data-testid="month-event"]'))
     // The event itself opens, never "Neuer Termin".
     expect(one('event-panel')?.textContent).not.toContain('Neuer Termin')
@@ -85,16 +92,18 @@ describe('TIME-12 create by click', () => {
   it('TIME-12 create by click not on a phone, and not without a connection', async () => {
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('699'), addEventListener: () => undefined, removeEventListener: () => undefined }))
     await open('/month', { rows: [] })
-    expect(cell('2026-12-03').hasAttribute('data-addable')).toBe(false)
+    expect(cell('2026-12-03').querySelector('[data-testid="month-add"]')).toBeNull()
     await tap(cell('2026-12-03'))
     expect(one('event-panel')).toBeNull()
+    expect(one('view-month')).not.toBeNull()
     vi.unstubAllGlobals()
     await act(async () => markUnreachable())
     await settle()
-    // Without a connection no pointer and no "+" either (the panel would not open for something new).
-    expect(cell('2026-12-03').hasAttribute('data-addable')).toBe(false)
+    // Without a connection no "+" (the panel would not open for something new); the day still opens.
+    expect(cell('2026-12-03').querySelector('[data-testid="month-add"]')).toBeNull()
     await tap(cell('2026-12-03'))
     expect(one('event-panel')).toBeNull()
+    expect(one('view-day')).not.toBeNull()
   })
 
   it('TIME-12 create by click into the all-day row of the week makes an all-day event that day', async () => {
@@ -120,7 +129,7 @@ describe('TIME-12 create by click', () => {
   it('TIME-12 create by click today after 23:00 stays on that day, never 09:00 already past', async () => {
     vi.setSystemTime(new Date('2026-11-26T22:20:00Z'))
     await open('/month', { rows: [] })
-    await tap(cell('2026-11-26'))
+    await tap(cell('2026-11-26').querySelector('[data-testid="month-add"]'))
     expect(value('field-start-date')).toBe('2026-11-26')
     expect(value('field-start-time')).toBe('23:00')
     expect(value('field-end-time')).toBe('23:59')
@@ -137,7 +146,7 @@ describe('TIME-12 create by click', () => {
 
   it('TIME-12 create by click the panel shows start and end each in a row of its own, date beside time', async () => {
     await open('/month', { rows: [] })
-    await tap(cell('2026-12-03'))
+    await tap(cell('2026-12-03').querySelector('[data-testid="month-add"]'))
     const times = one('times')!
     const rows = [...times.querySelectorAll('[data-testid^="time-row-"]')]
     expect(rows.map((row) => row.getAttribute('data-testid'))).toEqual(['time-row-start', 'time-row-end'])

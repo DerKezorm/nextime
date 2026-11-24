@@ -691,21 +691,34 @@
   min-height: 92px;
 }
 /* The free space of a day makes a new event (TIME-12): a pointer, a quiet "+" in the corner and the hover surface. */
-.nt-month-cell[data-addable] {
+.nt-month-cell[data-openable] {
   position: relative;
   cursor: pointer;
 }
-.nt-month-cell[data-addable]:hover {
+.nt-month-cell[data-openable]:hover {
   background-color: var(--color-accent-wash);
 }
-.nt-month-cell[data-addable]:hover::after {
-  content: '+';
+/* The "+" of a day: a new event on it, shown while the day is hovered or the button has the focus. */
+.nt-month-add {
   position: absolute;
-  top: 2px;
-  right: 6px;
-  font-size: 14px;
-  line-height: 1;
-  color: var(--color-mist-500);
+  top: 3px;
+  right: 4px;
+  display: flex;
+  height: 20px;
+  width: 20px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--color-mist-400);
+  opacity: 0;
+}
+.nt-month-cell:hover .nt-month-add,
+.nt-month-add:focus-visible {
+  opacity: 1;
+}
+.nt-month-add:hover {
+  background-color: var(--color-accent-500);
+  color: var(--color-on-accent);
 }
 .nt-month-event {
   @apply flex w-full min-w-0 items-center gap-1.5 rounded text-left text-[11.5px] text-mist-100 hover:bg-ink-800;
