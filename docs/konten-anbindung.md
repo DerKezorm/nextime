@@ -1,0 +1,268 @@
+# Anbindung des Kontenmoduls (`nexkonten`) an nextime
+
+Stand 24.11.2026, Zweig `konten`. Vorbereitung, noch nichts angebunden. Maßgeblich sind der Entwurf in nexlore
+(`Development/nexapps/Baupläne/Entwurf Konten, Einrichtung und Anmeldung.md`) und die Schnittstelle des Moduls
+(`bauplaene/konten/SCHNITTSTELLE.md`, Zweig `konten`, Fassung 0.1.0). Wo nextime etwas braucht, das die Schnittstelle
+nicht hergibt, steht es unter „Passt das Modul?“ (Abschnitt 12).
+
+Die Kontologik von nextime ist **eine Abschrift von nexnotes** (`services/accounts.py`, `services/oidc_store.py`,
+`routers/auth.py`, `routers/invites.py`, `routers/accounts.py`, `db.py` unterscheiden sich nur in Wortlauten und
+Kleinigkeiten, geprüft per `diff`). Was im Plan von nexnotes (`nexnotes/docs/konten-anbindung.md`, Zweig `konten`)
+steht, gilt hier genauso; dieser Plan nennt das Gleiche kurz und das Eigene ausführlich. **Das Eigene ist das
+Kalenderkonto (CalDAV)**: Dort ist der Benutzername Teil jeder Adresse und der Anmeldung, und ein Umbenennen würde
+heute jedes eingerichtete iPhone, jeden Mac und jedes DAVx5 abhängen.
+
+## 1. Bestand heute (0.4.0)
+
+### Datenmodell (`backend/app/models.py`)
+
+| Tabelle | Was zum Konto gehört |
+|---|---|
+| `accounts` | wie nexnotes: `id`, `name` (unique, immer klein, unsichtbar erzeugt), `display_name`, `role`, `sign_in`, `password_hash`, `email` (ohne eindeutigen Index), `email_source`, `provider_email(_off)`, `language`, `failed_logins`, `locked_until`, `blocked_at`, `deleted_at`, `password_reset_notice`, `totp_*`, `avatar*`, `device_key`; dazu `color` (Kreis mit Initiale) |
+| `invites`, `password_resets`, `auth_sessions`, `oidc_providers`, `oidc_links` | wie nexnotes (Einladung und Reset-Link 1/7/30 Tage, Reset nur vom Betreiber) |
+| `devices` | **Kalenderkonto** (TIME-20): je Gerät ein eigenes Passwort (nur SHA-256), `name`, `client`, `platform`, `app_device_id` |
+| `device_setups` | Einrichtungslink hinter dem QR-Code (10 Minuten, einmal) |
+| `app_devices`, `app_pairings`, `app_codes` | gekoppelte iPhone-/iPad-App (TIME-29) |
+| `api_keys` | Schlüssel für Programme und MCP (TIME-26) |
+| `calendars.dav_name` | Name des Kalenders in der CalDAV-Adresse (32 Hex, je Kalender) |
+
+### Dienste und Router
+
+Wie nexnotes (`accounts.by_login` mit `limit(1)` bei der Adresse, Sperre am Konto, Blindhash, Einrichtungscode
+`NEXTIME_SETUP_TOKEN`, Reset nur über Betreiber-Link, keine Mail außer Einladung und Test). Eigen:
+
+| Ort | Was |
+|---|---|
+| `routers/dav.py` | CalDAV unter `/dav/`: `/dav/principals/<name>/`, `/dav/calendars/<name>/`, `/dav/calendars/<name>/<dav_name>/`, `…/<objekt>.ics`; jede Anfrage prüft `parts[1] == caller.name` (`dav.py:531, 535, 607, 742, 785, 864, 928, 963`), jede Antwort baut die Adressen aus `caller.name` (`dav.py:161-174, 315-341, 522-562, 586-632, 735`) |
+| `services/devices.py:155-188` `authenticate` | HTTP Basic: Gerätepasswort, **und** der Benutzer muss Name oder Adresse des Kontos sein (ohne Groß/Klein) |
+| `services/devices.py:200-245` `mobileconfig` | Profil für Apple: `CalDAVUsername` = Name, `CalDAVPrincipalURL` = `<adresse>/dav/principals/<name>/` |
+| `routers/devices.py:62-140` | `GET/POST /api/devices` und `/api/device-setup/{code}/credentials` geben `user: account.name` zum Abtippen (DAVx5, Thunderbird) |
+| `routers/app1.py:262-287` | die iPhone-App lässt sich ein Kalenderkonto machen (`/setup/<token>`, gleiches Profil) |
+| `security.end_all_sessions` | Browser und **App-Geräte**; die Kalenderkonto-Geräte (`devices`) bleiben (eigene Passwörter) |
+
+### Wanderung
+
+Wie nexnotes: `init_db()` bei jedem Start (`create_all`, `_add_missing_columns` mit Sicherung davor, Indizes ohne
+Prüfung), dazu `nextasks.move_choices`; `_backup_before_update` bei Fassungswechsel.
+
+### Frontend
+
+Wie nexnotes (`pages/AuthPages.tsx`, `pages/settings/AccountTab.tsx`, `pages/settings/AccountsTab.tsx`, gleiche
+Bausteine). Eigen: `features/calendars/Devices.tsx` zeigt Adresse, **„Name“** (der Benutzername fürs Kalenderkonto,
+`devices.user`) und Passwort zum Abtippen.
+
+### iPhone-App (`nextime-ios`, geprüft)
+
+Kein eigenes Formular: Koppeln per QR-Code oder Anmeldeseite im Browser. Erkannt wird ein Serverkonto über Adresse und
+Konto-ID (`Core/Accounts.swift:41` `identity`). „Angemeldet als <login>“ (`Views/ServerAccountPage.swift:57`) und die
+Zeile „<adresse> · <login>“ (`Core/Accounts.swift:52`) lesen den beim Koppeln gespeicherten `login`
+(`Core/Server/ServerHub.swift:331`), der nie aufgefrischt wird: nach einer Änderung alt bis zum Neukoppeln, brechen
+tut nichts. **Das Kalenderkonto, das die App einrichtet, ist ein gewöhnliches CalDAV-Konto in Apple Kalender** (Profil
+mit dem Namen) und hängt an Abschnitt 2.
+
+## 2. Wo der Benutzername mehr ist als Anzeige
+
+| Stelle | Rolle des Namens | Bewertung |
+|---|---|---|
+| `routers/dav.py:161-174` `principal_path`, `home_path`, `calendar_path`, `object_path` | Name in **jeder** CalDAV-Adresse, nicht nur im Principal: Principal, Kalenderheim, jeder Kalender, jeder Termin | **bricht**: Apple Kalender, DAVx5 und Thunderbird merken sich diese Adressen (Principal-URL, Heim, Kalender-URLs mit Sync-Token, Termin-URLs mit ETag). Nach einem Umbenennen antwortet jede gemerkte Adresse 404 (`dav.py:531, 535 …`), die Kalender verschwinden vom Gerät |
+| `services/devices.py:173` Basic-Benutzer = Name oder Adresse | Anmeldung des Kalenderprogramms | **bricht**: das Gerät schickt den alten Namen (aus dem Profil oder abgetippt) → 401, das iPhone fragt nach dem Passwort. Gleiches heute schon beim Ändern der **Adresse**, wenn sie als Benutzer eingetippt wurde |
+| `services/devices.py:209-211` `mobileconfig`, `routers/devices.py:69, 90, 140` `user` | was neue Geräte bekommen | lösen: neue Geräte bekommen den aktuellen Namen; die Adressen siehe Lösung |
+| `routers/dav.py:315` `DAV:owner` mit `principal_path(owner.name)` | Besitzer eines geteilten Kalenders auf dem Gerät eines anderen | harmlos mit der Lösung (bleibt dann gleich), sonst eine geänderte Eigenschaft |
+| `services/accounts.py:67-71` `by_email(...).limit(1)` | erste von mehreren gleichen Adressen meldet sich an | **lösen** (Regel 3), wie nexnotes |
+| `routers/auth.py` Bremse `login:<ip>|<eingetippt>` | Zähler je eingetipptem Text | **lösen** wie nexnotes; die Sperre am Konto zählt schon beides (Test „Bestand“) |
+| `oidc_store.py:351, 358-379` | Name fürs OIDC-Modul, Anzeigename leer bei neuen Anbieter-Konten | lösen mit `nexoidc` 1.1.0, wie nexnotes |
+| `routers/totp.py` `provisioning_uri`, `deps.py` `logs.set_actor`, Logzeilen | Beschriftung, Protokoll | harmlos |
+| `routers/auth.py:144` `name`, `services/appsync.py:90` `login`, `routers/api_v1.py:148` `name` | Antwortfelder | harmlos, Feldnamen bleiben |
+| `services/shares.py:175` Suche beim Teilen | findet auch über den Namen | harmlos: geteilt wird an die Konto-ID |
+| `services/invitations.py:117`, `dav.py:323` `calendar-user-address-set` | **Adresse** als Kennung für Einladungen (TIME-18) | harmlos für den Namen; eine geänderte Adresse ändert, welche Einladungen „meine“ sind (wie heute) |
+| Sitzungen, App-Geräte, API-Schlüssel, Gast-Links, Freigaben, Sammlungen, Erinnerungen, Push, Anhänge (`/dav/attachments/<id>`), nextasks-/nexpaper-Verbindungen, Sicherungen | an der ID | harmlos |
+| `frontend/src/features/calendars/Devices.tsx:122, 319` Beschriftung „Name“ | Benutzer fürs Kalenderprogramm | Wort: wird „Benutzername“ |
+
+### Lösung für das Kalenderkonto (vor dem Ändern-Knopf)
+
+1. **Feste CalDAV-Kennung je Konto**: neue Spalte `accounts.dav_name` (String 64). Die Wanderung setzt sie für jedes
+   Bestandskonto auf seinen heutigen `name`; neue Konten bekommen beim Anlegen ihren Benutzernamen. **Sie ändert sich
+   nie**, auch nicht beim Umbenennen. Alle CalDAV-Adressen werden aus `dav_name` gebaut (`Caller.name` →
+   `account.dav_name`), Anfragen werden gegen `dav_name` geprüft. Damit bleibt jede Adresse, die ein Gerät kennt, für
+   immer dieselbe; es gibt keinen Umzug, keinen neuen Abgleich, keine doppelten Kalender. `dav_name` ist nur innerhalb
+   des angemeldeten Kontos gültig (das Gerätepasswort bestimmt das Konto), deshalb stört es nicht, wenn später ein
+   anderes Konto den alten Namen als Benutzernamen wählt.
+   - Warum nicht die Konto-ID im Pfad: Neue Geräte bekämen `/dav/principals/7/`, alte behielten den Namen; zwei
+     Schreibweisen für dasselbe wären dauerhaft zu pflegen, und die Bestandsgeräte brauchten den alten Namen sowieso.
+     Für nexfolk (CardDAV, neu) ist die ID von Anfang an richtig.
+   - Kosmetik: Wer sich umbenennt, sieht in der Principal-Adresse weiter den ersten Namen. Das steht nirgends sichtbar
+     außer im Profil des Geräts.
+2. **Basic-Benutzer**: angenommen werden der aktuelle Benutzername, `dav_name`, **jeder frühere Benutzername** und jede
+   frühere Adresse des Kontos (neue Tabelle `account_aliases`: `account_id`, `kind` `name`/`email`, `value`, `until`;
+   `Store.set_username` und `set_email` schreiben den alten Wert hinein). Grund: ein Gerät, das nach einer ersten
+   Umbenennung eingerichtet wurde, schickt den Zwischennamen. Das Gerätepasswort bleibt der eigentliche Schlüssel
+   (16 Zeichen aus 32, also 80 Bit Zufall, Hash eindeutig). Einfachere Alternative (Frage 1): den Benutzer gar nicht mehr vergleichen.
+3. **Neue Geräte** (`mobileconfig`, `/api/devices`): `CalDAVUsername` = aktueller Benutzername, `CalDAVPrincipalURL`
+   aus `dav_name`.
+4. Test „Bestand“ hat dafür das strikte `xfail` `test_after_the_change_a_renamed_account_keeps_its_calendar_program`.
+
+## 3. Zuordnung nextime ↔ Modul
+
+Wie nexnotes (Abschnitt 3 dort): `username` = `accounts.name` (Feldname `name` bleibt), `email_confirmed` neu,
+`pending_email` neue Tabelle `email_changes`, `has_password` = `sign_in == "password" and password_hash`, `blocked` =
+gesperrt oder gelöscht, `operator` = `role == "operator"`, `picture` aus `avatar_at` plus neue `avatar_source`,
+`Invite.rights` = Zeile (Rolle), `Invite.display_name` neue Spalte, `Invite.username` immer `""`. Store
+`services/konten_store.py`. Eigen:
+
+| Store | nextime |
+|---|---|
+| `add_account` | zusätzlich `dav_name = username` |
+| `set_username` | alter Name nach `account_aliases`; `dav_name` bleibt |
+| `set_email` | alte Adresse nach `account_aliases` (Basic-Benutzer) |
+| `end_sessions` | `security.end_all_sessions` (Browser und App-Geräte). **Kalenderkonto-Geräte bleiben**, wie heute beim Reset-Link (Frage 2, Lücke L7) |
+
+`nexkonten.configure(AppConfig(app_name="nextime", setup_token=lambda: get_settings().setup_token,
+logger_name="nextime.auth"))`; `accounts.setup_code` und `announce_setup_code` fallen weg.
+
+## 4. Neue Spalten und Wanderung (nur ergänzend)
+
+| Neu | Typ, Vorgabe | Bedeutung der Vorgabe |
+|---|---|---|
+| `accounts.dav_name` | String(64), `server_default ''`, danach **einmal** `UPDATE accounts SET dav_name = name WHERE dav_name = ''` in `services/konten_wanderung.py` | jede heutige CalDAV-Adresse bleibt. Solange `dav_name` leer ist, gilt `name` (der Rückfall in `dav.py` macht den Schritt selbst idempotent) |
+| `accounts.email_confirmed` | Boolean, `server_default '1'` | alle Bestandsadressen bestätigt, auch übernommene Anbieteradressen (`sam` im Fixture) |
+| `accounts.avatar_source` | String(16), `server_default ''` | vorhandene Bilder sind eigene |
+| `invites.display_name` | String(80), `server_default ''` | Bestandseinladungen ohne Anzeigename |
+| Tabelle `email_changes` | wie nexnotes | leer |
+| Tabelle `account_aliases` | `account_id` (FK CASCADE), `kind`, `value`, `created_at`; Index auf `(kind, lower(value))` | leer; kein eindeutiger Index (ein früherer Name darf neu vergeben werden) |
+| Index auf `lower(email)` | nicht eindeutig | Doppel im Bestand möglich (Fixture `kim`/`lou`) |
+
+Rückweg auf 0.4.0 eine Fassung lang: neue Spalten mit Vorgabe, 0.4.0 baut die CalDAV-Adressen wieder aus `name`.
+**Achtung:** Wer in der neuen Fassung umbenannt wurde, verliert beim Rückweg seine Kalenderprogramme (0.4.0 kennt
+`dav_name` nicht). Der Rückweg ist also nur vor dem ersten Umbenennen gefahrlos; das gehört in den Hinweis zur
+Fassung. Alternative: Umbenennen erst eine Fassung nach `dav_name` freischalten (Frage 3).
+
+## 5. Routen
+
+Wie nexnotes (Abschnitt 5 dort): `POST /api/setup` dazu `name`; `POST /api/auth/login` Feld `name` bleibt; neu
+`POST /api/auth/forgot`; `PUT /api/me/profile` dazu `name`, `password`; neu `GET/POST /api/email/{token}`,
+`DELETE /api/me/pending-email`; `POST /api/invites` dazu `display_name`; `GET/POST /api/invite/{token}` dazu `name`;
+`POST /api/accounts/{id}/reset-link` mit Mailversand; neu `PUT /api/accounts/{id}/name`, `…/display-name`,
+`DELETE /api/accounts/{id}/email`. Fehlerkennungen `invalid_email` → `email_invalid`, `name_taken` →
+`username_taken`, `invalid_account_name` → `username_invalid`.
+
+Eigen:
+
+| Route | Heute | Künftig |
+|---|---|---|
+| `GET/POST /api/devices`, `POST /api/device-setup/{code}/credentials` | `user` = Name | Feld bleibt, Wert der aktuelle Benutzername; `address` unverändert |
+| `GET /api/device-setup/{code}/profile` | Profil mit Name im Principal | Principal aus `dav_name` |
+| `/dav/…` | Name im Pfad, Basic mit Name oder Adresse | `dav_name` im Pfad, Basic mit aktuellem oder früherem Namen bzw. Adresse (Abschnitt 2) |
+| `PUT /api/me/profile` | nur Browser-Sitzung (`deps.require_account` kennt keinen Bearer) | bleibt so; die App ändert dort nichts |
+
+## 6. Oberfläche
+
+Wie nexnotes (Abschnitt 6 dort), nextime hat dieselben Bausteine (`AuthFrame`, `AuthField`, `Primary`, `Problem`,
+`PasswordConfirmField`, `Card`, `Field`, `Dialog`, `Input`, `Select`, `MenuItem`, `CopyLink`) und dieselben Seiten:
+
+| Bildschirm | Heute | Künftig | Sichtbar anders |
+|---|---|---|---|
+| **Ersteinrichtung** | Code, „Name“, E-Mail, Passwort zweimal; Hinweis „ohne HTTPS“ | Code, Anzeigename, **Benutzername**, E-Mail, Passwort zweimal, (Sprache); HTTPS-Hinweis bleibt | ein Feld mehr, Wortlaute |
+| **Anmelden** | Feld „E-Mail“, Passwort, „Passwort vergessen?“ mit Betreiber-Satz | „Benutzername oder E-Mail“; „Passwort vergessen?“ mit Mailserver zur neuen Seite | Beschriftung |
+| **Passwort vergessen**, **E-Mail bestätigen** | – | neu, wie nexnotes | nur mit Mailserver |
+| **Einladung annehmen** | „Name“, E-Mail, Passwort zweimal, Anbieter | Anzeigename, **Benutzername**, E-Mail, Passwort zweimal, Anbieter | ein Feld mehr |
+| **Profil** (Einstellungen › Mein Konto) | Bild, „Name“ und E-Mail mit „Speichern“, Rolle, Anbieterangebot, Sprache | Anzeigename, **Benutzername**, E-Mail (wartend mit „Zurücknehmen“), Passwortdialog beim Ändern | Benutzername sichtbar; Passwortabfrage bei der Adresse |
+| **Konten** (Einstellungen › Server) | Anzeigename, darunter `email || name`; Reset-Link mit Gültigkeit | darunter „Benutzername · E-Mail“, Hinweis doppelte Adresse, Menü: Benutzername/Anzeigename ändern, Adresse entfernen; Einladen mit Anzeigename | neue Menüpunkte |
+| **Auf iPhone und Co** (`features/calendars/Devices.tsx`) | „Adresse“, **„Name“**, „Passwort“ zum Abtippen | „Adresse“, **„Benutzername“**, „Passwort“ | ein Wort |
+
+Beim Umbenennen im Profil ein Satz unter dem Feld, wenn Geräte am Kalenderkonto hängen: „Deine Kalenderprogramme
+laufen weiter, du musst nichts ändern.“ (neuer Wortlaut, nextime-eigen, Frage 4).
+
+## 7. Passwort vergessen
+
+Wie nexnotes: beide Wege; der Weg per Mail ist neu. Ein neues Passwort beendet Browser und App-Geräte, **nicht** die
+Kalenderprogramme (sie haben eigene Passwörter, heute schon so; der Satz auf der Reset-Seite „Alle Sitzungen und
+gekoppelten Geräte enden“ stimmt für sie nicht ganz). Frage 2.
+
+## 8. Test „Bestand“
+
+`backend/tests/test_bestand.py` mit `backend/tests/bestand/bestand-0.4.0.sql.gz` (gebaut von 0.4.0 mit
+`tests/bestand/bauen.py`, Beschreibung in `bestand-0.4.0.json`). Start:
+
+    cd backend && .venv/Scripts/python -m pytest tests/test_bestand.py -q
+
+Konten wie nexnotes (`betrieb` mit zweitem Faktor, `erika-muster` ohne Adresse mit offener Sitzung und offenem
+Reset-Link, `kim`/`lou` mit doppelter Adresse, `mona` mit zweitem Faktor und gekoppeltem iPhone, `sam` mit Anbieter und
+übernommener Anbieteradresse, `robin.sso` nur Anbieter und Betreiber, `gesperrt`, `weg`, offene Einladung). Dazu
+`jonas` mit API-Schlüssel und **zwei Kalenderkonto-Geräten** (eins wie vom Profil eingerichtet mit dem Namen als
+Benutzer, eins von Hand mit der Adresse) und einem Termin, der über CalDAV kam; der Kalender heißt in der Fixture
+lesbar `bestand-kalender-1`.
+
+Geprüft (48 grün): alles wie nexnotes, dazu das Kalenderkonto mit Name, Name in Großbuchstaben und Adresse als
+Benutzer: Wurzel nennt den Principal, Principal nennt das Heim, Heim listet den Kalender, der Termin kommt; falsches
+Passwort und fremder Benutzer bleiben draußen.
+
+Strikte `xfail` (6): doppelte Adresse meldet keinen an; „Passwort vergessen“ per Mail (4 Konten); **ein umbenanntes
+Konto behält sein Kalenderprogramm** (alter Benutzer, alte Principal-, Heim-, Kalender- und Terminadressen).
+
+Gegen elf Mutationen geprüft, jede Rückgabecode 1 (Abschnitt 13).
+
+Der Vertragstest des Moduls (`tests/nexkonten/test_nexkonten_existing.py`) fragt die App über `Adapter.legacy()`
+nach einer Datenbank der Vorfassung und einer Liste `(eingetippt, Passwort, geht)`. Die Fixture hier liefert beides:
+`legacy()` lädt `bestand-0.4.0.sql.gz` wie `test_bestand.py` und baut die Liste aus `bestand-0.4.0.json` (Name und
+eindeutige Adresse: geht; doppelte Adresse, gesperrt, gelöscht, nur Anbieter: geht nicht).
+
+Vor dem Aufspielen auf einer **Kopie** der Live-Datenbank: doppelte Adressen zählen, die neue Fassung starten, dann
+mit einem echten iPhone ein Konto umbenennen und prüfen, dass Apple Kalender ohne Rückfrage weiter abgleicht.
+
+## 9. Risiken
+
+1. **Kalenderprogramme nach dem Umbenennen** (Abschnitt 2): ohne `dav_name` und Aliasse verlieren alle Geräte ihre
+   Kalender. Der Ändern-Knopf darf erst kommen, wenn das `xfail` grün ist.
+2. **Rückweg nach einem Umbenennen** hängt die Geräte ab (Abschnitt 4).
+3. **Adresse als CalDAV-Benutzer**: Wer seine Adresse ändert (künftig mit Bestätigungslink häufiger), verliert heute
+   die von Hand eingerichteten Programme; mit `account_aliases` nicht mehr.
+4. Wie nexnotes: doppelte Adressen, unsichtbare Benutzernamen, eindeutiger Adressindex nie beim Start erzwingen,
+   Betreiber ohne Passwort, Fehlerkennungen, Link-Dauern, neue Mailtexte.
+
+## 10. Offene Fragen
+
+1. Basic-Benutzer beim Kalenderkonto: frühere Namen und Adressen als Aliasse führen (Vorschlag), oder den Benutzer
+   gar nicht mehr prüfen (das Gerätepasswort reicht)?
+2. Soll ein neues Passwort (Reset, Passwort ändern) auch die Kalenderprogramme abmelden? Heute nein; das Modul sagt
+   „alle Sitzungen und gekoppelten Geräte“.
+3. Umbenennen in derselben Fassung wie `dav_name` freischalten, oder eine Fassung später (sicherer Rückweg)?
+4. Satz beim Umbenennen „Deine Kalenderprogramme laufen weiter“: gewünscht?
+5. Wie nexnotes: Betreiber nur über Anbieter, Gültigkeit 1/7/30 Tage, übernommene Anbieteradresse bestätigt,
+   Sprache bei der Einrichtung, Reset-Link für gesperrte Konten.
+
+## 11. Reihenfolge beim Bau
+
+1. **Zuerst, eigene Fassung:** `dav_name` und Aliasse, CalDAV darauf umstellen, ohne Ändern-Knopf; `xfail` für das
+   Umbenennen bleibt (es gibt noch keine Route), ein eigener Test prüft `dav_name` statt `name`.
+2. `nexkonten` und `nexoidc` 1.1.0 holen, Store, Spalten, Login/Setup/Einladung/Reset über das Modul.
+3. Profil mit Benutzername und Adresse, Betreiberaktionen, „Passwort vergessen“ per Mail; alle `xfail` weg.
+4. Oberfläche (Abschnitt 6) zeigen und abnehmen lassen; iPhone-App: „Benutzername“, `login` auffrischen.
+
+## 12. Passt das Modul?
+
+Alle Lücken und Reibungen von nexnotes gelten hier genauso (L1 Betreiber ohne Passwort, L2 Sperre am Konto und
+bekannter Browser, L3 Gültigkeit 1/7/30 Tage, R4 Hinweis nach Betreiber-Link, L5 gelöschte Konten halten Name und
+Adresse, L6 übernommene Anbieteradresse bestätigt, R7 Einrichtungscode aus `.env`, R9 Sprache, R10 Fehlerkennungen,
+R11 Reset für gesperrte Konten, R12 Anzeigename leer). nextime-eigen:
+
+| | Was nextime braucht | Was die Schnittstelle hergibt | Vorschlag |
+|---|---|---|---|
+| **L7** | Klare Grenze, was ein neues Passwort beendet: Browser und App-Geräte ja, Kalenderprogramme mit eigenem Gerätepasswort (heute) nein | `Store.end_sessions`: „alle Sitzungen und gekoppelten Geräte“ | im Vertrag festlegen, ob Protokoll-Passwörter (CalDAV, künftig CardDAV in nexfolk) dazugehören; sonst entscheidet jede App anders |
+| **L8** | Beim Umbenennen und beim Ändern der Adresse den **alten Wert** behalten (CalDAV-Benutzer) | `set_username(id, name)`/`set_email(id, …)` geben den alten Wert nicht mit; der Store kann ihn vorher selbst lesen | geht ohne Änderung; im Vertrag erwähnen, dass Apps mit Protokoll-Anmeldung (DAV) frühere Namen als Alias führen dürfen und dass `username_taken` frühere Namen **nicht** als belegt zählt (sonst könnte niemand einen Namen wiederverwenden). Eine Zeile in SCHNITTSTELLE „Was je App bleibt“ |
+| **R13** | Hinweis beim Umbenennen, dass Kalenderprogramme weiterlaufen | Modul liefert Wortlaute nur im Namensraum `account` | app-eigener Wortlaut, kein Modulthema |
+| **R14** | Mitteilung „Dein Benutzername ist jetzt …“ sollte bei nextime sagen, dass am Kalenderprogramm nichts zu ändern ist | `Mail(kind=username_changed)` ohne Zusatz | die App baut den Text selbst (das Modul schickt nie); kein Modulthema |
+
+## 13. Mutationen (Test „Bestand“, je `pytest tests/test_bestand.py -x`)
+
+Elf Mutationen, jede Rückgabecode 1:
+
+| Mutation | rot in |
+|---|---|
+| Adresssuche mit Groß/Klein | Anmelden mit Adresse |
+| Anmelden nur mit dem Namen | Anmelden mit Adresse |
+| CalDAV-Benutzer nur der Name (nicht die Adresse) | Kalenderprogramm mit Adresse |
+| CalDAV-Benutzer mit Groß/Klein | Kalenderprogramm mit `JONAS` |
+| CalDAV-Adressen über die Konto-ID statt den Namen | Kalenderprogramm (gemerkte Adressen) |
+| Start löscht offene Einladungen / beendet Sitzungen / löscht Kalenderkonto-Geräte / löscht App-Geräte | „Start ergänzt nur“ (Zeilen gezählt) |
+| Sperre zählt nur bei Eingabe des Namens | Sperre am Konto |
+| Regel 3 vorab gebaut (doppelte Adresse meldet keinen an) | das strikte `xfail` wird rot, wie es soll |
