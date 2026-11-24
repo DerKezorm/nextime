@@ -13,7 +13,7 @@
 import { ArrowDown, ArrowUp, Bell, CircleMinus, Eye, EyeOff, MoreHorizontal, Pencil, Plus, Share2, Star, Trash2, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { Menu, MenuEntry, type MenuAnchor } from '../../components/Menu'
 import { problemText } from '../../lib/errors'
@@ -30,6 +30,7 @@ import { NextasksGroup } from '../nextasks/NextasksGroup'
 import { useOnly } from '../collections/store'
 import { announce, useCalendars } from './store'
 import { useOffline } from '../offline/connection'
+import { afterAlone } from '../views/state'
 
 /** A head of the list, as nexnotes' "ORDNER": 11 px, semibold, in capitals. */
 const HEAD = 'mt-3 flex items-center justify-between gap-2 rounded-lg pr-1 pl-2.5'
@@ -46,17 +47,19 @@ export function CalendarList({ onNavigate, settings = false }: { onNavigate?: ()
   const { list, failed, take } = useCalendars()
   const [dialog, setDialog] = useState<{ kind: 'add' } | { kind: 'edit' | 'delete' | 'share' | 'leave'; calendar: CalendarEntry } | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
   const [menu, setMenu] = useState<{ anchor: MenuAnchor; calendar: CalendarEntry } | null>(null)
   const [problem, setProblem] = useState<string | null>(null)
   const { only, setOnly } = useOnly()
   // Without a connection nothing is added (TIME-28 AC-3).
   const offline = useOffline()
 
-  /** The calendar alone in the month; the same again brings back the choice before, the view stays (TIME-13). */
+  /** The calendar alone, in the view on screen (from elsewhere in Month); the same again brings back the choice before (TIME-13). */
   const choose = (entry: CalendarEntry) => {
     if (only === entry.id) return setOnly(null)
     setOnly(entry.id)
-    navigate('/month')
+    const next = afterAlone(location.pathname)
+    if (next) navigate(next)
     onNavigate?.()
   }
 

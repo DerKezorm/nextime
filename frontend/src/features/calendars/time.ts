@@ -3,10 +3,22 @@
  * arithmetic goes through `Intl`, so the change of the clocks comes out right without tables of our own.
  */
 
+/** One formatter per zone: making one is far dearer than using it, and a month asks thousands of times (TIME-12 EC-9). */
+const offsetFormats = new Map<string, Intl.DateTimeFormat>()
+
+function offsetFormat(zone: string): Intl.DateTimeFormat {
+  let found = offsetFormats.get(zone)
+  if (!found) {
+    found = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' })
+    offsetFormats.set(zone, found)
+  }
+  return found
+}
+
 /** The offset of `zone` at the instant `ms`, in minutes east of UTC. */
 export function offsetMinutes(zone: string, ms: number): number {
   try {
-    const name = new Intl.DateTimeFormat('en-US', { timeZone: zone, timeZoneName: 'longOffset' }).formatToParts(new Date(ms)).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
+    const name = offsetFormat(zone).formatToParts(new Date(ms)).find((part) => part.type === 'timeZoneName')?.value ?? 'GMT'
     const found = /GMT([+-])(\d{1,2})(?::?(\d{2}))?/.exec(name)
     return found ? (found[1] === '-' ? -1 : 1) * (Number(found[2]) * 60 + Number(found[3] ?? 0)) : 0
   } catch {

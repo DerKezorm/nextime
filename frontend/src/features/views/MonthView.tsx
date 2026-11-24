@@ -7,7 +7,7 @@
  * klicken"): today at the next full hour, other days at 09:00, the usual length; not on a phone (the plus of the bar
  * there), not without a connection (TIME-28 AC-3).
  */
-import { useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -22,7 +22,7 @@ import { EmptyCollection } from '../collections/CollectionMenu'
 import { useShown } from '../collections/store'
 import { DayList, Dot, invited, LoadProblem, useCalendarMap, useClock, useOpen, useTitleOf } from './bits'
 import { addDays, addMonths, format, isoWeekOf, isWeekend, monthWeeks, weekday } from './dates'
-import { daysOf, isBackground, isHoliday, touches } from './layout'
+import { daysOf, isBackground, isHoliday } from './layout'
 import { setViewDay, todayAt, useNarrow, useNow, useViewCommands, useViewDay, useWindow } from './state'
 import { useWide, ViewColumn } from './CalendarColumn'
 import { ViewHead, WeekJump } from './ViewHead'
@@ -87,7 +87,22 @@ export function MonthView() {
     else step(command === 'previous' ? -1 : 1)
   })
 
-  const rowsOf = (date: string) => (loaded.rows ?? []).filter((row) => touches(row, date, zone))
+  // The occurrences of each day of the grid, sorted out once: asking every row for every one of the 42 days turned a
+  // full month into a second of work (found while testing the year, 2026-11-24).
+  const byDay = useMemo(() => {
+    const found = new Map<string, Occurrence[]>()
+    for (const row of loaded.rows ?? []) {
+      const span = daysOf(row, zone)
+      const end = span.last > last ? last : span.last
+      for (let date = span.first < first ? first : span.first; date <= end; date = addDays(date, 1)) {
+        const list = found.get(date)
+        if (list) list.push(row)
+        else found.set(date, [row])
+      }
+    }
+    return found
+  }, [loaded.rows, zone, first, last])
+  const rowsOf = (date: string) => byDay.get(date) ?? []
   const names = weekdayNames(display.week_start, language)
   // The ISO week of the row's Thursday, whatever day the week begins (TIME-3 EC-13).
   const week = (days: string[]) => isoWeekOf(days.find((date) => weekday(date) === 4) ?? days[0]).week

@@ -254,8 +254,8 @@ describe('TIME-13 "Nur diesen zeigen"', () => {
     expect(one('only-bar')).toBeNull()
   })
 
-  it('TIME-13 click opens month with the calendar alone and the row chosen; again ends it, the view stays; the eye changes only the showing', async () => {
-    await open()
+  it('TIME-13 click shows the calendar alone in the view on screen and the row chosen; again ends it, the view stays; the eye changes only the showing', async () => {
+    await open({}, '/month')
     await click(toggle('Verein'))
     expect(one('view-month')).not.toBeNull()
     expect(one('only-bar')).not.toBeNull()
@@ -276,6 +276,23 @@ describe('TIME-13 "Nur diesen zeigen"', () => {
     await click(eye)
     expect(calls.filter((call) => call.method === 'PATCH').map((call) => [call.path, call.body])).toEqual([['/api/calendars/2', { hidden: true }]])
     expect(one('only-bar')).toBeNull()
+  })
+
+  it('TIME-13 click keeps the view on screen (Heute, Woche, Jahr) and opens the month only from elsewhere', async () => {
+    for (const [where, view] of [['/', 'view-today'], ['/week', 'view-week'], ['/year', 'view-year']] as const) {
+      await open({}, where)
+      await click(toggle('Verein'))
+      expect(one(view)).not.toBeNull()
+      expect(one('view-month')).toBeNull()
+      expect(one('only-bar')).not.toBeNull()
+      stop()
+      start()
+      forgetPrefs()
+      localStorage.clear()
+    }
+    await open({}, '/search')
+    await click(toggle('Verein'))
+    expect(one('view-month')).not.toBeNull()
   })
 
   it('TIME-13 click opens month also from the drawer, and closes the drawer, also when the month is open already', async () => {
@@ -388,7 +405,7 @@ describe('TIME-13 preselect sidebar click', () => {
   it('TIME-13 preselect sidebar click then a click in the month: that calendar with its defaults', async () => {
     // Wide, as a wide screen: the column beside the month is there.
     vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('1600'), addEventListener: () => undefined, removeEventListener: () => undefined }))
-    await open({ calendars: withDefaults(), more: (_method, path) => (path.startsWith('/api/search/calendar/') ? { status: 200, body: { total: 0, future_total: 0, offset: 0, items: [] } } : undefined) })
+    await open({ calendars: withDefaults(), more: (_method, path) => (path.startsWith('/api/search/calendar/') ? { status: 200, body: { total: 0, future_total: 0, offset: 0, items: [] } } : undefined) }, '/month')
     await click(toggle('Verein'))
     expect(one('view-month')).not.toBeNull()
     await click(box.querySelector('[data-testid="month-day"][data-date="2026-11-15"]'))

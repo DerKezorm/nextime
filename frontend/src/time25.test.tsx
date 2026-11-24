@@ -12,7 +12,7 @@ import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs, setPref } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
-import { calls, click, render, settle, start, stop, type } from './testing'
+import { box, calls, click, render, settle, start, stop, type } from './testing'
 import { NOW, theWeek, views } from './viewFakes'
 
 const CONNECTED: NextasksStatus = { connected: true, local_allowed: false, url: 'https://tasks.example.com', host: 'tasks.example.com', name: 'Robin', level: 'write', hidden: false, problem: null }
@@ -443,7 +443,12 @@ describe('TIME-25 asked for while testing (2026-11-23)', () => {
     await settle()
     expect(calls.find((call) => call.method === 'PATCH' && call.path === '/api/nextasks/areas/l-one')!.body).toEqual({ hidden: true })
     expect(all('task-title').map((title) => title.textContent)).toEqual(['Rasen mähen'])
+    // Shown alone in the view on screen: from Heute it stays Heute, in the month it stays the month.
     await click(document.querySelector('[data-area="s-home"] [data-testid="task-area-name"]'))
+    await settle()
+    expect(one('view-today')).not.toBeNull()
+    expect(one('only-bar')!.textContent).toContain('Zuhause')
+    await click(box.querySelector('[data-testid="sidebar-places"] a[href="/month"]'))
     await settle()
     expect(one('view-month')).not.toBeNull()
     expect(one('only-bar')!.textContent).toContain('Zuhause')

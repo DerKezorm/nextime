@@ -8,7 +8,7 @@
 import { ExternalLink, Eye, EyeOff, ListChecks, MoreHorizontal, SlidersHorizontal, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { Menu, MenuEntry, type MenuAnchor } from '../../components/Menu'
 import { problemText } from '../../lib/errors'
@@ -19,6 +19,7 @@ import { todayAt, useNow } from '../views/state'
 import { AreaMark } from './AreaMark'
 import { nextasksApi, setNextasks, setTaskAreas, taskAreas, type TaskArea } from './api'
 import { useNextasks, useTaskAreas, useTasks } from './hooks'
+import { afterAlone } from '../views/state'
 
 export function NextasksGroup({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
@@ -30,6 +31,7 @@ export function NextasksGroup({ onNavigate }: { onNavigate?: () => void }) {
   const { tasks } = useTasks(today, { all: true })
   const { onlyArea, setOnlyArea } = useOnly()
   const navigate = useNavigate()
+  const location = useLocation()
   const [menu, setMenu] = useState<{ anchor: MenuAnchor; area: TaskArea } | null>(null)
   const [problem, setProblem] = useState('')
   if (!status?.connected) return null
@@ -56,7 +58,8 @@ export function NextasksGroup({ onNavigate }: { onNavigate?: () => void }) {
   const alone = (area: TaskArea) => {
     if (onlyArea === area.id) return setOnlyArea(null)
     setOnlyArea(area.id)
-    navigate('/month')
+    const next = afterAlone(location.pathname)
+    if (next) navigate(next)
     onNavigate?.()
   }
 

@@ -7,7 +7,7 @@
 import { ExternalLink, Eye, EyeOff, FileClock, MoreHorizontal, SlidersHorizontal, Undo2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 import { Menu, MenuEntry, type MenuAnchor } from '../../components/Menu'
 import { problemText } from '../../lib/errors'
@@ -17,6 +17,7 @@ import { useOffline } from '../offline/connection'
 import { todayAt, useNow } from '../views/state'
 import { DEADLINES_ROW, nexpaperApi, setNexpaper } from './api'
 import { useDeadlines, useNexpaper } from './hooks'
+import { afterAlone } from '../views/state'
 
 export function NexpaperGroup({ onNavigate }: { onNavigate?: () => void }) {
   const { t } = useTranslation()
@@ -27,6 +28,7 @@ export function NexpaperGroup({ onNavigate }: { onNavigate?: () => void }) {
   const { deadlines } = useDeadlines(today, { all: true })
   const { onlyArea, setOnlyArea } = useOnly()
   const navigate = useNavigate()
+  const location = useLocation()
   const [menu, setMenu] = useState<MenuAnchor | null>(null)
   const [problem, setProblem] = useState('')
   if (!status?.connected) return null
@@ -46,7 +48,8 @@ export function NexpaperGroup({ onNavigate }: { onNavigate?: () => void }) {
   const showAlone = () => {
     if (alone) return setOnlyArea(null)
     setOnlyArea(DEADLINES_ROW)
-    navigate('/month')
+    const next = afterAlone(location.pathname)
+    if (next) navigate(next)
     onNavigate?.()
   }
 

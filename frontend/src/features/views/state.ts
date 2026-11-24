@@ -15,6 +15,17 @@ import { useOffline, watchSlow } from '../offline/connection'
 import { keptWindow, outsideKept } from '../offline/kept'
 import { useKept } from '../offline/snapshot'
 
+// ---- Where a calendar shown alone leads ------------------------------------------------------------------------------
+
+/** The views of the calendar. Showing a calendar, an area or the deadlines alone keeps the view on screen (asked for
+ * while testing, 2026-11-24); from anywhere else (settings, search, trash) it opens Month. */
+export const VIEW_PATHS: readonly string[] = ['/', '/day', '/week', '/month', '/year']
+
+/** The page to go to after showing something alone from `path`, or `null` to stay. */
+export function afterAlone(path: string): string | null {
+  return VIEW_PATHS.includes(path) ? null : '/month'
+}
+
 // ---- The day shown --------------------------------------------------------------------------------------------------
 
 let shownDay: string | null = null
