@@ -100,8 +100,11 @@ def _calendar_out(db: Session, item: calendars.Access, row: Any, default_id: int
     calendar = item.calendar
     own = item.right == calendars.OWNER
     state = None
+    synced = None
     if own and calendar.source_id is not None:
-        state = db.scalar(select(Source.state).where(Source.id == calendar.source_id))
+        found = db.execute(select(Source.state, Source.synced_at).where(Source.id == calendar.source_id)).first()
+        if found is not None:
+            state, synced = found
     return {
         "id": calendar.id, "name": calendar.name, "color": calendar.color, "icon": symbols.shown(calendar.icon),
         "background": calendar.background, "holiday": calendars.highlighted(calendar, row),
@@ -110,6 +113,8 @@ def _calendar_out(db: Session, item: calendars.Access, row: Any, default_id: int
         "position": row.position, "default": calendar.id == default_id,
         "owner": None if own else people(calendar.owner_id),
         "shared": own and events.calendars_shared(db, calendar.id), "source_state": state,
+        # The last round with the source that worked (0.4): "<source> not reachable · state of 15:52" (TIMEIOS-6 EC-7).
+        "synced_at": iso(synced),
     }
 
 

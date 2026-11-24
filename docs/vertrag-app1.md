@@ -20,6 +20,9 @@ Changes in 0.4 (24.11.2026, stage 3 of the app: TIMEIOS-8, 9, 16, 17, G9), each 
 - People (`created_by`, `updated_by`, `calendars[].owner`, `conflicts[].by`) carry `avatar` and `color`;
   `GET /avatars/{id}` with the device's token (feature `people`, TIMEIOS-9).
 - `GET /year?year=&zone=&collection=|only=` with the browser's count (feature `year`, TIMEIOS-8 AC-16).
+- `calendars[].synced_at`: when the last round with the calendar's source worked (ISO, UTC), beside `source_state`;
+  `null` for nextime's own calendars, for a source never synced and for others' calendars (as `source_state`). For
+  "<source> not reachable · state of 15:52" (TIMEIOS-6 EC-7), as the browser shows it.
 
 Changes in 0.3 (24.11.2026, follow-up 5, TIME-29 AC-3):
 - Notifications of changes in shared calendars (TIME-21) reach the app through the relay, as nexnotes sends its
@@ -201,7 +204,7 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
     {"id": 3, "name": "Home", "color": "green", "icon": "house", "background": false, "holiday": false,
      "reminder": 0, "defaults": {}, "group": "own", "kind": "", "right": "owner", "writable": true,
      "read_only": false, "hidden": false, "position": 0, "default": true, "owner": null, "shared": false,
-     "source_state": null}
+     "source_state": null, "synced_at": null}
   ],
   "collections": [{"id": 2, "name": "Family", "calendar_ids": [3, 5], "with_tasks": false, "task_areas": []}],
   "conflicts": [
@@ -251,7 +254,8 @@ The cursor is an opaque string; the app keeps it as it came and never builds one
     server's symbols or empty), `reminder` (minutes, the calendar's default), `defaults` (the account's own defaults
     for new events, as in the browser); `owner`: `{"id", "name"}` of a shared calendar's owner, else `null`; `shared`:
     an own calendar shared with somebody; `source_state`: `ok`, `expired`, `unreachable`, `paused` or `null` (only for
-    the one who connected the source).
+    the one who connected the source); `synced_at` (0.4) the last round with the source that worked, ISO in UTC, or
+    `null`.
   - `collections`: the account's own collections (TIME-13), with the calendars it sees now.
   - `conflicts`: see "Conflicts".
 - **Paging**: at most 500 events (`limits.changes_page`) per page; `more: true` means ask again with the new `cursor`

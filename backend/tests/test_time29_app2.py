@@ -274,3 +274,20 @@ def test_TIME29_app2_hello_names_the_new_parts(client: TestClient) -> None:
     with app_client() as phone:
         features = set(phone.get("/api/app/1/hello").json()["features"])
     assert {"collections_write", "tasks", "deadlines", "invitations", "people", "year"} <= features
+
+
+def test_TIME29_app2_a_source_calendar_says_when_it_last_synced(client: TestClient, account: Account) -> None:
+    """TIMEIOS-6 EC-7: "<source> not reachable · state of 15:52" needs the last round that worked."""
+    from .test_time19 import source_calendar
+
+    work = source_calendar(account.id, "Arbeit")
+    with SessionLocal() as db:
+        db.execute(update(Source).values(state="unreachable",
+                                         synced_at=datetime(2026, 11, 24, 14, 52, tzinfo=UTC)))
+        db.commit()
+    own = make_calendar(client, "Familie")
+    device = pair(client)
+    body, _events = all_changes(device["token"])
+    rows = {row["id"]: row for row in body["calendars"]}
+    assert (rows[work]["source_state"], rows[work]["synced_at"]) == ("unreachable", "2026-11-24T14:52:00Z")
+    assert rows[own]["synced_at"] is None and rows[own]["source_state"] is None
