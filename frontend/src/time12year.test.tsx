@@ -9,7 +9,7 @@ import { announce } from './features/calendars/store'
 import type { YearMap } from './features/calendars/api'
 import { markUnreachable, resetConnection } from './features/offline/connection'
 import { setViewDay } from './features/views/state'
-import { addYears, heatStep } from './features/views/year'
+import { addYears, heatStep, yearFit } from './features/views/year'
 import i18n from './i18n'
 import { forgetPrefs, prefKey } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
@@ -272,7 +272,7 @@ describe('TIME-12 the year as a heat map', () => {
     await click(one('to-year'))
     await settle()
     expect(one('view-year')).not.toBeNull()
-    expect(one('year-grid')!.className).toContain('grid-cols-2')
+    expect(one('year-grid')!.className).toContain('grid-cols-[repeat(2,minmax(0,200px))]')
     expect(one('view-switch')).toBeNull()
   })
 
@@ -296,6 +296,24 @@ describe('TIME-12 the year as a heat map', () => {
     expect(css).toMatch(/\.nt-heat,\n\.nt-heat-swatch \{[^}]*border-radius: 4px;/)
     expect(css).toMatch(/\.nt-heat\[data-today\] \{\n {2}box-shadow: inset 0 0 0 2px var\(--color-mist-100\);/)
     expect(css).toMatch(/\.nt-heat\[data-holiday\]::after,[^{]*\{[^}]*width: 5px;\n {2}height: 5px;[^}]*background-color: var\(--color-bad-500\);/)
+  })
+
+  it('TIME-12 EC-22 the whole year fits the room without scrolling, filling a wide view; a phone scrolls two by two', () => {
+    // Width and height a month takes for a fit: 7 fields and 6 gaps across, the head and 6 rows of fields down.
+    const tall = (month: number) => 50 + 6 * ((month - 18) / 7) + 15
+    for (const [width, height] of [[737, 600], [995, 590], [1255, 760], [1600, 950], [700, 900], [2400, 1300]]) {
+      const { columns, month } = yearFit(width, height)
+      const rows = 12 / columns
+      expect(columns * month + (columns - 1) * 20).toBeLessThanOrEqual(width)
+      expect(rows * tall(month) + (rows - 1) * 16).toBeLessThanOrEqual(height)
+    }
+    // Room to the side is used: six months side by side when the height is the limit.
+    expect(yearFit(1255, 760).columns).toBe(6)
+    expect(yearFit(1255, 760).month * 6 + 100).toBeGreaterThan(1200)
+    // Never larger than 48 px fields, however wide.
+    expect(yearFit(4000, 3000).month).toBeLessThanOrEqual(7 * 48 + 18)
+    // A phone: two side by side, scrolling.
+    expect(yearFit(343, 600)).toEqual({ columns: 2, month: 161 })
   })
 
   it('TIME-12 AC-16 a year on keeps the day, the 29th of February becomes the 28th', () => {

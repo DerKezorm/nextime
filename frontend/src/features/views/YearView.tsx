@@ -28,7 +28,7 @@ import { useWide, ViewColumn } from './CalendarColumn'
 import { addDays, format, monthWeeks } from './dates'
 import { setViewDay, todayAt, useNarrow, useNow, useViewCommands, useViewDay } from './state'
 import { ViewHead } from './ViewHead'
-import { addYears, heatStep, type HeatStep } from './year'
+import { addYears, heatStep, yearFit, type HeatStep } from './year'
 
 type Year = { map: YearMap | null; failed: boolean; offline: boolean; retry: () => void }
 
@@ -96,7 +96,29 @@ export function YearView() {
   const [active, setActive] = useState<string | null>(null)
   const focused = active && active.startsWith(`${year}-`) ? active : day
   const grid = useRef<HTMLDivElement>(null)
+  const scroller = useRef<HTMLDivElement>(null)
+  const legend = useRef<HTMLUListElement>(null)
   const moved = useRef(false)
+  // The whole year in the room there is, without scrolling (EC-22; found while testing): how many months side by side
+  // and how wide, from the width and height of the view; the classes below stand in until it is measured.
+  const [fit, setFit] = useState<{ columns: number; month: number } | null>(null)
+  useEffect(() => {
+    const box = scroller.current
+    const area = grid.current?.parentElement
+    if (!box || !area || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      const top = area.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop
+      const below = (legend.current?.offsetHeight ?? 20) + 12 + 16
+      const width = area.clientWidth
+      const height = box.clientHeight - top - below
+      setFit(width > 0 && height > 0 ? yearFit(width, height) : null)
+    }
+    const watch = new ResizeObserver(measure)
+    watch.observe(box)
+    watch.observe(area)
+    measure()
+    return () => watch.disconnect()
+  }, [offline])
   useEffect(() => {
     if (!moved.current) return
     moved.current = false
@@ -137,7 +159,7 @@ export function YearView() {
 
   return (
     <div className="flex h-full min-h-0 w-full min-w-0 overflow-hidden">
-    <div className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pt-3 pb-4 sm:px-6 sm:pt-5" data-testid="view-year">
+    <div ref={scroller} className="flex h-full min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-y-auto px-3 pt-3 pb-4 sm:px-6 sm:pt-5" data-testid="view-year">
       <ViewHead kind="year" title={String(year)} week={null} narrow={narrow} onStep={step} onToday={() => setDay(today)} onJump={() => undefined} day={day} today={today} picking={picking} onPicking={setPicking} onPick={setDay} />
       {failed && <LoadProblem onRetry={retry} />}
       {shown.empty && <EmptyCollection />}
@@ -148,7 +170,8 @@ export function YearView() {
           <div className="@container">
             <div
               ref={grid}
-              className="grid grid-cols-2 gap-x-4 gap-y-5 @lg:grid-cols-3 @3xl:grid-cols-4 @6xl:grid-cols-6"
+              className="grid grid-cols-[repeat(2,minmax(0,200px))] gap-x-5 gap-y-4 @[40rem]:grid-cols-[repeat(3,minmax(0,200px))] @[52rem]:grid-cols-[repeat(4,minmax(0,200px))] @[78rem]:grid-cols-[repeat(6,minmax(0,200px))]"
+              style={fit ? { gridTemplateColumns: `repeat(${fit.columns}, ${fit.month}px)` } : undefined}
               aria-busy={map === null && !failed}
               onKeyDown={move}
               data-testid="year-grid"
@@ -209,7 +232,7 @@ export function YearView() {
               })}
             </div>
           </div>
-          <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-mist-500" aria-label={t('views.yearLegend')} data-testid="year-legend">
+          <ul ref={legend} className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs text-mist-500" aria-label={t('views.yearLegend')} data-testid="year-legend">
             {steps.map((entry) => (
               <li key={entry.step} className="inline-flex items-center gap-1.5">
                 <span className="nt-heat-swatch" data-step={entry.step} aria-hidden />

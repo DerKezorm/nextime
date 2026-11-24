@@ -564,6 +564,8 @@
 .nt-heat {
   aspect-ratio: 1;
   width: 100%;
+  /* Square also on a phone: the 44 px tap rule would stretch the fields; the month's name leads into it instead. */
+  min-height: 0;
 }
 .nt-heat-swatch {
   width: 12px;
