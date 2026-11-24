@@ -109,15 +109,32 @@ describe('TIME-12 the year as a heat map', () => {
     expect(one('view-year')).not.toBeNull()
   })
 
-  it('TIME-12 AC-16 the sidebar has "Jahr" below "Monat", marked while the year is shown', async () => {
+  it('TIME-12 AC-16 the sidebar has "Heute" and "Kalender"; "Kalender" comes back to the view shown last, the switch above chooses it', async () => {
     await open('/')
-    const links = [...one('sidebar-places')!.querySelectorAll<HTMLAnchorElement>('li > a')].filter((link) => ['/', '/week', '/month', '/year'].includes(link.getAttribute('href') ?? ''))
-    expect(links.map((link) => link.textContent)).toEqual(['Heute', 'Woche', 'Monat', 'Jahr'])
-    await click(links[3])
+    const places = () => [...one('sidebar-places')!.querySelectorAll<HTMLAnchorElement>('[data-testid="nav-today"], [data-testid="nav-calendar"]')]
+    expect(places().map((link) => link.textContent)).toEqual(['Heute', 'Kalender'])
+    expect(one('nav-today')!.className).toContain('nt-chosen')
+    // The month from the start.
+    expect(one('nav-calendar')!.getAttribute('href')).toBe('/month')
+    await click(one('nav-calendar'))
+    await settle()
+    expect(one('view-month')).not.toBeNull()
+    expect(one('nav-calendar')!.className).toContain('nt-chosen')
+    expect(one('nav-today')!.className).not.toContain('nt-chosen')
+    // The switch above chooses the span; the sidebar stays on "Kalender", for Day too.
+    await click([...one('view-switch')!.querySelectorAll('button')][0])
+    await settle()
+    expect(one('view-day')).not.toBeNull()
+    expect(one('nav-calendar')!.className).toContain('nt-chosen')
+    await click([...one('view-switch')!.querySelectorAll('button')][3])
+    await settle()
+    expect(one('to-today')!.getAttribute('title')).toBe('Zu heute springen')
+    await click(one('nav-today'))
+    await settle()
+    expect(one('view-today')).not.toBeNull()
+    await click(one('nav-calendar'))
     await settle()
     expect(one('view-year')).not.toBeNull()
-    expect(one('sidebar-places')!.querySelector('a[href="/year"]')!.className).toContain('nt-chosen')
-    expect(one('sidebar-places')!.querySelector('a[href="/month"]')!.className).not.toContain('nt-chosen')
   })
 
   it('TIME-12 EC-19 the weeks begin on the first weekday set; a leap year has a 29th of February', async () => {

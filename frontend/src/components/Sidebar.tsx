@@ -1,6 +1,8 @@
 /**
  * The sidebar, after the accepted mock-up and laid out as nexnotes' (its drawing "Seitenleiste"): the mark at the top,
- * then "New event" and the field "Suchen" (TIME-22), the collection, the views Heute, Woche and Monat, the list of
+ * then "New event" and the field "Suchen" (TIME-22), the collection, the places Heute (the overview) and Kalender (the
+ * view this device showed last; Day, Week, Month or Year are chosen in the switch above, asked for while testing
+ * 2026-11-24), the list of
  * calendars by source (TIME-4) and, under a line, "Papierkorb" (TIME-23); at the bottom the account with the way to
  * the settings: picture, name and the gear, marked while the settings are open (TIME-2 AC-7). Signing out is in the
  * profile. Beside the page it is as wide as set on this device (`lib/columns.ts`, the handle at its edge); the drawer
@@ -16,6 +18,7 @@ import { usePanel } from '../features/calendars/store'
 import { SearchEntry } from '../features/search/SearchPage'
 import { TrashEntry } from '../features/trash/TrashPage'
 import { useOffline } from '../features/offline/connection'
+import { CALENDAR_PATHS, useLastView } from '../features/views/state'
 import { COLUMNS, useColumnWidth } from '../lib/columns'
 import { useAuth } from '../state/auth'
 import { Avatar } from './Avatar'
@@ -27,14 +30,12 @@ const QUIET = 'text-mist-300 hover:bg-ink-800 hover:text-mist-100'
 /** A place in the list (a view), as nexnotes' "Alle Notizen" and its inbox. */
 const PLACE = 'flex h-[34px] items-center rounded-lg px-2.5 text-[13.5px] transition-colors '
 
-/** The views of the calendar, in the order of the sidebar and the bar on a phone (the first three). */
+/** The views in the bar on a phone: there is no switch above on a phone, so Week and Month stand there themselves. */
 // eslint-disable-next-line react-refresh/only-export-components
 export const VIEWS = [
   { to: '/', key: 'nav.today', end: true },
   { to: '/week', key: 'nav.week', end: false },
   { to: '/month', key: 'nav.month', end: false },
-  // Only in the sidebar: the bar on a phone has no room for it (the head of the month leads there).
-  { to: '/year', key: 'views.year', end: false },
 ] as const
 
 /** `resizable`: beside the page, with the handle at its edge and the width of this device; never in the phone's drawer. */
@@ -42,8 +43,8 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
   const { t } = useTranslation()
   const [setWidth] = useColumnWidth('sidebar')
   const width = resizable ? setWidth : COLUMNS.sidebar.fallback
-  // The day view belongs to "Woche" in the list, as in the bar on a phone.
-  const dayShown = useLocation().pathname === '/day'
+  const path = useLocation().pathname
+  const [lastView] = useLastView()
   return (
     <nav aria-label={t('app.mainMenu')} style={{ width }} className="relative flex h-full flex-col border-r border-ink-700 bg-ink-900">
       <div className="px-4 pt-4 pb-3">
@@ -58,13 +59,16 @@ export function Sidebar({ onNavigate, resizable = false }: { onNavigate?: () => 
         <SearchEntry onNavigate={onNavigate} />
         <CollectionButton onNavigate={onNavigate} />
         <ul className="mt-1">
-          {VIEWS.map((view) => (
-            <li key={view.to}>
-              <NavLink to={view.to} end={view.end} onClick={onNavigate} className={({ isActive }) => PLACE + (isActive || (view.to === '/week' && dayShown) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')}>
-                {t(view.key)}
-              </NavLink>
-            </li>
-          ))}
+          <li>
+            <NavLink to="/" end onClick={onNavigate} className={({ isActive }) => PLACE + (isActive ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')} data-testid="nav-today">
+              {t('nav.today')}
+            </NavLink>
+          </li>
+          <li>
+            <NavLink to={lastView} onClick={onNavigate} className={() => PLACE + (CALENDAR_PATHS.includes(path) ? 'nt-chosen font-semibold' : 'text-mist-100 hover:bg-ink-800')} aria-current={CALENDAR_PATHS.includes(path) ? 'page' : undefined} data-testid="nav-calendar">
+              {t('nav.calendar')}
+            </NavLink>
+          </li>
         </ul>
         <CalendarList onNavigate={onNavigate} />
         <div className="mt-3 border-t border-ink-700 pt-2 pb-2">

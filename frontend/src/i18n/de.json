@@ -454,6 +454,7 @@
     "today": "Heute",
     "week": "Woche",
     "month": "Monat",
+    "calendar": "Kalender",
     "calendars": "Kalender",
     "noCalendars": "Noch keine Kalender.",
     "newEvent": "Neuer Termin"
@@ -840,6 +841,7 @@
     "yearHoliday": "Feiertag",
     "yearLegend": "Legende",
     "keyHint": "{{name}} (Taste {{key}})",
+    "toToday": "Zu heute springen",
     "newOn": "Neuer Termin am {{day}}",
     "dayAria": "{{day}} als Tag zeigen",
     "weekAria": "KW {{number}} als Woche zeigen",

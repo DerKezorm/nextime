@@ -5,6 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 
+import { useDevicePref } from '../../lib/devicePref'
 import { useDisplay } from '../../lib/useDisplay'
 import { eventsApi, type Occurrence } from '../calendars/api'
 import { useRevision } from '../calendars/store'
@@ -24,6 +25,20 @@ export const VIEW_PATHS: readonly string[] = ['/', '/day', '/week', '/month', '/
 /** The page to go to after showing something alone from `path`, or `null` to stay. */
 export function afterAlone(path: string): string | null {
   return VIEW_PATHS.includes(path) ? null : '/month'
+}
+
+// ---- The calendar in the sidebar -------------------------------------------------------------------------------
+
+/** The views of the calendar itself, as the switch above names them; "Kalender" in the sidebar stands for all of them. */
+export const CALENDAR_PATHS: readonly string[] = ['/day', '/week', '/month', '/year']
+const LAST_VIEW = 'calendarView'
+const parseView = (raw: string | null): string => (raw && CALENDAR_PATHS.includes(`/${raw}`) ? `/${raw}` : '/month')
+
+/** Where "Kalender" leads: the view this device showed last (Day, Week, Month or Year), the month from the start; and
+ * how a view notes itself. The span itself is chosen only above, in the switch (asked for while testing, 2026-11-24). */
+export function useLastView(): [string, (kind: 'day' | 'week' | 'month' | 'year') => void] {
+  const [path, store] = useDevicePref(LAST_VIEW, parseView)
+  return [path, (kind) => store(kind)]
 }
 
 // ---- The day shown --------------------------------------------------------------------------------------------------

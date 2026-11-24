@@ -5,13 +5,14 @@
  * (with a date field too), and the switch Day, Week, Month, Year (TIME-12 AC-16; the year steps a year and has no week
  * button).
  */
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 import { Dialog } from '../../components/Dialog'
 import { isoWeekOf, mondayOfWeek, weeksInYear } from './dates'
 import { DatePicker } from './DatePicker'
+import { useLastView } from './state'
 
 export type Kind = 'day' | 'week' | 'month' | 'year'
 
@@ -40,6 +41,11 @@ export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, d
   const steps = kind === 'day' ? ['views.previousDay', 'views.nextDay'] : kind === 'month' ? ['views.previousMonth', 'views.nextMonth'] : kind === 'year' ? ['views.previousYear', 'views.nextYear'] : narrow ? ['views.previousThree', 'views.nextThree'] : ['views.previousWeek', 'views.nextWeek']
   const names: Record<Kind, string> = { day: t('views.day'), week: t('nav.week'), month: t('nav.month'), year: t('views.year') }
   const titleButton = useRef<HTMLButtonElement>(null)
+  // "Kalender" in the sidebar comes back to this view.
+  const [lastView, noteView] = useLastView()
+  useEffect(() => {
+    if (lastView !== PATHS[kind]) noteView(kind)
+  }, [kind, lastView, noteView])
   return (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3" data-testid="view-head">
       <button type="button" className="nt-btn nt-btn-ghost w-10 px-0" aria-label={t(steps[0])} onClick={() => onStep(-1)} data-testid="step-back">
@@ -49,7 +55,7 @@ export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, d
         ›
       </button>
       {!narrow && (
-        <button type="button" className="nt-btn nt-btn-ghost" onClick={onToday} data-testid="to-today">
+        <button type="button" className="nt-btn nt-btn-ghost" title={t('views.toToday')} onClick={onToday} data-testid="to-today">
           {t('nav.today')}
         </button>
       )}
@@ -92,7 +98,7 @@ export function ViewHead({ kind, title, week, narrow, onStep, onToday, onJump, d
               {t('views.year')}
             </button>
           )}
-          <button type="button" className="nt-btn nt-btn-quiet text-sm" onClick={onToday} data-testid="to-today">
+          <button type="button" className="nt-btn nt-btn-quiet text-sm" title={t('views.toToday')} onClick={onToday} data-testid="to-today">
             {t('nav.today')}
           </button>
         </span>

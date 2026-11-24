@@ -454,6 +454,7 @@
     "today": "Today",
     "week": "Week",
     "month": "Month",
+    "calendar": "Calendar",
     "calendars": "Calendars",
     "noCalendars": "No calendars yet.",
     "newEvent": "New event"
@@ -840,6 +841,7 @@
     "yearHoliday": "Holiday",
     "yearLegend": "Key",
     "keyHint": "{{name}} (key {{key}})",
+    "toToday": "Go to today",
     "newOn": "New event on {{day}}",
     "dayAria": "Show {{day}} as a day",
     "weekAria": "Show week {{number}}",
