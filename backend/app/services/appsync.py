@@ -369,7 +369,10 @@ def _run(db: Session, account: Account, op: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(restore, bool):
             return _refused("invalid_input", "The input is not valid.", fields=["restore"])
         row = db.get(Event, event_id)
-        if row is not None and events.conflict_of(db, account, row) is None and not restore:
+        if row is None or calendars.access(db, account.id, row.calendar_id) is None:
+            # One the account does not see answers as one that is not there (no one learns that an id exists).
+            return _refused("not_found", "Not found.")
+        if events.conflict_of(db, account, row) is None and not restore:
             return _done(db, account, row) if row.deleted_at is None else {"state": "done", "event": None}
         row = events.resolve_conflict(db, account, event_id, restore=restore)
         return _done(db, account, row)

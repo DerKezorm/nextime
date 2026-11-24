@@ -557,3 +557,112 @@ def test_TIME29_follow_up4_removing_it_from_apple_calendar_locks_the_device_out(
     with SessionLocal() as db:
         assert db.scalar(select(Device).where(Device.account_id == account.id)) is None
     assert call("GET", "/me", device["token"]).json()["calendar_account"] is None
+
+
+# --- After the review (TIME-29 Prüfbericht) ---------------------------------------------------------------------------
+
+
+def test_TIME29_EC5_a_deleted_account_hears_blocked(client: TestClient, account: Account) -> None:
+    mika = make_account("mika")
+    with new_client(mika) as browser:
+        device = pair(browser)
+    with SessionLocal() as db:
+        row = db.get(Account, mika.id)
+        assert row is not None
+        accounts.delete_account(db, row)
+    for answer in (call("GET", "/me", device["token"]), call("GET", "/changes", device["token"]),
+                   call("POST", "/ops", device["token"], json={"ops": [
+                       {"ref": ref(), "op": "create", "event": {"title": "Danach", "start": "2026-11-26T10:00"}}]})):
+        assert answer.status_code == 401 and code(answer) == "account_blocked"
+    with SessionLocal() as db:
+        assert db.scalar(select(Event).where(Event.title == "Danach")) is None
+
+
+def test_TIME29_EC7_only_the_source_not_answering_takes_the_change_and_it_waits(client: TestClient,
+                                                                               account: Account) -> None:
+    from app.models import RemoteChange, Source
+
+    from .test_time19 import from_source, source_calendar, vevent
+
+    work = source_calendar(account.id, "Arbeit")
+    from_source(work, vevent("kunde@example.com", "20261126T090000Z", "20261126T100000Z", "Kundentermin"))
+    with SessionLocal() as db:
+        db.execute(update(Source).values(state="unreachable"))
+        db.commit()
+        row = db.scalar(select(Event).where(Event.calendar_id == work))
+        assert row is not None
+        event_id, etag = row.id, row.etag
+    device = pair(client)
+    answer = ops(device["token"], {"ref": ref(), "op": "change", "id": event_id, "etag": etag,
+                                   "event": {"title": "Kundentermin (verlegt)"}})[0]
+    assert answer["state"] == "done" and answer["event"]["waiting"] is True
+    assert answer["event"]["title"] == "Kundentermin (verlegt)"
+    with SessionLocal() as db:
+        assert db.scalar(select(RemoteChange).where(RemoteChange.calendar_id == work)) is not None
+    _body, events = all_changes(device["token"])
+    assert next(row for row in events if row["id"] == event_id)["waiting"] is True
+
+
+def test_TIME29_EC4_after_a_long_pause_an_old_cursor_brings_everything_since(client: TestClient,
+                                                                             account: Account) -> None:
+    """A year of changes after the cursor (none of it is ever pruned): what the device then holds is what a new
+    device gets."""
+    kept = make_event(client, "Bleibt")
+    changed = make_event(client, "Wird geändert")
+    dropped = make_event(client, "Wird gelöscht")
+    device = pair(client)
+    old, held_events = all_changes(device["token"])
+    held = {row["id"]: row for row in held_events}
+    for week in range(52):
+        client.patch(f"/api/events/{changed['id']}", json={"title": f"Woche {week}"})
+        make_event(client, f"Neu {week}", start=f"2027-{1 + week // 5:02d}-{1 + week % 5:02d}T10:00",
+                   end=f"2027-{1 + week // 5:02d}-{1 + week % 5:02d}T11:00")
+    client.delete(f"/api/events/{dropped['id']}")
+    later, came = all_changes(device["token"], old["cursor"])
+    assert later["full"] is False
+    for row in came:
+        held[row["id"]] = row
+    for gone in later["all_removed"]:
+        for key, row in list(held.items()):
+            if (row["calendar_id"], row["href"]) == (gone["calendar_id"], gone["href"]):
+                del held[key]
+    _fresh, everything = all_changes(device["token"])
+    assert {key: row["etag"] for key, row in held.items()} == {row["id"]: row["etag"] for row in everything}
+    assert held[changed["id"]]["title"] == "Woche 51" and kept["id"] in held and dropped["id"] not in held
+
+
+def test_TIME29_AC4_disconnecting_ends_a_running_wait_at_once(client: TestClient, account: Account,
+                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+    import time
+
+    device = pair(client)
+    body, _events = all_changes(device["token"])
+    monkeypatch.setattr(app1_router, "WAIT_SECONDS", 20.0)
+    monkeypatch.setattr(app1_router, "WAIT_RECHECK", 20.0)
+    result: dict[str, Any] = {}
+
+    def waiting() -> None:
+        started = time.monotonic()
+        answer = call("GET", "/wait", device["token"], params={"cursor": body["cursor"]})
+        result.update(status=answer.status_code, code=code(answer) if answer.status_code == 401 else "",
+                      seconds=time.monotonic() - started)
+
+    thread = threading.Thread(target=waiting)
+    thread.start()
+    time.sleep(1.0)
+    assert client.delete(f"/api/app-devices/{device['device']['id']}").status_code == 204
+    thread.join(timeout=15)
+    assert result["status"] == 401 and result["code"] == "device_disconnected"
+    assert result["seconds"] < 5
+
+
+def test_TIME29_AC8_resolving_an_event_the_account_does_not_see_says_not_found(client: TestClient,
+                                                                               account: Account) -> None:
+    private = make_event(client, "Geheim")
+    mika = make_account("mika")
+    with new_client(mika) as browser:
+        device = pair(browser)
+    answers = ops(device["token"], {"ref": ref(), "op": "resolve", "id": private["id"], "restore": False},
+                  {"ref": ref(), "op": "resolve", "id": 999_999, "restore": False})
+    assert [row["code"] for row in answers] == ["not_found", "not_found"]

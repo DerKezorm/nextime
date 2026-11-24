@@ -56,7 +56,8 @@ export function AppDevicesSection() {
             const meta = [
               t(`appDevices.kind.${device.kind === 'mac' ? 'mac' : 'ios'}`),
               device.last_seen_at ? t('appDevices.section.lastSeen', { when: ago(new Date(device.last_seen_at).getTime(), i18n.language) }) : t('appDevices.section.neverSeen'),
-              ...(device.push ? [t('appDevices.section.push')] : []),
+              // "Mitteilungen aus" too (TIME-29 EC-8): the list says either way.
+              device.push ? t('appDevices.section.push') : t('appDevices.section.pushOff'),
             ]
             return (
               <li key={device.id} className="flex items-center gap-3 border-b border-ink-800 py-2.5 last:border-0" data-testid="app-device-row">

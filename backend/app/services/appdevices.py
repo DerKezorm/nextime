@@ -40,7 +40,7 @@ from sqlalchemy.orm import Session
 
 from ..models import Account, AppCode, AppDevice, AppGoneDevice, AppPairing, Device, utcnow
 from ..security import account_out
-from . import totp
+from . import live, totp
 
 logger = logging.getLogger("nextime.app")
 
@@ -255,6 +255,8 @@ def disconnect(db: Session, account_id: int, device_id: int) -> bool:
                                                    AppDevice.account_id == account_id)).rowcount
     if gone_rows:
         db.execute(update(Device).where(Device.app_device_id == device_id).values(app_device_id=None))
+        # A ``wait`` of the device going on right now ends at once (as nexnotes closes its open connections).
+        live.touch_accounts(db, {account_id})
     db.commit()
     if gone_rows:
         logger.info("App device disconnected device_id=%s", device_id)
@@ -278,6 +280,7 @@ def end_all(db: Session, account_id: int) -> None:
     if ids:
         db.execute(update(Device).where(Device.app_device_id.in_(ids)).values(app_device_id=None))
         db.execute(delete(AppDevice).where(AppDevice.id.in_(ids)))
+        live.touch_accounts(db, {account_id})
         logger.info("App devices of an account disconnected count=%s", len(ids))
 
 

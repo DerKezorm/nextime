@@ -125,12 +125,12 @@ async function click(element: HTMLElement | null): Promise<void> {
 }
 
 describe('TIME-29 devices in Settings, On iPhone and co', () => {
-  it('TIME-29 AC-7 lists every device with its kind, last contact and notifications', async () => {
+  it('TIME-29 AC-7 EC-8 lists every device with its kind, last contact and notifications on or off', async () => {
     await render(<AppDevicesSection />)
     expect($$('app-device-name').map((element) => element.textContent)).toEqual(['iPhone von Mika', 'Mac mini'])
     const [phone, mac] = $$('app-device-meta').map((element) => element.textContent)
     expect(phone).toBe('iOS-App · zuletzt vor 2 Minuten · Mitteilungen an')
-    expect(mac).toBe('iPad-App auf dem Mac · noch nicht gemeldet')
+    expect(mac).toBe('iPad-App auf dem Mac · noch nicht gemeldet · Mitteilungen aus')
   })
 
   it('TIME-29 AC-7 disconnects a device after asking', async () => {

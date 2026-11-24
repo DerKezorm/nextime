@@ -2498,6 +2498,7 @@
       "lastSeen": "zuletzt {{when}}",
       "neverSeen": "noch nicht gemeldet",
       "push": "Mitteilungen an",
+      "pushOff": "Mitteilungen aus",
       "disconnect": "Trennen",
       "disconnectTitle": "„{{name}}“ trennen?",
       "disconnectText": "Das Gerät kommt ab sofort nicht mehr an deine Kalender. Um es wieder zu verbinden, scannst du einen neuen Code."

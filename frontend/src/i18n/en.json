@@ -2498,6 +2498,7 @@
       "lastSeen": "last seen {{when}}",
       "neverSeen": "not seen yet",
       "push": "notifications on",
+      "pushOff": "notifications off",
       "disconnect": "Disconnect",
       "disconnectTitle": "Disconnect “{{name}}”?",
       "disconnectText": "From now on the device cannot reach your calendars. To connect it again, scan a new code."
