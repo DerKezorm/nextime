@@ -53,7 +53,7 @@ MIN_API = 1
 WAIT_SECONDS = 25.0
 WAIT_RECHECK = 5.0
 #: The parts of the interface this server has (``hello``): an app tells an older server by their absence.
-FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge")
+FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify")
 
 
 def _refused(code: str, text: str, status: int, retry: int | None = None) -> HTTPException:
@@ -228,6 +228,9 @@ def drop_device(device_id: int, found: Device_) -> Response:
 class PushIn(BaseModel):
     ticket: str = Field(min_length=1, max_length=appdevices.TICKET_MAX)
     key: str = Field(min_length=1, max_length=100)
+    #: The app shows notifications with text (its notification service extension opens them, 0.3). Left out: only the
+    #: silent nudge, so that a build without the extension never shows an empty notification.
+    alerts: bool = False
 
 
 @router.put("/push", status_code=204, summary="Notifications for this device: the relay's ticket and the key")
@@ -235,7 +238,7 @@ def push_on(found: Device_, body: PushIn) -> Response:
     """Kept as nexnotes keeps it; the device gets the silent nudge on every change of the account."""
     with SessionLocal() as db:
         try:
-            appdevices.remember_push(db, found.device.id, body.ticket, body.key)
+            appdevices.remember_push(db, found.device.id, body.ticket, body.key, body.alerts)
         except ValueError as exc:
             raise error("push_ticket_invalid", "The ticket or the key is not usable.", 422) from exc
     return Response(status_code=204)

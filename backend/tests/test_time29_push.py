@@ -157,3 +157,102 @@ def test_TIME29_follow_up3_without_a_relay_nothing_goes_out(client: TestClient, 
     clock.now += apppush.DELAY
     # Neither what was due before the relay went nor what came after goes out.
     assert apppush.flush() == 0 and relay.sent == []
+
+
+# --- Notifications of changes with text (contract 0.3, TIME-29 AC-3, follow-up 5) --------------------------------------
+
+
+@pytest.fixture
+def ticker(monkeypatch: pytest.MonkeyPatch) -> Any:
+    from app.services import notify
+
+    from .test_time21 import Clock as NotifyClock
+
+    made = NotifyClock()
+    monkeypatch.setattr(notify, "clock", made)
+    return made
+
+
+def shared_family(client: TestClient, account: Account) -> tuple[int, Account]:
+    from .test_time19 import put_share
+    from .test_time21 import prefs, switch
+
+    prefs(account.id)
+    mika = make_account("mika")
+    family = make_calendar(client, "Familie")
+    put_share(client, family, mika.id, "edit")
+    assert switch(client, family).status_code == 200
+    return family, mika
+
+
+def test_TIME29_AC3_a_change_of_another_reaches_the_app_that_shows_notifications(
+        client: TestClient, account: Account, relay: Relay, ticker: Any) -> None:
+    family, mika = shared_family(client, account)
+    phone = pair(client)
+    old_build = pair(client, "Altes iPhone")
+    private, public = keys()
+    assert call("PUT", "/push", phone["token"], json={"ticket": "1.phone", "key": public,
+                                                      "alerts": True}).status_code == 204
+    with_push(old_build, "1.old")
+    with new_client(mika) as browser:
+        made = make_event(browser, "Elternabend", calendar_id=family, start="2026-12-03T19:00",
+                          end="2026-12-03T20:00")
+    ticker.later(150)
+    alerts = [body for _url, body in relay.sent if not body.get("quiet")]
+    assert [body["ticket"] for body in alerts] == ["1.phone"]
+    # The build without the extension is not even queued for (only the nudge reaches it).
+    from sqlalchemy import select
+
+    from app.db import SessionLocal
+    from app.models import NotifyOutbox
+
+    with SessionLocal() as db:
+        assert [row.target_id for row in db.scalars(select(NotifyOutbox).where(NotifyOutbox.kind == "app"))] == [
+            phone["device"]["id"]]
+    body = alerts[0]
+    assert "quiet" not in body and body["collapse"].startswith("nt-c")
+    message = json.loads(push_crypto.decrypt(body["enc"], private))
+    assert message["type"] == "changes" and message["account"] == account.id
+    assert message["server"] == appdevices.server_id() and message["calendar_id"] == family
+    assert message["title"] == "Familie" and "Mika" in message["text"] and "Elternabend" in message["text"]
+    assert message["who"] == ["Mika"] and message["calendar"] == "Familie" and message["count"] == 1
+    assert message["items"] == [{"kind": "created", "event_id": made["id"], "title": "Elternabend",
+                                 "starts_at": "2026-12-03T18:00:00Z", "all_day": False, "before_start": None,
+                                 "recurring": False}]
+    assert message["day"] == "2026-12-03" and message["event_id"] == made["id"]
+    # Again a minute later: nothing twice.
+    relay.sent.clear()
+    ticker.later(60)
+    assert relay.sent == []
+
+
+def test_TIME29_AC3_own_changes_and_switched_off_calendars_send_nothing(
+        client: TestClient, account: Account, relay: Relay, ticker: Any) -> None:
+    from .test_time21 import switch
+
+    family, mika = shared_family(client, account)
+    phone = pair(client)
+    _private, public = keys()
+    call("PUT", "/push", phone["token"], json={"ticket": "1.phone", "key": public, "alerts": True})
+    make_event(client, "Eigener Termin", calendar_id=family)
+    ticker.later(150)
+    assert relay.sent == []
+    switch(client, family, False)
+    with new_client(mika) as browser:
+        make_event(browser, "Elternabend", calendar_id=family)
+    ticker.later(150)
+    assert relay.sent == []
+
+
+def test_TIME29_AC3_a_ticket_the_relay_forgot_stops_the_notifications(
+        client: TestClient, account: Account, relay: Relay, ticker: Any) -> None:
+    family, mika = shared_family(client, account)
+    phone = pair(client)
+    _private, public = keys()
+    call("PUT", "/push", phone["token"], json={"ticket": "1.phone", "key": public, "alerts": True})
+    relay.status = 410
+    with new_client(mika) as browser:
+        make_event(browser, "Elternabend", calendar_id=family)
+    ticker.later(150)
+    assert len(relay.sent) == 1
+    assert client.get("/api/app-devices").json()[0]["push"] is False

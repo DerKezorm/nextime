@@ -1057,6 +1057,9 @@ class AppDevice(Base):
     #: The push relay's ticket and the device's X25519 public key (``PUT /push``); empty while off.
     push_ticket: Mapped[str] = mapped_column(Text, default="", server_default="")
     push_key: Mapped[str] = mapped_column(String(100), default="", server_default="")
+    #: The app shows notifications with text (it said so with ``PUT /push``, ``alerts``): only then do the changes of
+    #: shared calendars go to it (TIME-21 through the relay); every device with a ticket gets the silent nudge.
+    push_alerts: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
 
 
 class AppPairing(Base):

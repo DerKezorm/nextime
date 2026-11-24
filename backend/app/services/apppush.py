@@ -78,6 +78,51 @@ def _post(url: str, body: dict[str, object]) -> int:
 POST: Callable[[str, dict[str, object]], int] = _post
 
 
+class Gone(Exception):
+    """The relay says the ticket is gone (410)."""
+
+
+class Failed(Exception):
+    """Not delivered now; ``final``: never will be (the request was refused)."""
+
+    def __init__(self, code: str, final: bool = False) -> None:
+        super().__init__(code)
+        self.code = code
+        self.final = final
+
+
+#: The longest text of a notification's fields.
+TITLE_MAX = 120
+TEXT_MAX = 300
+
+
+def alert(device: AppDevice, message: dict[str, object], collapse_mark: str) -> None:
+    """A notification with text for one device (TIME-21 through the relay, contract 0.3): the alert's own words are
+    the app's (``push_title``/``push_body``); what it shows comes from ``enc``, which its extension opens. Raises
+    ``Gone`` (410) or ``Failed``."""
+    relay = relay_url()
+    if not relay:
+        raise Failed("no_relay")
+    if not device.push_ticket or not device.push_alerts:
+        raise Failed("no_ticket", final=True)
+    text = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    try:
+        enc = push_crypto.encrypt(text, device.push_key)
+    except ValueError as exc:
+        raise Failed("bad_key", final=True) from exc
+    body: dict[str, object] = {"ticket": device.push_ticket, "enc": enc, "collapse": collapse_mark[:COLLAPSE_MAX]}
+    try:
+        status = POST(f"{relay}/v1/send", body)
+    except (httpx.HTTPError, OSError) as exc:
+        raise Failed(type(exc).__name__.lower()[:40]) from exc
+    if status == 410:
+        raise Gone
+    if status in (400, 403, 413):
+        raise Failed(f"http_{status}", final=True)
+    if status != 200:
+        raise Failed(f"http_{status}")
+
+
 def plaintext(account_id: int) -> bytes:
     from .appdevices import server_id
 

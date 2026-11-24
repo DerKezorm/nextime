@@ -349,7 +349,7 @@ def key_valid(value: str) -> bool:
     return True
 
 
-def remember_push(db: Session, device_id: int, ticket: str, key: str) -> None:
+def remember_push(db: Session, device_id: int, ticket: str, key: str, alerts: bool = False) -> None:
     """Ticket and key of a paired device. The same ticket belongs to one device of the person: a device paired again
     brings its ticket, and the old pairing must not get every message twice."""
     if not ticket or len(ticket) > TICKET_MAX or not key_valid(key):
@@ -358,13 +358,15 @@ def remember_push(db: Session, device_id: int, ticket: str, key: str) -> None:
     if row is None:
         raise ValueError("no such device")
     db.execute(update(AppDevice).where(AppDevice.account_id == row.account_id, AppDevice.id != device_id,
-                                       AppDevice.push_ticket == ticket).values(push_ticket="", push_key=""))
-    row.push_ticket, row.push_key = ticket, key
+                                       AppDevice.push_ticket == ticket).values(push_ticket="", push_key="",
+                                                                               push_alerts=False))
+    row.push_ticket, row.push_key, row.push_alerts = ticket, key, alerts
     db.commit()
 
 
 def forget_push(db: Session, device_id: int) -> None:
-    db.execute(update(AppDevice).where(AppDevice.id == device_id).values(push_ticket="", push_key=""))
+    db.execute(update(AppDevice).where(AppDevice.id == device_id).values(push_ticket="", push_key="",
+                                                                         push_alerts=False))
     db.commit()
 
 

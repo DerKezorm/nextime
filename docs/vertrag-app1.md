@@ -6,10 +6,18 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.2 (24.11.2026), server TIME-29 on nextime branch `ios-app1` (0.1 `dd89332`, after the review
-`6a158d7`). Built: everything the app's stage 2 needs (TIMEIOS-4, TIMEIOS-5) and the silent nudge. Parts marked
-**later** are named so that later stages dock on; the server does not have them yet and `hello.features` does not
-name them.
+Status: draft 0.3 (24.11.2026), server TIME-29 on nextime branch `ios-app1` (0.1 `dd89332`, after the review
+`6a158d7`, 0.2 `a857c14`). Built: everything the app's stage 2 needs (TIMEIOS-4, TIMEIOS-5), the silent nudge and the
+notifications of changes. Parts marked **later** are named so that later stages dock on; the server does not have them
+yet and `hello.features` does not name them.
+
+Changes in 0.3 (24.11.2026, follow-up 5, TIME-29 AC-3):
+- Notifications of changes in shared calendars (TIME-21) reach the app through the relay, as nexnotes sends its
+  notifications: an alert whose `enc` carries the ready words in the account's language and the fields to say it in
+  the device's language and to open the event or the day. See "Notifications".
+- `PUT /push` takes `"alerts": true`: only a build whose notification service extension opens such messages says so.
+  Without it (every build before 0.3) the device gets the silent nudge only, never an alert it cannot open.
+- `hello.features` adds `notify`. Reminders never go to app devices (G6: the app plans them itself).
 
 Changes in 0.2 (24.11.2026, follow-up 3):
 - The silent nudge through the push relay: on every change the account sees (an event, a calendar, a share, a
@@ -37,7 +45,7 @@ device token in api 1.
 
 ```json
 {"app": "nextime", "api": 1, "min_api": 1, "version": "0.3.0", "sign_in": ["password", "oidc"],
- "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge"]}
+ "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify"]}
 ```
 
 The app speaks `api` 1. If `min_api` > 1 the app says "update the app"; if `api` < 1 it says "update the server"
@@ -336,8 +344,9 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
 
 ## Notifications (TIME-29 AC-3; follow-ups 3, 5)
 
-- `PUT /api/app/1/push {"ticket", "key"}` → `204`: the relay's ticket and the device's X25519 public key (base64,
-  32 bytes), as nexnotes (`422 push_ticket_invalid` when unusable). `DELETE /api/app/1/push` → `204`. The browser's
+- `PUT /api/app/1/push {"ticket", "key", "alerts"?}` → `204`: the relay's ticket and the device's X25519 public key
+  (base64, 32 bytes), as nexnotes (`422 push_ticket_invalid` when unusable); `alerts: true` (0.3) when the build shows
+  notifications with text (its extension opens them), else only the silent nudge comes. `DELETE /api/app/1/push` → `204`. The browser's
   list shows „Mitteilungen an“ while a ticket is kept, else „Mitteilungen aus“ (TIME-29 AC-7, EC-8).
 - **The silent nudge (0.2, follow-up 3; TIMEIOS-5 AC-12):** the server calls the relay (`https://push.nexapps.dev`,
   app `dev.nexapps.nextime`) with `POST /v1/send {"ticket", "enc", "quiet": true, "collapse"}` for every device of the
@@ -353,10 +362,39 @@ browser: the app then says „an einem anderen Gerät“). One conflict per even
     app still syncs when it opens.
   - A `410` from the relay drops the device's ticket (the browser then shows „Mitteilungen aus“); the app brings a
     new one with `PUT /push` on its next start. Other failures are logged without the ticket and not retried.
-- **Not yet (follow-up 5, later):** notifications with text of changes in shared calendars (TIMEIOS-20), switches
-  „Erinnern“ and „Mitteilungen“ per app device. Planned `enc` for them, as nexnotes:
-  `{"title", "text", "event_id", "occurrence", "calendar_id", "type": "changed"|"deleted", "account", "server"}`, an
-  alert instead of `quiet`. Reminders never go through the relay (G6): the app plans them itself.
+- **Notifications of changes (0.3, follow-up 5; TIMEIOS-20):** when somebody else changes events in a calendar the
+  account sees shared (its own shared with others, or shared with it) and the account switched „Mitteilungen“ on for
+  that calendar in the browser (TIME-21 AC-1, the same switch for every device), every app device with
+  `"alerts": true` gets one alert per bundle, as the browser does (two minutes after the last change in that calendar, at the
+  latest 30 minutes after its first). `POST /v1/send {"ticket", "enc", "collapse"}` without `quiet`: the alert carries the app's own strings
+  `push_title`/`push_body`, which say nothing about content; the extension replaces them with what it opens. `enc` is
+  encrypted as the nudge is, the message:
+
+```json
+{"type": "changes", "title": "Familie", "text": "Kim Example hat „Elternabend“ am Do, 3.12. um 19:00 eingetragen.",
+ "account": 7, "server": "9c1d2e4b3f9a0c1d", "calendar_id": 3, "calendar": "Familie", "who": ["Kim Example"],
+ "busy": false, "count": 1,
+ "items": [{"kind": "created", "event_id": 41, "title": "Elternabend", "starts_at": "2026-12-03T18:00:00Z",
+            "all_day": false, "before_start": null, "recurring": false}],
+ "day": "2026-12-03", "event_id": 41}
+```
+
+  - `title` (the calendar, „<Kalender> (von <Besitzer>)“ for one shared with the account) and `text` are the browser's
+    words in the account's language and zone, plain text, at most 120 and 300 characters. The app may show them as
+    they are or say the same in the device's language (G7) from `calendar`, `who`, `items` and `count`.
+  - `items`: the first three changes of the bundle (`count` is all of them), oldest first. `kind` is `created`,
+    `changed`, `moved` (another time, `before_start` the time before) or `deleted`; `event_id` is `null` for a deleted
+    one. A whole-day event's `starts_at` is its date at midnight UTC. `who`: the people who made the changes (not the
+    account itself); empty when only the calendar's source (iCloud and co) changed it.
+  - „Busy only“ (`busy: true`): no titles, no names, no `event_id`; the times only.
+  - Opening („Öffnen“, a tap): `day` and `event_id` as the browser's link `/day?day=…&event=…`; with several
+    changes or a deleted event only `day`. `account` and `server` name the account in the app.
+  - `collapse` is a keyed mark per calendar (`nt-c…`): a newer bundle replaces an older one Apple still holds.
+  - Nothing of the account's own changes; nothing after the account lost the calendar or switched it off (checked
+    again before each try). A failure is tried again after 1, 5, 15 and 60 minutes; `410` drops the ticket (and the
+    alerts) of the device; `400`, `403`, `413` give the message up.
+- Reminders never go through the relay (G6): the app plans them itself from its copy. Switches „Erinnern“ and
+  „Mitteilungen“ per app device and the app devices in the browser's list of TIME-21 stay **later**.
 
 ## Later (names fixed, not built)
 
@@ -370,9 +408,9 @@ So that later stages dock on; each comes with its name in `hello.features`.
   move as jobs, `GET /upcoming`, `GET /year` (counted as the browser counts, TIMEIOS-8 AC-16).
 - `sync_more` (follow-up 2, rest): profile pictures of people, the state of invitations, nextasks tasks and nexpaper
   deadlines in `changes`; ops `answer`, `tick`, `collection_*`, `calendar_order`.
-- `reminders` (follow-up 5): the account's reminders per event in `changes` (`reminders: [minutes]` beside each
-  event, and per occurrence), notifications of changes in shared calendars with „Öffnen“; switches „Erinnern“ and
-  „Mitteilungen“ per app device; `offers.relay_ok` (the server reaches the relay).
+- `reminders` (follow-up 5, rest): the account's reminders per event in `changes` (`reminders: [minutes]` beside each
+  event, and per occurrence); switches „Erinnern“ and „Mitteilungen“ per app device; `offers.relay_ok` (the server
+  reaches the relay).
 - `marks` (follow-up 6): marks per person and event that travel: `alarm` (Wecker, TIMEIOS-21), `leave_off` („Los um“
   off, TIMEIOS-22).
 - `links` (follow-up 7): `GET /.well-known/apple-app-site-association` for `/day?…&event=…`, `/calendar/*`; the
@@ -416,3 +454,6 @@ Only where a calendar needs it:
 8. Token prefix `ntd_`, schemes `nextime://connect` and `nextime://connected`.
 9. **A silent nudge on every change** of the account (`quiet`, 0.2): nexnotes sends only notifications with text;
    the calendar app keeps widgets and its copy current in the background (TIMEIOS-5 AC-12).
+10. **`alerts` in `PUT /push`** (0.3): every nexnotes build had its extension from the start; nextime's builds before
+    0.3 have none, so only a build that says so gets notifications with text. The message carries the fields to say
+    it in the device's language besides the server's words (nexnotes: `who` and `note` for the app lock).
