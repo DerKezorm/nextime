@@ -467,7 +467,9 @@ def apple_devices(db: Session, account_id: int, now: datetime | None = None) -> 
     the last ``DEVICE_RECENT`` (review of TIME-7, finding 3)."""
     since = (now or clock()) - DEVICE_RECENT
     return {kind_of(platform) for platform in db.scalars(select(Device.platform).where(
-        Device.account_id == account_id, Device.platform.in_((*APPLE, "ios")), Device.last_used_at >= since))}
+        Device.account_id == account_id, Device.platform.in_((*APPLE, "ios")), Device.last_used_at >= since,
+        # Set up from the nextime app on the same device: Apple Calendar gets no alarms there (TIMEIOS-4 AC-7).
+        Device.app_device_id.is_(None)))}
 
 
 def through_account(db: Session, account: Account) -> set[int]:

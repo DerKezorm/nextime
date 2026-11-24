@@ -25,6 +25,8 @@ from .middleware import ForwardedProtoMiddleware, GuardMiddleware, RequestContex
 from .routers import about, auth, health, invites, oidc, server
 from .routers import accounts as accounts_router
 from .routers import api_v1 as api_v1_router
+from .routers import app1 as app1_router
+from .routers import app_pairing as app_pairing_router
 from .routers import attachments as attachments_router
 from .routers import avatars as avatars_router
 from .routers import backups as backups_router
@@ -79,7 +81,7 @@ FEATURE_ROUTERS: list = [calendars_router, collections_router, events_router, de
                          sources_router, shares_router, notify_router, reminders_router,
                          places_router, attachments_router, search_router, trash_router, offline_router,
                          transfer_router, keys_router, api_v1_router, mcp_router, nextasks_router,
-                         nexpaper_router]
+                         nexpaper_router, app_pairing_router, app1_router]
 
 
 def _read_log_mode() -> tuple[str, datetime | None]:

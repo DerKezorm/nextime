@@ -14,7 +14,7 @@ from app.main import _mount_frontend
 
 
 def test_health_and_about(client: TestClient) -> None:
-    assert client.get("/api/health").json() == {"status": "ok", "version": __version__}
+    assert client.get("/api/health").json() == {"status": "ok", "version": __version__, "app": "nextime"}
     about = client.get("/api/about").json()
     assert about["version"] == __version__ and about["license"] == "AGPL-3.0"
 

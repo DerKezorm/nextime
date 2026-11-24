@@ -7,6 +7,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { serverApi, type ServerState } from '../../api/client'
+import { AppDevicesSection } from '../../features/app/AppDevicesSection'
 import { DevicesTab } from '../../features/calendars/Devices'
 import { ConnectionsArea } from '../../features/keys/ConnectionsArea'
 import { RemindersArea } from '../../features/reminders/RemindersArea'
@@ -33,7 +34,13 @@ export function AreaContent({ area }: { area: AreaSlug }) {
     case 'calendars':
       return <CalendarsArea />
     case 'devices':
-      return <DevicesTab />
+      // The iPhone and iPad app first (TIME-29, as nexnotes' "Geräte"), then the calendar account (TIME-20).
+      return (
+        <div className="space-y-8">
+          <AppDevicesSection />
+          <DevicesTab />
+        </div>
+      )
     case 'shares':
       return <SharesArea />
     case 'reminders':

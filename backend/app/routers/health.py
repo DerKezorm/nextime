@@ -25,7 +25,8 @@ class BrowserClockIn(BaseModel):
 
 @router.get("", summary="Is nextime running?")
 def health() -> dict[str, str]:
-    return {"status": "ok", "version": __version__}
+    # ``app`` tells the iPhone app "nextime, but too old" from "no nextime" (TIME-29 EC-2).
+    return {"status": "ok", "version": __version__, "app": "nextime"}
 
 
 @router.get("/clock", summary="The server's time in milliseconds")
