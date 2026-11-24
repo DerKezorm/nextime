@@ -13,7 +13,7 @@
  * The chips in the head set the same choice as "Sammlung" and "Nur diesen", so the list and the calendar never
  * disagree. Without a connection what the installed app kept.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -49,6 +49,23 @@ export function UpcomingPage() {
   const shown = useShown()
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [goTo, setGoTo] = useState<string | null>(null)
+  // Four weeks side by side (from 72rem): each column reaches the bottom and shows all its rows, scrolling on its own
+  // (asked for while testing, 2026-11-24); narrower they stand below each other, eight rows and "+ n weitere".
+  const page = useRef<HTMLDivElement>(null)
+  const [tall, setTall] = useState(false)
+  useEffect(() => {
+    const box = page.current
+    if (!box || typeof ResizeObserver === 'undefined') return
+    const measure = () => {
+      // The width the container queries see: without the padding.
+      const style = getComputedStyle(box)
+      setTall(box.clientWidth - parseFloat(style.paddingLeft || '0') - parseFloat(style.paddingRight || '0') >= 72 * 16)
+    }
+    const watch = new ResizeObserver(measure)
+    watch.observe(box)
+    measure()
+    return () => watch.disconnect()
+  }, [])
 
   // Each occurrence on its first day (today while it still runs); background entries apart; and how many events
   // touch each day (an event over several days on each of them, as the year counts).
@@ -87,8 +104,8 @@ export function UpcomingPage() {
   }
 
   return (
-    <div className="h-full min-h-0 w-full overflow-y-auto px-3 pt-3 pb-6 sm:px-6 sm:pt-5" data-testid="view-upcoming">
-      <div className="@container flex flex-col gap-4">
+    <div ref={page} className="@container h-full min-h-0 w-full overflow-y-auto px-3 pt-3 pb-6 sm:px-6 sm:pt-5" data-testid="view-upcoming" data-tall={tall || undefined}>
+      <div className="flex flex-col gap-4 @[72rem]:h-full">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-lg font-bold tracking-tight text-mist-100 sm:text-xl">{t('nav.upcoming')}</h1>
           <UpcomingFilter />
@@ -108,7 +125,7 @@ export function UpcomingPage() {
               <NextCard rows={loaded.rows ?? []} now={now} today={today} calendars={calendars} />
               <Strip today={today} counts={counts} onDay={showDay} />
             </div>
-            <div className="grid items-start gap-3 @[40rem]:grid-cols-2 @[72rem]:grid-cols-4" data-testid="upcoming-weeks">
+            <div className="grid items-start gap-3 @[40rem]:grid-cols-2 @[72rem]:min-h-0 @[72rem]:flex-1 @[72rem]:grid-cols-4 @[72rem]:items-stretch" data-testid="upcoming-weeks">
               {columns.map((column) => (
                 <WeekColumn
                   key={column.first}
@@ -118,7 +135,7 @@ export function UpcomingPage() {
                   today={today}
                   now={now}
                   calendars={calendars}
-                  open={expanded.has(column.first)}
+                  open={tall || expanded.has(column.first)}
                   onOpen={() => setExpanded((before) => new Set(before).add(column.first))}
                 />
               ))}
@@ -303,7 +320,7 @@ function WeekColumn({ column, days, counts, today, now, calendars, open, onOpen 
   if (!later && (open || hidden === 0)) parts.push(gap(before, addDays(column.last, 1), 'gap-end'))
 
   return (
-    <section className="min-w-0 rounded-[14px] border border-ink-700 bg-ink-850 px-3.5 pt-3 pb-3.5" aria-label={title} data-testid="upcoming-week" data-kind={column.kind}>
+    <section className="nt-scroll min-h-0 min-w-0 rounded-[14px] border border-ink-700 bg-ink-850 px-3.5 pt-3 pb-3.5 @[72rem]:overflow-y-auto" aria-label={title} data-testid="upcoming-week" data-kind={column.kind}>
       <div className="text-[15px] font-semibold text-mist-100">{title}</div>
       <div className="text-xs text-mist-500">{sub}</div>
       {shownDays.length === 0 ? <div className="pt-3 text-[13px] text-mist-500">{later ? t('upcoming.laterNothing') : t('upcoming.weekFree')}</div> : parts}

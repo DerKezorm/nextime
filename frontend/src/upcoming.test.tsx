@@ -117,6 +117,23 @@ describe('Demnächst as weeks', () => {
     expect(one('upcoming-more', week('this'))).toBeNull()
   })
 
+  it('four weeks side by side reach the bottom and show all their rows, each scrolling on its own', async () => {
+    vi.stubGlobal('ResizeObserver', class {
+      observe() {}
+      disconnect() {}
+    })
+    const width = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(1600)
+    const many = [9, 10, 11, 12, 13, 14, 15].map((hour) => at(3, `Termin ${hour}`, `2026-11-27 ${hour}:00`, `2026-11-27 ${hour}:30`))
+    await open({ rows: [...ROWS(), ...many] })
+    expect(one('view-upcoming')!.dataset.tall).toBe('true')
+    expect(all('upcoming-event', week('this'))).toHaveLength(11)
+    expect(one('upcoming-more', week('this'))).toBeNull()
+    expect(week('this').className).toContain('@[72rem]:overflow-y-auto')
+    expect(one('upcoming-weeks')!.className).toContain('@[72rem]:flex-1')
+    width.mockRestore()
+    vi.unstubAllGlobals()
+  })
+
   it('the chips set the same choice as "Sammlung" and "Nur diesen"', async () => {
     await open({ collections: [{ id: 9, name: 'Job', calendar_ids: [3], updated_at: '2026-11-20T10:00:00Z' }] })
     expect(one('upcoming-all')!.getAttribute('aria-pressed')).toBe('true')
