@@ -165,7 +165,7 @@ class Adapter(StandardAdapter):
         # As many failed runs at the provider from this sender as the brake lets pass (every TestClient is the
         # sender "testclient"): the next start, return and linking wait.
         key = "oidc:" + normal_address("testclient")
-        for _ in range(Brake.FREE + 1):
+        for _ in range(Brake.FREE):
             brake.failed(key)
 
     def operator_unlink(self, client: Any, account_id: int, provider_id: int, password: str) -> httpx.Response:

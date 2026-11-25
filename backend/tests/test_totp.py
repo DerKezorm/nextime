@@ -250,9 +250,8 @@ def test_the_brake_slows_a_guessing_sender(client: TestClient, operator: Account
     for _ in range(totp.MAX_ATTEMPTS):
         code_step(client, "000000")
     password_step(client)
-    # The shared module counts every code of the account (``code:<account>``, konten 0.3.4): five free, the sixth
-    # wrong one waits.
-    assert code_step(client, "000000").status_code == 401
+    # The shared module counts every code of the account (``code:<account>``, konten 0.3.10): five free, the fifth
+    # starts the wait, so the next code waits.
     braked = code_step(client, "000000")
     assert braked.status_code == 429 and braked.json()["detail"]["code"] == "too_many_attempts"
     assert "retry-after" in braked.headers

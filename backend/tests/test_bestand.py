@@ -152,11 +152,12 @@ def anbieter():
 
 
 class Postfach:
-    """The system mail that went into the outbox during the test (the shared post module sends it from there), as a
-    list of ``{"an", "text"}``."""
+    """The system mail that went into the outbox during the test (the shared post module sends it from there), or out
+    at once (``nexpost.send.deliver``: "Forgot your password?" since konten 0.3.10), as a list of ``{"an", "text"}``."""
 
     def __init__(self) -> None:
         self.start = self._last()
+        self.sofort: list[dict] = []
 
     @staticmethod
     def _last() -> int:
@@ -174,7 +175,8 @@ class Postfach:
 
         with SessionLocal() as db:
             rows = db.scalars(select(MailOutbox).where(MailOutbox.id > self.start).order_by(MailOutbox.id))
-            return [{"an": json.loads(row.letter)["to"], "text": json.loads(row.letter)["text"]} for row in rows]
+            liegen = [{"an": json.loads(row.letter)["to"], "text": json.loads(row.letter)["text"]} for row in rows]
+        return liegen + self.sofort
 
     def __iter__(self):
         return iter(self._mails())
@@ -190,6 +192,7 @@ class Postfach:
 
     def clear(self) -> None:
         self.start = self._last()
+        self.sofort.clear()
 
 
 @pytest.fixture
@@ -197,11 +200,16 @@ def post(monkeypatch):
     """A mail server counts as set up; what is mailed is read from the outbox (the shared post module sends it from
     there). "Forgot your password?" does its work before the answer here (it runs after the answer otherwise)."""
     from app.routers import auth as auth_router
+    from app.vendor.nexpost import send
 
     monkeypatch.setattr(auth_router, "FORGOT_AT_ONCE", True)
     with SessionLocal() as db:
         settings_service.save(db, {"smtp_host": "smtp.example.com", "smtp_from": "kalender@example.com"})
-    return Postfach()
+    postfach = Postfach()
+    # What goes out at once is caught here instead of at the mail server of the fixture (there is none).
+    monkeypatch.setattr(send, "deliver", lambda _settings, letter: postfach.sofort.append(
+        {"an": letter.to, "text": letter.text}))
+    return postfach
 
 
 def browser() -> TestClient:

@@ -323,8 +323,6 @@
       "title": "Darstellung"
     },
     "password": {
-      "change": "Ändern",
-      "changedAt": "zuletzt geändert am {{day}}",
       "current": "Jetziges Passwort",
       "done": "Passwort geändert. Andere Browser müssen sich neu anmelden.",
       "new": "Neues Passwort",

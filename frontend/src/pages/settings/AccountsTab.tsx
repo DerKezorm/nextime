@@ -75,10 +75,10 @@ function Badges({ shown }: { shown: BadgeShown[] }) {
   )
 }
 
-/** The picture of an account: its own, else the letter on the hue of its name (the same on server and iPhone). */
+/** The picture of an account: its own, else the letter on the person's colour (as everywhere in nextime). */
 function Picture({ row, size }: { row: ListedAccount; size: 32 | 48 }) {
   const picture = accountPicture(row)
-  return <Avatar src={picture.src} letter={picture.letter} hue={picture.hue} size={size} />
+  return <Avatar src={picture.src} letter={picture.letter} hue={picture.hue} color={picture.color} size={size} />
 }
 
 export function AccountsTab() {

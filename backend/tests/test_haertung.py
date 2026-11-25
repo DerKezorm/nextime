@@ -132,9 +132,11 @@ def test_a5_a_stranger_guessing_that_very_name_does_not_keep_its_known_browser_o
         make_account(name)
     own = _known(name)
     brake.forget()
-    assert 429 in _spray_name(name)
+    # konten 0.3.10: once the name's count waits, every guess is answered like a wrong password (401), never 429.
+    assert set(_spray_name(name)) == {401}
     without = _browser().post("/api/auth/login", json={"name": name, "password": PASSWORD})
-    assert without.status_code == 429, "without the cookie the sender waits"
+    assert without.status_code == 401, "without the cookie even the right password is held, answered as wrong"
+    assert without.json()["detail"]["code"] == "wrong_credentials"
     assert own.post("/api/auth/login", json={"name": name, "password": PASSWORD}).status_code == 200
 
 

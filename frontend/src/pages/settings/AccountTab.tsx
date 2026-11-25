@@ -29,7 +29,7 @@ import { day } from '../../lib/format'
 import { usePasswordConfirm } from '../../lib/passwordConfirm'
 import { go } from '../../lib/providers'
 import { useAuth } from '../../state/auth'
-import { DISPLAY_NAME_MAX, EMAIL_MAX, FIELDS, PAGES, screenFields, SECOND_FACTOR_STATE, USERNAME_MAX } from '../../vendor/nexkonten/konten'
+import { DISPLAY_NAME_MAX, EMAIL_MAX, FIELDS, PAGES, passwordChanged, screenFields, SECOND_FACTOR_STATE, USERNAME_MAX } from '../../vendor/nexkonten/konten'
 import { Badge, Box, Card, CheckboxRow, ConfirmDialog, Field, Notice, Row, Rows, SelectField } from '../../vendor/nexui'
 import { pagePart } from './accountPages'
 import { DisplayFields } from './DisplayFields'
@@ -42,6 +42,11 @@ export type AccountPart = 'profile' | 'security' | 'appearance'
 export function AccountTab({ part }: { part?: AccountPart } = {}) {
   const { t, i18n } = useTranslation()
   const shows = (which: AccountPart) => !part || part === which
+  /** "Last changed on …" in the box Password, or that it is not known (konten 0.3.10, `passwordChanged`). */
+  const changedLine = (at: string | null | undefined) => {
+    const changed = passwordChanged(at)
+    return t(changed.text, changed.date ? { day: day(changed.date, i18n.language) } : undefined)
+  }
   const { me, setMe, refresh } = useAuth()
   const offline = useOffline()
   const [params] = useSearchParams()
@@ -316,7 +321,7 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
           {me.sign_in === 'password' && (
             <Box
               title={t(pagePart('security', 'password').title)}
-              hint={me.password_changed_at ? t('me.password.changedAt', { day: day(me.password_changed_at, i18n.language) }) : undefined}
+              hint={changedLine(me.password_changed_at)}
               testId="password-row"
               actions={
                 <AccountButton

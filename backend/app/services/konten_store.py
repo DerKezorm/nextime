@@ -183,6 +183,8 @@ class KontenStore:
             # "No, thanks" of the module (0.3.4) is nextime's ``provider_email_off`` of 0.4.0: the same address stays
             # declined.
             declined_email=row.provider_email_off or "",
+            # "Last changed on" under Security (konten 0.3.10); empty where 0.4.0 never wrote it.
+            password_changed_at=_aware(row.password_changed_at) if row.password_changed_at else None,
         )
 
     @staticmethod
@@ -407,18 +409,21 @@ class KontenStore:
         password (``calendar``, the calendar account of TIME-20), API keys and passkeys."""
         owner = int(account_id)
         found = [
-            Access(f"{DEVICE_UID}{row.id}", "device", row.name, row.last_used_at)
+            Access(f"{DEVICE_UID}{row.id}", nexkonten.ACCESS_DEVICE, row.name, row.last_used_at)
             for row in self.db.scalars(select(AppDevice).where(AppDevice.account_id == owner).order_by(AppDevice.id))
         ]
         found += [
-            Access(f"calendar-{row.id}", "calendar", row.name, row.last_used_at)
+            Access(f"calendar-{row.id}", nexkonten.ACCESS_CALENDAR, row.name, row.last_used_at)
             for row in self.db.scalars(select(Device).where(Device.account_id == owner).order_by(Device.id))
         ]
         found += [
-            Access(f"key-{row.id}", "api_key", row.name, row.last_used_at)
+            Access(f"key-{row.id}", nexkonten.ACCESS_API_KEY, row.name, row.last_used_at)
             for row in self.db.scalars(select(ApiKey).where(ApiKey.account_id == owner).order_by(ApiKey.id))
         ]
-        found += [Access(key.uid, "passkey", key.name, key.last_used_at) for key in self.passkeys_of(account_id)]
+        found += [
+            Access(key.uid, nexkonten.ACCESS_PASSKEY, key.name, key.last_used_at)
+            for key in self.passkeys_of(account_id)
+        ]
         return found
 
     def revoke_access(self, account_id: AccountId) -> int:

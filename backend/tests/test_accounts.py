@@ -88,12 +88,14 @@ def test_an_expired_session_is_gone(client: TestClient) -> None:
 
 def test_the_brake_holds_a_guesser_back(client: TestClient) -> None:
     make_account("anna")
-    # The shared account module's brake: five failures free at the account, the sixth starts the wait.
-    for _ in range(6):
+    # The shared account module's brake (konten 0.3.10): five failures free at the account, the fifth starts the wait.
+    for _ in range(5):
         assert client.post("/api/auth/login", json={"name": "anna", "password": "wrong password"}).status_code == 401
     held = client.post("/api/auth/login", json={"name": "anna", "password": PASSWORD})
-    # Even the right password waits: otherwise the brake would tell when a guess was right.
-    assert held.status_code == 429 and int(held.headers["Retry-After"]) > 0
+    # While only the account's count waits, even the right password is answered like a wrong one (401, not 429):
+    # the brake never tells when a guess was right, nor that the name is one.
+    assert held.status_code == 401 and held.json()["detail"]["code"] == "wrong_credentials"
+    assert "retry-after" not in held.headers
 
 
 def test_the_account_locks_after_ten_failures_from_anywhere(client: TestClient) -> None:
@@ -168,8 +170,8 @@ def test_changing_the_password_ends_the_other_sessions(client: TestClient) -> No
 def test_a_wrong_current_password_counts_like_a_wrong_sign_in(client: TestClient) -> None:
     anna = make_account("anna")
     sign_in(client, anna)
-    # The shared module's count (``confirm:<account>``, konten 0.3.4): five free, the sixth wrong one waits.
-    for _ in range(6):
+    # The shared module's count (``confirm:<account>``, konten 0.3.10): five free, the fifth starts the wait.
+    for _ in range(5):
         client.put("/api/auth/password", json={"current": "guess guess guess", "new": GOOD})
     held = client.put("/api/auth/password", json={"current": PASSWORD, "new": GOOD})
     assert held.status_code == 429
@@ -240,3 +242,36 @@ def test_an_address_is_taken_once_whatever_its_case(client: TestClient, operator
     # The invitation is still there after both refusals.
     made = stranger.post(f"/api/invite/{token}", json={"display_name": "Dora", "password": GOOD})
     assert made.status_code == 200 and made.json()["name"] == "dora"
+
+
+def test_forgot_password_mails_at_once_and_a_mail_that_fails_takes_its_link(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """konten 0.3.10: "Forgot your password?" sends straight through the mail server, never through the outbox that
+    tries again an hour later; a mail that does not go out leaves no link behind that nobody got."""
+    from app.models import PasswordReset
+    from app.models_accounts import MailOutbox
+    from app.routers import auth as auth_router
+    from app.vendor import nexpost
+
+    anna = make_account("anna")
+    monkeypatch.setattr(auth_router, "FORGOT_AT_ONCE", True)
+    with SessionLocal() as db:
+        settings_service.save(db, {"smtp_host": "smtp.example.com", "smtp_from": "kalender@example.com",
+                                   "public_url": "https://kalender.example.com"})
+    sent: list[str] = []
+    monkeypatch.setattr(nexpost.send, "deliver", lambda _settings, letter: sent.append(letter.to))
+    assert client.post("/api/auth/forgot", json={"name": "anna"}).status_code == 202
+    assert sent == ["anna@example.com"]
+    with SessionLocal() as db:
+        assert db.scalar(select(MailOutbox)) is None
+        assert db.scalar(select(PasswordReset).where(PasswordReset.account_id == anna.id)) is not None
+
+    def refuse(_settings: object, _letter: object) -> None:
+        raise nexpost.MailError("mail_unreachable", "The mail server cannot be reached.")
+
+    monkeypatch.setattr(nexpost.send, "deliver", refuse)
+    assert client.post("/api/auth/forgot", json={"name": "anna"}).status_code == 202
+    with SessionLocal() as db:
+        assert db.scalar(select(MailOutbox)) is None
+        assert db.scalar(select(PasswordReset).where(PasswordReset.account_id == anna.id)) is None

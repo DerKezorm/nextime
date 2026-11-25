@@ -15,6 +15,7 @@ from app.main import app
 from app.models import Account
 from app.security import DEVICE_COOKIE, brake
 from app.services import accounts
+from app.vendor.nexkonten import brake as konten_brake
 
 from .conftest import PASSWORD, SETUP_CODE, make_account
 
@@ -191,9 +192,12 @@ def test_ports_and_spellings_of_one_address_are_one_sender(client: TestClient, m
     assert normal_address("2001:db8::1") == normal_address("[2001:db8::2]:443") == "2001:db8::/64"
     monkeypatch.setattr(get_settings(), "trusted_proxies", "10.9.0.0/16")
     proxy = fresh("10.9.0.1")
-    answers = [proxy.post("/api/auth/login", json={"name": "nobody", "password": "x"},
-                          headers={"X-Forwarded-For": f"7.7.7.7:{4000 + n}"}).status_code for n in range(7)]
-    assert answers[-1] == 429
+    # Another name each time, so that only the sender's count fills (konten 0.3.10: while only the count of a name
+    # waits the answer is 401 like a wrong password; 429 only once the sender's own count is full).
+    free = konten_brake.FREE["sender"]
+    answers = [proxy.post("/api/auth/login", json={"name": f"nobody{n}", "password": "x"},
+                          headers={"X-Forwarded-For": f"7.7.7.7:{4000 + n}"}).status_code for n in range(free + 1)]
+    assert answers[:free] == [401] * free and answers[-1] == 429
     brake.forget()
 
 

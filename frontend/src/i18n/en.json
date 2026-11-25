@@ -323,8 +323,6 @@
       "title": "Appearance"
     },
     "password": {
-      "change": "Change",
-      "changedAt": "last changed on {{day}}",
       "current": "Current password",
       "done": "Password changed. Other browsers have to sign in again.",
       "new": "New password",

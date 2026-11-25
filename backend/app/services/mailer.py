@@ -88,6 +88,11 @@ def _one_line(text: str) -> str:
     return " ".join("".join(" " if unicodedata.category(char) in {"Cc", "Zl", "Zp"} else char for char in text).split())
 
 
+def deliver_letter(db: Session, letter: object) -> None:
+    """A letter of the post module at once (``MailError`` when it did not go out): "Forgot your password?"."""
+    _deliver(db, letter)
+
+
 def _deliver(db: Session, letter: object) -> None:
     """At once, through the shared post module (the operator waits for the answer: an invitation, the test mail)."""
     from ..vendor import nexpost

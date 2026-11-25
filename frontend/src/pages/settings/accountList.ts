@@ -1,7 +1,7 @@
 /** nextime's side of the operator's account list of the shared account module (konten 0.3.9): what its server can do,
  * its own act at its fixed place, and its rows as the module knows them. */
 import type { AccountRow } from '../../api/client'
-import { avatarUrl } from '../../lib/avatar'
+import { avatarUrl, personColor } from '../../lib/avatar'
 import type { AccountCaps, ListedAccount, OwnAction } from '../../vendor/nexkonten/konten'
 
 /** What nextime's server can do for the operator (konten 0.3.9, `ACCOUNT_CAPS`): everything of the module. */
@@ -45,5 +45,7 @@ export function listedOf(row: AccountRow, ownId: number | undefined): ListedAcco
     purgeAt: row.purge_at,
     lastSeenAt: row.last_seen_at,
     picture: avatarUrl(row.id, row.avatar),
+    // The person's own colour (TIME-2 EC-11): the letter stands on it here as everywhere else in nextime.
+    color: personColor(row.color ?? row.id),
   }
 }

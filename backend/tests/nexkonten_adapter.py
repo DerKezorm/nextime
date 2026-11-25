@@ -355,3 +355,39 @@ class Adapter(StandardAdapter):
         with self.store() as store:
             account = package.login.resolve_login(store, typed)
         return account.id if account is not None else None
+
+    def sign_in_from(self, typed: str, password: str, sender: str) -> tuple[int, Any]:
+        """Since 0.3.10: ``POST /api/auth/login`` from the address ``sender`` (nextime's brake counts it), the brake
+        left as it is: ``(status, account id)``."""
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+
+        browser = TestClient(app, base_url="https://kalender.example.com", client=(sender, 50000),
+                             headers={"X-Nextime-Client": "tab-contract"})
+        answer = browser.post("/api/auth/login", json={"name": typed, "password": password})
+        if answer.status_code != 200:
+            return answer.status_code, None
+        package = __import__(self.package, fromlist=["login"])
+        with self.store() as store:
+            account = package.login.resolve_login(store, typed)
+        return 200, account.id if account is not None else None
+
+    def listed_invites(self) -> list[dict[str, Any]]:
+        """Since 0.3.10: ``GET /api/invites`` as the operator's list asks it (expired ones stay until withdrawn)."""
+        from fastapi.testclient import TestClient
+
+        from app.db import SessionLocal
+        from app.main import app
+        from app.models import Account
+        from app.security import SESSION_COOKIE, start_session
+
+        with SessionLocal() as db:
+            row = db.get(Account, self._operator_id())
+            assert row is not None
+            token = start_session(db, row, "127.0.0.1", "contract")
+        browser = TestClient(app, base_url="https://kalender.example.com", headers={"X-Nextime-Client": "tab-contract"})
+        browser.cookies.set(SESSION_COOKIE, token)
+        answer = browser.get("/api/invites")
+        assert answer.status_code == 200, answer.text
+        return [{"email": entry["email"], "expired": entry["expired"]} for entry in answer.json()]
