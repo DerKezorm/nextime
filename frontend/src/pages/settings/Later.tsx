@@ -7,7 +7,7 @@ export function Later() {
   return (
     <div className="nt-empty" data-testid="later">
       <Hourglass className="h-6 w-6 text-mist-500" strokeWidth={1.6} aria-hidden />
-      <p>{t('account.later')}</p>
+      <p>{t('settings.later')}</p>
     </div>
   )
 }

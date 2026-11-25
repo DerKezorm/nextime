@@ -10,7 +10,7 @@ import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import { SearchPage } from './features/search/SearchPage'
 import { GuestPage } from './features/shares/GuestPage'
 import { TrashPage } from './features/trash/TrashPage'
-import { InvitePage, LoginPage, ResetPage, SetupPage } from './pages/AuthPages'
+import { EmailPage, ForgotPage, InvitePage, LoginPage, ResetPage, SetupPage } from './pages/AuthPages'
 import { FormerSettingsAddress, SettingsPage } from './pages/SettingsPage'
 import { GridView } from './features/views/GridView'
 import { MonthView } from './features/views/MonthView'
@@ -48,6 +48,9 @@ export default function App() {
       <Route path="invite/:token" element={<InvitePage />} />
       <Route path="reset/:token" element={<ResetPage />} />
       <Route path="setup/:code" element={<SetupLinkPage />} />
+      {/* "Forgot your password?" by mail, and the link that confirms a new address (the shared account module). */}
+      <Route path="forgot" element={<ForgotPage />} />
+      <Route path="email/:token" element={<EmailPage />} />
       {/* The iPhone app's sign-in sheet (TIME-29 AC-5): signs in, then hands the app a one-time code. */}
       <Route path="app-connect" element={<AppConnectPage />} />
       {/* A guest's read link (TIME-19 AC-13): no account, nothing else of nextime. */}

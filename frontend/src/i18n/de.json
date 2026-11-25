@@ -1,107 +1,25 @@
 {
   "accounts": {
-    "actions": "Aktionen",
-    "actionsFor": "Aktionen für {{name}}",
-    "block": "Sperren",
-    "blocked": "gesperrt",
-    "blockedSince": "gesperrt seit {{day}}",
-    "confirm": {
-      "block": {
-        "button": "Sperren",
-        "text": "Das Konto ist sofort auf allen Geräten abgemeldet und kommt nicht mehr hinein, auch nicht über seine Kalenderkonten und Schlüssel. Seine Kalender bleiben, Geteiltes bleibt für andere sichtbar.",
-        "title": "{{name}} sperren?"
-      },
-      "delete": {
-        "button": "Löschen",
-        "text": "Das Konto hat {{calendars}} mit {{events}} und {{shared}}. Es ist sofort gesperrt, und was es geteilt hat, verschwindet bei den anderen mit Hinweis. {{days}} Tage lang kannst du es zurückholen, danach sind seine Kalender, Termine und gespeicherten Zugänge zu iCloud und Google endgültig weg.",
-        "title": "{{name}} löschen?"
-      },
-      "resetFactor": {
-        "button": "Zurücksetzen",
-        "text": "Das Konto meldet sich danach nur mit dem Passwort an und kann einen neuen zweiten Faktor einrichten.",
-        "title": "Zweiten Faktor von {{name}} zurücksetzen?"
-      },
-      "restore": {
-        "button": "Zurückholen",
-        "text": "Das Konto kann sich wieder anmelden, mit allen seinen Kalendern.",
-        "title": "{{name}} zurückholen?"
-      },
-      "role": {
-        "button": "Ändern",
-        "title": "Rolle von {{name}} ändern?",
-        "toMember": "Das Konto wird Mitglied und verwaltet ab sofort nichts mehr.",
-        "toOperator": "Das Konto wird Betreiber und verwaltet ab sofort Server und Konten, ohne Kalender anderer zu sehen."
-      },
-      "signOut": {
-        "button": "Abmelden",
-        "text": "Alle Sitzungen dieses Kontos enden. Es kann sich danach wieder anmelden.",
-        "title": "{{name}} überall abmelden?"
-      },
-      "unblock": {
-        "button": "Entsperren",
-        "text": "Das Konto kann sich wieder anmelden, mit allen seinen Kalendern.",
-        "title": "{{name}} entsperren?"
-      },
-      "unlink": {
-        "button": "Lösen",
-        "text": "Das Konto meldet sich danach nicht mehr über {{name}} an.",
-        "title": "Verknüpfung von {{name}} lösen?"
-      }
-    },
     "countShared_one": "{{count}} geteilten Kalender",
     "countShared_other": "{{count}} geteilte Kalender",
-    "delete": "Löschen …",
-    "deleted": "gelöscht",
-    "goesOn": "endgültig weg am {{day}}",
-    "invite": "Person einladen",
-    "inviteEmailHint": "Freiwillig. Mit Adresse kann nextime den Link auch per Mail schicken.",
-    "inviteLink": "Schick diesen Link der Person. Er gilt einmal und wird nur jetzt angezeigt.",
-    "inviteLinkToo": "Den Link kannst du hier auch selbst kopieren. Er gilt einmal und wird nur jetzt angezeigt.",
-    "inviteMake": "Einladung anlegen",
-    "inviteNoAddress": "ohne Adresse",
-    "inviteSend": "Einladung senden",
-    "inviteSent": "Einladung verschickt an {{email}}.",
-    "last": "Zuletzt angemeldet",
-    "lead_one": "{{count}} Konto.",
-    "lead_other": "{{count}} Konten.",
     "limitField": "Grenze in GB",
     "limitRemove": "Grenze entfernen",
     "limitSet": "Setzen",
     "limitText": "Ist sie erreicht, geht Schreiben weiter, neue Anhänge nicht.",
     "limitTitle": "Speichergrenze für {{name}}",
     "limitUsed": "Belegt: {{used}}",
-    "makeMember": "Zum Mitglied machen",
-    "makeOperator": "Zum Betreiber machen",
-    "never": "noch nie",
-    "person": "Person",
-    "resetFactor": "Zweiten Faktor zurücksetzen",
-    "resetLink": "Link zum Zurücksetzen …",
-    "resetLinkFor": "Link zum Zurücksetzen für {{name}}",
-    "resetLinkMake": "Link erstellen",
-    "resetLinkShown": "Schick diesen Link an {{name}}. Er gilt einmal und wird nur jetzt angezeigt.",
-    "resetLinkText": "Mit diesem Link setzt {{name}} selbst ein neues Passwort; du erfährst es nie. Bis dahin gilt das alte. Wer den Link benutzt, meldet das Konto überall ab und beendet seine gekoppelten Geräte, und beim nächsten Anmelden erfährt das Konto, dass sein Passwort über deinen Link zurückgesetzt wurde.",
-    "restore": "Zurückholen",
-    "role": "Rolle",
-    "sendMail": "Per Mail schicken",
-    "setLimit": "Speichergrenze …",
-    "signOut": "Überall abmelden",
     "storage": "Speicher",
-    "title": "Konten",
-    "unblock": "Entsperren",
-    "unlink": "Verknüpfung mit {{name}} lösen",
-    "until": "bis {{day}}",
     "usedNoLimit": "{{used}} · ohne Grenze",
     "usedOf": "{{used}} von {{limit}}",
-    "valid": "Gültig",
-    "withdraw": "Zurückziehen",
     "withdrawn": "Einladung zurückgezogen.",
-    "invited": "eingeladen",
-    "inviteOpen": "Einladung offen",
     "privacy": "Du siehst Namen, Speicher und Anmeldung, nie Kalender, Termine oder Zugangsdaten.",
     "countCalendars_one": "{{count}} Kalender",
     "countCalendars_other": "{{count}} Kalender",
     "countEvents_one": "{{count}} Termin",
-    "countEvents_other": "{{count}} Termine"
+    "countEvents_other": "{{count}} Termine",
+    "storageLimit": "Speichergrenze",
+    "removeNumbers": "Es hat {{calendars}} mit {{events}} und {{shared}}. Was es geteilt hat, verschwindet bei den anderen mit Hinweis.",
+    "privacyTitle": "Was du siehst"
   },
   "app": {
     "home": "Zu Heute",
@@ -113,12 +31,10 @@
     "backToLogin": "Zur Anmeldung",
     "code": {
       "back": "Zurück zum Passwort",
-      "hint": "Sechs Ziffern, oder ein Wiederherstellungscode vom Papier.",
       "label": "Code",
       "text": "Der Code aus deiner Authenticator-App, oder ein Wiederherstellungscode.",
       "title": "Zweiter Faktor"
     },
-    "email": "E-Mail",
     "invite": {
       "expiredText": "Diese Einladung ist abgelaufen. Bitte um eine neue.",
       "expiredTitle": "Einladung abgelaufen",
@@ -134,15 +50,11 @@
     },
     "login": {
       "ended": "Deine Sitzung ist beendet. Melde dich wieder an.",
-      "forgot": "Passwort vergessen?",
-      "forgotText": "Der Betreiber kann dir in den Einstellungen unter „Konten“ einen Link erstellen, mit dem du selbst ein neues Passwort setzt.",
       "noAccount": "Kein Konto? Lass dich vom Betreiber einladen.",
       "submit": "Anmelden",
       "title": "Bei nextime anmelden"
     },
-    "name": "Name",
     "password": "Passwort",
-    "passwordConfirm": "Passwort bestätigen",
     "reset": {
       "doneText": "Melde dich jetzt mit dem neuen Passwort an.",
       "doneTitle": "Passwort gesetzt",
@@ -151,7 +63,7 @@
       "invalidText": "Dieser Link wurde schon benutzt oder durch einen neueren ersetzt.",
       "invalidTitle": "Link nicht gültig",
       "submit": "Passwort setzen",
-      "text": "Für {{name}}. Alle Sitzungen und gekoppelten Geräte des Kontos enden; danach meldest du dich mit dem neuen Passwort an.",
+      "text": "Für {{name}}. Alle Anmeldungen im Browser enden; danach meldest du dich mit dem neuen Passwort an und siehst, welche Geräte noch Zugriff haben.",
       "title": "Neues Passwort setzen"
     }
   },
@@ -197,7 +109,6 @@
     "log_level_from_environment": "Die Stufe des Logs ist mit NEXTIME_LOG_LEVEL fest eingestellt.",
     "mail_failed": "Der Mailserver hat die Mail nicht angenommen.",
     "mail_off": "Es ist kein Mailserver eingetragen.",
-    "name_missing": "Gib einen Namen ein.",
     "name_taken": "Dieser Name ist vergeben.",
     "network": "Der Server ist nicht erreichbar.",
     "no_offer": "Es gibt keine Adresse zum Übernehmen.",
@@ -394,13 +305,11 @@
     "browser_only": "Das geht nur im Browser.",
     "push_ticket_invalid": "Ticket oder Schlüssel für Mitteilungen sind nicht brauchbar.",
     "too_many_ops": "Höchstens 50 Änderungen auf einmal.",
-    "event_unknown": "Den Termin gibt es noch nicht. Die Datei wartet, bis er angelegt ist."
+    "event_unknown": "Den Termin gibt es noch nicht. Die Datei wartet, bis er angelegt ist.",
+    "use_logout": "Diesen Browser meldest du mit „Abmelden“ ab."
   },
   "me": {
-    "emailDecline": "Nicht mehr fragen",
     "emailDeclined": "nextime fragt nicht mehr nach dieser Adresse.",
-    "emailOffer": "Ein Anmeldeanbieter kennt dich als {{address}}. Soll nextime diese Adresse nehmen?",
-    "emailTake": "Übernehmen",
     "emailTaken": "Adresse übernommen.",
     "linked": "Dein Konto ist mit {{name}} verknüpft.",
     "looks": {
@@ -421,23 +330,14 @@
       "submit": "Passwort ändern"
     },
     "profile": {
-      "role": "Rolle: {{role}}",
       "saved": "Profil gespeichert.",
-      "title": "Profil",
       "viaPassword": "Anmeldung mit Passwort",
       "viaProvider": "Anmeldung über {{name}}",
-      "provider": "einen Anbieter",
-      "factorOn": "zweiter Faktor an",
-      "factorOff": "zweiter Faktor aus",
-      "factorProvider": "zweiter Faktor beim Anbieter"
+      "provider": "einen Anbieter"
     },
-    "security": {
-      "title": "Anmeldung und Sicherheit"
-    },
+    "security": {},
     "sessions": {
-      "done": "Alle anderen Browser sind abgemeldet.",
-      "submit": "Überall sonst abmelden",
-      "text": "Meldet dich überall ab außer hier, etwa nach einem verlorenen Handy."
+      "done": "Alle anderen Browser sind abgemeldet."
     },
     "setupFirst": "Der Betreiber verlangt einen zweiten Faktor. Richte ihn hier ein, dann geht es weiter.",
     "signOut": {
@@ -450,10 +350,7 @@
     "picture": {
       "remove": "Bild entfernen",
       "saved": "Profilbild gespeichert.",
-      "removed": "Profilbild entfernt.",
-      "hint": "Erscheint an deinen Terminen in geteilten Kalendern.",
-      "change": "Anderes Bild",
-      "add": "Profilbild hochladen"
+      "removed": "Profilbild entfernt."
     }
   },
   "nav": {
@@ -622,7 +519,7 @@
     "texts_other": "{{count}} Texte",
     "trash": "Papierkorb leeren nach",
     "twoFactorRequired": "Zweiten Faktor verlangen",
-    "twoFactorRequiredHint": "Jedes Konto, das sich mit Passwort anmeldet, muss ihn einrichten, bevor es weiterkommt. Konten von einem Anmeldeanbieter bringen dessen eigenen mit. Ein Konto mit Passwort ist ebenfalls nicht betroffen, wenn es über einen Anbieter kommt, bei dem „{{trusts}}“ an ist.",
+    "twoFactorRequiredHint": "Konten von einem Anmeldeanbieter bringen dessen eigenen mit. Ein Konto mit Passwort ist ebenfalls nicht betroffen, wenn es über einen Anbieter kommt, bei dem „{{trusts}}“ an ist.",
     "untitled": "Ohne Titel",
     "upload": "Sprache hochladen",
     "uploadBackup": "Sicherung hochladen",
@@ -708,11 +605,8 @@
     "showLog": "Log ansehen"
   },
   "session": {
-    "again": "Wieder anmelden",
     "blockedText": "Der Betreiber hat dein Konto gesperrt. Es wird nichts mehr gespeichert. Wende dich an den Betreiber.",
     "blockedTitle": "Dein Konto ist gesperrt",
-    "expiredText": "Deine Anmeldung ist abgelaufen. Was du geschrieben hast, bleibt hier stehen und wird gespeichert, sobald du wieder angemeldet bist.",
-    "expiredTitle": "Bitte melde dich wieder an",
     "leave": "Zur Anmeldung",
     "signOutAnyway": "Trotzdem abmelden",
     "wait": "Warten",
@@ -797,19 +691,16 @@
         "title": "Mitnehmen und umziehen",
         "text": "Kalender als Datei sichern, Dateien laden und aus iCloud oder Google umziehen."
       }
-    }
+    },
+    "later": "Kommt in einer späteren Version."
   },
   "setup": {
-    "code": "Einrichtungscode",
-    "codeHint": "Steht im Log des Containers, oder du hast ihn selbst vorgegeben.",
     "folder": "Datenordner {{path}}",
     "free": "{{size}} frei",
-    "passwordHint_one": "Mindestens {{count}} Zeichen. Den zweiten Faktor richtest du gleich danach ein.",
-    "passwordHint_other": "Mindestens {{count}} Zeichen. Den zweiten Faktor richtest du gleich danach ein.",
+    "passwordHint_one": "Mindestens {{count}} Zeichen.",
+    "passwordHint_other": "Mindestens {{count}} Zeichen.",
     "share": "Der Datenordner liegt auf einer Netzfreigabe (NFS oder SMB). Das kann Termine beschädigen. Besser ein lokaler Datenträger.",
     "submit": "Einrichten",
-    "text": "Das erste Konto wird Betreiber. Den Einrichtungscode findest du im Log des Containers.",
-    "title": "nextime einrichten",
     "version": "Version {{version}}"
   },
   "theme": {
@@ -826,21 +717,14 @@
     "codesLead": "Jeder meldet dich einmal an, wenn das Handy nicht zur Hand ist. Sie werden nur jetzt gezeigt: Kopiere sie oder speichere sie als Datei und bewahre sie getrennt vom Handy auf.",
     "codesTitle": "Deine Wiederherstellungscodes",
     "confirm": "Einschalten",
-    "disable": "Ausschalten",
     "disableText": "Danach meldet dich das Passwort allein an. Gib es ein, um den zweiten Faktor auszuschalten.",
-    "enable": "Einrichten",
     "lowCodes": "Nur noch wenige Wiederherstellungscodes. Erzeuge neue, solange du dich noch anmelden kannst.",
-    "off": "Aus.",
-    "on_one": "An. Noch {{count}} Wiederherstellungscode.",
-    "on_other": "An. Noch {{count}} Wiederherstellungscodes.",
     "passwordHint": "Zeigt, dass du selbst an der Tastatur sitzt.",
     "provider": "Du meldest dich über den Anbieter an; dort gilt sein zweiter Faktor.",
     "qr": "QR-Code für die Authenticator-App",
-    "renew": "Neue Wiederherstellungscodes",
     "renewText": "Die alten Wiederherstellungscodes gelten dann nicht mehr. Gib dein Passwort ein, um neue zu erzeugen.",
     "scan": "Scanne diesen Code mit der App oder tippe den Schlüssel darunter ein. Dann gib den Code ein, den die App zeigt, und dein Passwort.",
-    "secret": "Schlüssel zum Eintippen:",
-    "title": "Zweiter Faktor"
+    "secret": "Schlüssel zum Eintippen:"
   },
   "views": {
     "weekNumber": "KW {{number}}",
@@ -957,9 +841,6 @@
       "more": "Weitere anzeigen"
     },
     "nextEvents": "Nächste Termine"
-  },
-  "account": {
-    "later": "Kommt in einer späteren Version."
   },
   "display": {
     "weekStart": "Erster Wochentag",
@@ -1271,7 +1152,7 @@
     "codeValid_other": "Der Code gilt {{count}} Minuten.",
     "others": "Android, Thunderbird und andere",
     "address": "Adresse",
-    "user": "Name",
+    "user": "Benutzername",
     "password": "Gerätepasswort",
     "onlyNow": "Das Gerätepasswort ist nur jetzt sichtbar.",
     "noSignInPassword": "Dein Anmeldepasswort brauchst du dort nicht.",
@@ -2528,5 +2409,9 @@
     "invalid": "Diese Seite öffnet die nextime-App selbst. Starte das Verbinden in der App.",
     "doneTitle": "Verbunden",
     "done": "Weiter geht es in der App."
+  },
+  "emailLink": {
+    "title": "Neue Adresse bestätigen",
+    "submit": "Bestätigen"
   }
 }

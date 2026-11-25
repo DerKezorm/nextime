@@ -25,6 +25,7 @@ import {
   type SettingsChange,
 } from '../../api/client'
 import { byName, forgetAddedLanguages, templateFile } from '../../i18n'
+import { errorText } from '../../lib/errors'
 import { bytes, dayTime } from '../../lib/format'
 import { dateIn } from '../../lib/display'
 import { clock, moment, type TimeOptions } from '../../lib/time'
@@ -557,6 +558,8 @@ export function MailCard({ server }: { server: Server }) {
         <Input label={t('server.smtpUser')} value={value.smtp_user ?? ''} onChange={(smtp_user) => setDraft({ ...draft, smtp_user })} />
         <Input label={t('auth.password')} type="password" autoComplete="new-password" value={draft.smtp_password ?? ''} onChange={(smtp_password) => setDraft({ ...draft, smtp_password })} placeholder={s.smtp_password_set ? t('server.secretKept') : ''} />
         <Input label={t('server.smtpFrom')} value={value.smtp_from ?? ''} onChange={(smtp_from) => setDraft({ ...draft, smtp_from })} placeholder="time@example.com" />
+        <Input label={t('mail.senderName')} value={value.smtp_sender_name ?? ''} onChange={(smtp_sender_name) => setDraft({ ...draft, smtp_sender_name })} placeholder="nextime" />
+        {value.smtp_security === 'none' && <p className="text-xs text-warn-500 sm:col-span-2">{t('mail.warningUnencrypted')}</p>}
         <div className="sm:col-span-2">
           <Button type="submit" accent busy={server.busy}>
             {t('common.save')}
@@ -575,6 +578,13 @@ export function MailCard({ server }: { server: Server }) {
           {t('server.send')}
         </Button>
       </form>
+      {(s.mail_last_ok_at || s.mail_last_error) && (
+        <p className="text-xs text-mist-500" data-testid="mail-status">
+          {s.mail_last_ok_at && t('mail.lastOk', { when: dayTime(s.mail_last_ok_at, i18n.language) })}
+          {s.mail_last_ok_at && s.mail_last_error ? ' · ' : ''}
+          {s.mail_last_error && s.mail_last_error_at && t('mail.lastError', { when: dayTime(s.mail_last_error_at, i18n.language), error: errorText(s.mail_last_error) })}
+        </p>
+      )}
       <Feedback problem={test.problem ?? server.problem} done={test.done ?? server.done} />
     </Card>
   )

@@ -30,6 +30,7 @@ import {
   type AuthentikAddress,
 } from '../../vendor/nexoidc/oidc'
 import type { useServerSettings } from './ServerCards'
+import { SecondFactorOffNotice } from './SecurityBoxes'
 import { ASKED, Button, Card, Confirm, CopyLink, Feedback, Input, Toggle, useAction } from './ui'
 
 type Server = ReturnType<typeof useServerSettings>
@@ -72,6 +73,7 @@ export function SignInCard({ server, anyActive }: { server: Server; anyActive: b
     <Card id="sign-in" icon={ShieldCheck} title={t('oidc.admin.signInTitle')}>
       {(
         <>
+          <SecondFactorOffNotice on={me?.second_factor_off} />
           <Toggle
             label={t('oidc.admin.password')}
             hint={t('oidc.admin.passwordHint')}
@@ -103,10 +105,15 @@ export function SignInCard({ server, anyActive }: { server: Server; anyActive: b
           provider whose switch says it checks the second factor itself is not sent away; both hints name that switch. */}
           <Toggle
             label={t('server.twoFactorRequired')}
-            hint={!s.two_factor_required && me?.sign_in === 'password' && !me?.two_factor ? t('server.ownSecondFactorFirst', trusts) : t('server.twoFactorRequiredHint', trusts)}
+            hint={!s.two_factor_required && me?.sign_in === 'password' && !me?.two_factor ? t('server.ownSecondFactorFirst', trusts) : `${t('account.factorRequiredSwitchHint')} ${t('server.twoFactorRequiredHint', trusts)}`}
             checked={s.two_factor_required}
             disabled={!s.two_factor_required && me?.sign_in === 'password' && !me?.two_factor}
             onChange={(two_factor_required) => void server.save({ two_factor_required })}
+          />
+          <Toggle
+            label={t('account.passkeysAllowed')}
+            checked={s.passkeys_allowed !== false}
+            onChange={(passkeys_allowed) => void server.save({ passkeys_allowed })}
           />
         </>
       )}

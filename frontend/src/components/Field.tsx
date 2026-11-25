@@ -9,6 +9,7 @@ export function Field({
   autoComplete,
   autoFocus = false,
   hint,
+  hints,
   maxLength,
 }: {
   label: string
@@ -18,11 +19,14 @@ export function Field({
   autoComplete?: string
   autoFocus?: boolean
   hint?: string
+  /** More than one hint, each its own line under the field (konten 0.3.7: the username in the profile). */
+  hints?: readonly string[]
   /** The server's limit, so a longer text cannot be typed at all. */
   maxLength?: number
 }) {
-  // The hint describes the field; it is not part of its name.
+  // The hints describe the field (aria-describedby); they are not part of its name.
   const hintId = useId()
+  const lines = (hints ?? (hint ? [hint] : [])).filter(Boolean)
   return (
     <div className="text-sm">
       <label className="block">
@@ -33,16 +37,16 @@ export function Field({
           autoComplete={autoComplete}
           autoFocus={autoFocus}
           maxLength={maxLength}
-          aria-describedby={hint ? hintId : undefined}
+          aria-describedby={lines.length ? lines.map((_, index) => `${hintId}-${index}`).join(' ') : undefined}
           onChange={(event) => onChange(event.target.value)}
           className="nt-field mt-1"
         />
       </label>
-      {hint && (
-        <span id={hintId} className="mt-1 block text-xs text-mist-500">
-          {hint}
+      {lines.map((line, index) => (
+        <span key={index} id={`${hintId}-${index}`} className="mt-1 block text-xs text-mist-500">
+          {line}
         </span>
-      )}
+      ))}
     </div>
   )
 }

@@ -156,6 +156,8 @@ export type Me = {
   email: string
   /** The address a sign-in provider knows the account by, offered when it differs from the own one. */
   provider_email?: string
+  /** The provider whose address is offered, as on its button (konten 0.3.4). */
+  provider_email_from?: string
   /** Empty: the browser's language. Chosen once, it counts on every device of the account. */
   language: string
   /** First day of the week, week numbers, clock, time zone and home zone (TIME-3), on every device. */
@@ -166,6 +168,10 @@ export type Me = {
   avatar?: string | null
   two_factor: boolean
   two_factor_recovery_left: number
+  /** The module's state of the second factor (`factor.state`): none, required, active, passkey. */
+  factor_state?: string
+  /** NEXTIME_SECOND_FACTOR_OFF holds: no second factor is asked of anybody. */
+  second_factor_off?: boolean
   password_changed_at?: string | null
   created_at?: string
   last_seen_at?: string | null
@@ -176,6 +182,14 @@ export type Me = {
   min_password?: number
   /** The password was set through the operator's reset link; the page says so until it is put away. */
   password_reset_notice?: boolean
+  /** The address counts (signing in, a forgotten password); a new one waiting for its link; the name before. */
+  email_confirmed?: boolean
+  pending_email?: string
+  former_name?: string
+  /** A mail when a browser signs in for the first time (on from the start). */
+  new_sign_in_mail?: boolean
+  /** A password set through a link: the page lists what still has access, until put away. */
+  new_password_origin?: string
 }
 
 /** How the account sees its times (TIME-3). `week_start`: 0 Sunday … 6 Saturday. `clock`: `auto` follows the
@@ -210,8 +224,22 @@ export type SetupState = {
 
 /** A button of the sign-in page: an active provider (the shared sign-in module, vendor/nexoidc). */
 export type ProviderButton = { slug: string; label: string }
-export type Methods = { password: boolean; providers: ProviderButton[] }
+export type Methods = {
+  password: boolean
+  providers: ProviderButton[]
+  /** "Sign in with a passkey" (the operator's switch). */
+  passkeys?: boolean
+  /** "Forgot your password?" by mail (a mail server, the public address, signing in by password). */
+  forgot_mail?: boolean
+}
 /** An active provider and whether the own account is linked to it. */
+/** The operator's dialog "Reset the second factor": what the account has. */
+export type FactorResetOverview = {
+  authenticator: boolean
+  recovery_codes: number
+  passkeys: { uid: string; name: string }[]
+  devices: { uid: string; label: string }[]
+}
 export type MyProvider = ProviderButton & { linked: boolean; managed: string }
 /** A provider an account is linked to, as a mark in the operator's account list. */
 export type LinkedProvider = { id: number; slug: string; label: string; managed: string }
@@ -230,6 +258,8 @@ export type AccountRow = {
   sign_in: 'password' | 'oidc'
   language: string
   two_factor: boolean
+  /** Passkeys of the account (a second factor too, since konten 0.3.2). */
+  passkeys?: number
   created_at: string
   last_seen_at: string | null
   locked: boolean
@@ -238,16 +268,33 @@ export type AccountRow = {
   deleted_at: string | null
   purge_at: string | null
   has_password: boolean
+  /** The address is held by another account too (left by an older version): it signs nobody in. */
+  email_duplicate?: boolean
+  /** The address counts (signing in, a forgotten password); left out by an older server. */
+  email_confirmed?: boolean
   providers: LinkedProvider[]
   storage_used: number
   storage_limit: number | null
 }
 
-export type Invite = { id: number; role: 'operator' | 'member'; email: string; by: string | null; created_at: string; expires_at: string }
+export type Invite = {
+  id: number
+  role: 'operator' | 'member'
+  email: string
+  display_name?: string
+  by: string | null
+  created_at: string
+  expires_at: string
+  /** It ran out; it stays in the list until withdrawn (konten 0.3.9). */
+  expired?: boolean
+}
 
 export type InviteOffer = {
   by: string | null
   email: string
+  /** The fields as the page fills them: the invitation's display name, a username suggested from it. */
+  display_name?: string
+  name?: string
   role: 'operator' | 'member'
   min_password: number
   password: boolean
@@ -267,6 +314,13 @@ export type ServerSettings = {
   smtp_user: string
   smtp_password_set: boolean
   smtp_from: string
+  /** The name system mail goes out under ("" for nextime), and the last result (the shared post module). */
+  smtp_sender_name?: string
+  mail_last_ok_at?: string
+  mail_last_error?: string
+  mail_last_error_at?: string
+  /** Passkeys may be added and used to sign in (on from the start). */
+  passkeys_allowed?: boolean
   upload_max_mb: number
   trash_days: number
   share_links: boolean
@@ -402,10 +456,13 @@ export type AddressQuestion = { count: number; hand: number; address: string }
 
 export const authApi = {
   setupState: () => api<SetupState>('/api/setup'),
-  setup: (body: { display_name: string; email: string; password: string; password_confirm: string; code: string; language: string }) =>
+  setup: (body: { display_name: string; name: string; email: string; password: string; password_confirm: string; code: string; language: string }) =>
     api<Me>('/api/setup', { method: 'POST', body }),
   methods: () => api<Methods>('/api/auth/methods'),
-  login: (name: string, password: string) => api<Me | { second_factor: true }>('/api/auth/login', { method: 'POST', body: { name, password } }),
+  login: (name: string, password: string, remember = true) =>
+    api<Me | { second_factor: true; passkey?: boolean; code?: boolean }>('/api/auth/login', { method: 'POST', body: { name, password, remember } }),
+  /** "Forgot your password?": the same answer whatever was typed. */
+  forgot: (name: string) => api<{ sent: boolean }>('/api/auth/forgot', { method: 'POST', body: { name } }),
   code: (code: string) => api<Me>('/api/auth/login/totp', { method: 'POST', body: { code } }),
   cancelCode: () => api<void>('/api/auth/login/totp/cancel', { method: 'POST' }),
   logout: () => api<void>('/api/auth/logout', { method: 'POST' }),
@@ -415,7 +472,16 @@ export const authApi = {
   display: (change: Partial<Omit<Display, 'home_zone'>>) => api<Me>('/api/me/display', { method: 'PUT', body: change }),
   avatar: (picture: Blob) => api<Me>('/api/auth/avatar', { method: 'PUT', raw: picture }),
   removeAvatar: () => api<Me>('/api/auth/avatar', { method: 'DELETE' }),
-  profile: (change: { display_name?: string; email?: string }) => api<Me>('/api/me/profile', { method: 'PUT', body: change }),
+  profile: (change: { display_name?: string; email?: string; name?: string; password?: string }) =>
+    api<Me>('/api/me/profile', { method: 'PUT', body: change }),
+  resendEmail: () => api<Me>('/api/me/email/resend', { method: 'POST' }),
+  withdrawEmail: () => api<Me>('/api/me/email/pending', { method: 'DELETE' }),
+  newSignInMail: (on: boolean) => api<Me>('/api/me/new-sign-in-mail', { method: 'PUT', body: { on } }),
+  sessions: () => api<SessionEntry[]>('/api/auth/sessions'),
+  endSession: (uid: string) => api<void>(`/api/auth/sessions/${encodeURIComponent(uid)}`, { method: 'DELETE' }),
+  access: () => api<{ origin: string; access: AccessEntry[] }>('/api/auth/access'),
+  disconnectAll: () => api<{ disconnected: number }>('/api/auth/access/disconnect', { method: 'POST' }),
+  accessSeen: () => api<Me>('/api/auth/access/seen', { method: 'POST' }),
   password: (current: string, next: string, confirm: string) =>
     api<void>('/api/auth/password', { method: 'PUT', body: { current, new: next, password_confirm: confirm } }),
   whatsNewSeen: () => api<Me>('/api/me/whats-new/seen', { method: 'POST' }),
@@ -425,25 +491,64 @@ export const authApi = {
     api<{ url: string }>(`/api/oidc/${encodeURIComponent(slug)}/link`, { method: 'POST', body: { password } }),
   unlink: (slug: string) => api<void>(`/api/oidc/${encodeURIComponent(slug)}/link`, { method: 'DELETE' }),
   /** Takes the address a provider knows the account by, or stops the page from offering it. */
-  takeProviderEmail: () => api<{ email: string }>('/api/oidc/me/address', { method: 'POST' }),
+  takeProviderEmail: (password = '') => api<Me>('/api/oidc/me/address', { method: 'POST', body: { password } }),
   declineProviderEmail: () => api<void>('/api/oidc/me/address', { method: 'DELETE' }),
   /** The browser's clock, so the log can warn when the server's is far off. */
   clock: () => api<{ now: number; drift: number }>('/api/health/clock', { method: 'POST', body: { now: Date.now() } }),
 }
 
+/** A browser or a paired device in "Where you are signed in". */
+export type SessionEntry = {
+  uid: string
+  kind: string
+  label: string
+  address: string
+  created_at: string
+  last_seen_at: string | null
+  current: boolean
+  device: boolean
+}
+
+/** What still has access after a password set through a link: devices, API tokens, passkeys. */
+export type AccessEntry = { id: string; kind: string; label: string; last_used_at: string | null }
+
+/** A passkey of the own account. */
+export type PasskeyEntry = { uid: string; name: string; created_at: string; last_used_at: string | null }
+
+/** A confirmation link for a new address, opened without an account. */
+export const emailLinkApi = {
+  offer: (token: string) => api<{ email: string }>(`/api/email/${encodeURIComponent(token)}`),
+  confirm: (token: string) => api<{ email: string }>(`/api/email/${encodeURIComponent(token)}`, { method: 'POST' }),
+}
+
+/** Passkeys: sign in with one, add and remove the own (the browser's WebAuthn in `lib/passkeys.ts`). */
+export const passkeysApi = {
+  list: () => api<PasskeyEntry[]>('/api/auth/passkeys'),
+  beginAdd: (password: string) =>
+    api<{ token: string; options: Record<string, unknown> }>('/api/auth/passkeys/begin', { method: 'POST', body: { password } }),
+  finishAdd: (token: string, credential: unknown, name: string) =>
+    api<PasskeyEntry>('/api/auth/passkeys/finish', { method: 'POST', body: { token, credential, name } }),
+  remove: (uid: string, password: string) =>
+    api<Me>(`/api/auth/passkeys/${encodeURIComponent(uid)}`, { method: 'DELETE', body: { password } }),
+  beginSignIn: () => api<{ token: string; options: Record<string, unknown> }>('/api/auth/passkey/begin', { method: 'POST' }),
+  finishSignIn: (token: string, credential: unknown) =>
+    api<Me>('/api/auth/passkey/finish', { method: 'POST', body: { token, credential } }),
+}
+
 /** A reset link from the operator, opened without an account. */
 export const resetApi = {
-  offer: (token: string) => api<{ name: string; min_password: number; expires_at: string }>(`/api/reset/${encodeURIComponent(token)}`),
+  offer: (token: string) =>
+    api<{ name: string; username?: string; min_password: number; expires_at: string }>(`/api/reset/${encodeURIComponent(token)}`),
   use: (token: string, password: string, confirm: string) =>
     api<void>(`/api/reset/${encodeURIComponent(token)}`, { method: 'POST', body: { password, password_confirm: confirm } }),
 }
 
 export const invitesApi = {
   offer: (token: string) => api<InviteOffer>(`/api/invite/${encodeURIComponent(token)}`),
-  accept: (token: string, body: { display_name: string; email: string; password: string; password_confirm: string }) =>
+  accept: (token: string, body: { display_name: string; name: string; email: string; password: string; password_confirm: string }) =>
     api<Me>(`/api/invite/${encodeURIComponent(token)}`, { method: 'POST', body }),
   list: () => api<Invite[]>('/api/invites'),
-  make: (body: { days: number; email: string; role: 'operator' | 'member'; send: boolean; language: string }) =>
+  make: (body: { days: number; email: string; display_name: string; role: 'operator' | 'member'; send: boolean; language: string }) =>
     api<Invite & { link: string; sent: boolean }>('/api/invites', { method: 'POST', body }),
   withdraw: (id: number) => api<void>(`/api/invites/${id}`, { method: 'DELETE' }),
 }
@@ -459,13 +564,26 @@ export const accountsApi = {
   unblock: (id: number, current_password: string) => api<void>(`/api/accounts/${id}/unblock`, { method: 'POST', body: { current_password } }),
   role: (id: number, role: 'operator' | 'member', current_password: string) =>
     api<AccountRow>(`/api/accounts/${id}/role`, { method: 'PUT', body: { role, current_password } }),
-  limit: (id: number, limit: number | null) => api<AccountRow>(`/api/accounts/${id}/storage-limit`, { method: 'PUT', body: { limit } }),
+  limit: (id: number, limit: number | null, current_password: string) =>
+    api<AccountRow>(`/api/accounts/${id}/storage-limit`, { method: 'PUT', body: { limit, current_password } }),
   /** A one-time link with which the person sets a new password themselves; the operator never knows it. */
   resetLink: (id: number, days: number, current_password: string) =>
-    api<{ link: string; expires_at: string }>(`/api/accounts/${id}/reset-link`, { method: 'POST', body: { days, current_password } }),
+    api<{ link: string | null; sent?: boolean; expires_at: string }>(`/api/accounts/${id}/reset-link`, { method: 'POST', body: { days, current_password } }),
+  /** Another username or display name; the address only taken away, never set (the operator's own password). */
+  rename: (id: number, name: string, current_password: string) =>
+    api<AccountRow>(`/api/accounts/${id}/name`, { method: 'PUT', body: { name, current_password } }),
+  displayName: (id: number, display_name: string, current_password: string) =>
+    api<AccountRow>(`/api/accounts/${id}/display-name`, { method: 'PUT', body: { display_name, current_password } }),
+  removeEmail: (id: number, current_password: string) =>
+    api<AccountRow>(`/api/accounts/${id}/email`, { method: 'DELETE', body: { current_password } }),
   signOut: (id: number) => api<void>(`/api/accounts/${id}/sign-out`, { method: 'POST' }),
-  resetSecondFactor: (id: number, current_password: string) =>
-    api<void>(`/api/accounts/${id}/totp/reset`, { method: 'POST', body: { current_password } }),
+  /** What a reset of the second factor would take away (the shared module's ``factor.reset_overview``). */
+  resetOverview: (id: number) => api<FactorResetOverview>(`/api/accounts/${id}/totp/reset`),
+  resetSecondFactor: (id: number, current_password: string, disconnect_devices = true, remove_passkeys = true) =>
+    api<void>(`/api/accounts/${id}/totp/reset`, {
+      method: 'POST',
+      body: { current_password, disconnect_devices, remove_passkeys },
+    }),
 }
 
 export const settingsApi = {

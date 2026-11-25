@@ -44,12 +44,13 @@ afterEach(stop)
 describe('TIME-1 the setup', () => {
   const SETUP = { needs_setup: true, code_required: true, signed_in: false, version: '0.1.0', min_password: 12, data_on_share: false }
 
-  it('TIME-1 AC-1 shows "nextime einrichten" with code, name, address, password and "Einrichten"', async () => {
+  it('TIME-1 AC-1 shows "nextime einrichten" with code, display name, username, address, password and "Einrichten"', async () => {
     serve((_method, path) => (path === '/api/setup' ? ok({ ...SETUP, https: true }) : undefined))
     await render(<AuthProvider><App /></AuthProvider>, '/setup')
     expect(box.textContent).toContain('nextime einrichten')
-    const labels = [...box.querySelectorAll('label span:first-child')].map((label) => label.textContent)
-    expect(labels).toEqual(expect.arrayContaining(['Einrichtungscode', 'Name', 'Passwort']))
+    // The fields of the shared account module (konten, `SCREENS.setup`), each joined to its label.
+    const labels = [...box.querySelectorAll('label')].map((label) => label.textContent)
+    expect(labels).toEqual(expect.arrayContaining(['Einrichtungscode', 'Anzeigename', 'Benutzername', 'E-Mail', 'Passwort', 'Passwort wiederholen']))
     expect(byText('Einrichten', box)).toBeDefined()
     expect(box.querySelector('[role="status"], .text-warn-500')?.textContent ?? '').not.toContain('HTTPS')
   })
@@ -93,14 +94,15 @@ describe('TIME-1 the setup', () => {
       return undefined
     })
     await render(<AuthProvider><App /></AuthProvider>, '/setup')
+    // Code, display name, username (follows the display name), address, password twice (konten `SCREENS.setup`).
     const fields = [...box.querySelectorAll('input')]
     type(fields[0], 'AB12-CD34-EF56')
     type(fields[1], 'Robin')
-    type(fields[2], 'robin@example.com')
-    type(fields[3], 'twelve chars')
+    type(fields[3], 'robin@example.com')
     type(fields[4], 'twelve chars')
+    type(fields[5], 'twelve chars')
     await click(byText('Einrichten', box))
-    expect(sent).toMatchObject({ code: 'AB12-CD34-EF56', display_name: 'Robin', email: 'robin@example.com', password: 'twelve chars' })
+    expect(sent).toMatchObject({ code: 'AB12-CD34-EF56', display_name: 'Robin', name: 'robin', email: 'robin@example.com', password: 'twelve chars' })
     expect(box.querySelector('[data-testid="view-today"]')).not.toBeNull()
   })
 })

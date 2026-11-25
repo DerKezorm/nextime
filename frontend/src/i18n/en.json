@@ -1,107 +1,25 @@
 {
   "accounts": {
-    "actions": "Actions",
-    "actionsFor": "Actions for {{name}}",
-    "block": "Block",
-    "blocked": "blocked",
-    "blockedSince": "blocked since {{day}}",
-    "confirm": {
-      "block": {
-        "button": "Block",
-        "text": "The account is signed out on every device at once and cannot get back in, not through its calendar accounts or keys either. Its calendars stay, and what it shared stays visible to the others.",
-        "title": "Block {{name}}?"
-      },
-      "delete": {
-        "button": "Delete",
-        "text": "The account has {{calendars}} with {{events}} and {{shared}}. It is blocked at once, and what it shared disappears for the others, with a notice. For {{days}} days you can bring it back; after that its calendars, events and stored access to iCloud and Google are gone for good.",
-        "title": "Delete {{name}}?"
-      },
-      "resetFactor": {
-        "button": "Reset",
-        "text": "The account then signs in with its password only and can set up a new second factor.",
-        "title": "Reset the second factor of {{name}}?"
-      },
-      "restore": {
-        "button": "Bring back",
-        "text": "The account can sign in again, with all its calendars.",
-        "title": "Bring {{name}} back?"
-      },
-      "role": {
-        "button": "Change",
-        "title": "Change the role of {{name}}?",
-        "toMember": "The account becomes a member and runs nothing from now on.",
-        "toOperator": "The account becomes an operator and runs the server and the accounts from now on, without seeing anybody else's calendars."
-      },
-      "signOut": {
-        "button": "Sign out",
-        "text": "Every session of this account ends. It can sign in again afterwards.",
-        "title": "Sign {{name}} out everywhere?"
-      },
-      "unblock": {
-        "button": "Unblock",
-        "text": "The account can sign in again, with all its calendars.",
-        "title": "Unblock {{name}}?"
-      },
-      "unlink": {
-        "button": "Unlink",
-        "text": "The account no longer signs in through {{name}} afterwards.",
-        "title": "Unlink {{name}}?"
-      }
-    },
     "countShared_one": "{{count}} shared calendar",
     "countShared_other": "{{count}} shared calendars",
-    "delete": "Delete …",
-    "deleted": "deleted",
-    "goesOn": "gone for good on {{day}}",
-    "invite": "Invite a person",
-    "inviteEmailHint": "Optional. With an address nextime can mail the link too.",
-    "inviteLink": "Send this link to the person. It works once and is shown only now.",
-    "inviteLinkToo": "You can also copy the link here yourself. It works once and is shown only now.",
-    "inviteMake": "Make the invitation",
-    "inviteNoAddress": "no address",
-    "inviteSend": "Send invitation",
-    "inviteSent": "Invitation sent to {{email}}.",
-    "last": "Last signed in",
-    "lead_one": "{{count}} account.",
-    "lead_other": "{{count}} accounts.",
     "limitField": "Limit in GB",
     "limitRemove": "Remove the limit",
     "limitSet": "Set",
     "limitText": "Once reached, writing goes on, new attachments do not.",
     "limitTitle": "Storage limit for {{name}}",
     "limitUsed": "In use: {{used}}",
-    "makeMember": "Make member",
-    "makeOperator": "Make operator",
-    "never": "never",
-    "person": "Person",
-    "resetFactor": "Reset the second factor",
-    "resetLink": "Reset link …",
-    "resetLinkFor": "Reset link for {{name}}",
-    "resetLinkMake": "Make the link",
-    "resetLinkShown": "Send this link to {{name}}. It works once and is shown only now.",
-    "resetLinkText": "With this link {{name}} sets a new password themselves; you never learn it. Until then the old one stays. Using the link signs the account out everywhere and ends its paired devices, and at the next sign-in it is told that its password was reset through your link.",
-    "restore": "Bring back",
-    "role": "Role",
-    "sendMail": "Send by mail",
-    "setLimit": "Storage limit …",
-    "signOut": "Sign out everywhere",
     "storage": "Storage",
-    "title": "Accounts",
-    "unblock": "Unblock",
-    "unlink": "Unlink from {{name}}",
-    "until": "until {{day}}",
     "usedNoLimit": "{{used}} · no limit",
     "usedOf": "{{used}} of {{limit}}",
-    "valid": "Valid for",
-    "withdraw": "Withdraw",
     "withdrawn": "Invitation withdrawn.",
-    "invited": "invited",
-    "inviteOpen": "Invitation open",
     "privacy": "You see names, storage and sign-in, never calendars, events or access data.",
     "countCalendars_one": "{{count}} calendar",
     "countCalendars_other": "{{count}} calendars",
     "countEvents_one": "{{count}} event",
-    "countEvents_other": "{{count}} events"
+    "countEvents_other": "{{count}} events",
+    "storageLimit": "Storage limit",
+    "removeNumbers": "It has {{calendars}} with {{events}} and {{shared}}. What it shared disappears for the others with a notice.",
+    "privacyTitle": "What you see"
   },
   "app": {
     "home": "Go to Today",
@@ -113,12 +31,10 @@
     "backToLogin": "To the sign-in",
     "code": {
       "back": "Back to the password",
-      "hint": "Six digits, or a recovery code from paper.",
       "label": "Code",
       "text": "The code from your authenticator app, or a recovery code.",
       "title": "Second factor"
     },
-    "email": "Email",
     "invite": {
       "expiredText": "This invitation has expired. Ask for a new one.",
       "expiredTitle": "Invitation expired",
@@ -134,15 +50,11 @@
     },
     "login": {
       "ended": "Your session has ended. Sign in again.",
-      "forgot": "Forgot your password?",
-      "forgotText": "The operator can make you a link in the settings under “Accounts”, with which you set a new password yourself.",
       "noAccount": "No account? Ask the operator for an invitation.",
       "submit": "Sign in",
       "title": "Sign in to nextime"
     },
-    "name": "Name",
     "password": "Password",
-    "passwordConfirm": "Confirm password",
     "reset": {
       "doneText": "Sign in with your new password now.",
       "doneTitle": "Password set",
@@ -151,7 +63,7 @@
       "invalidText": "This link has been used already or was replaced by a newer one.",
       "invalidTitle": "Link not valid",
       "submit": "Set the password",
-      "text": "For {{name}}. Every session and paired device of the account ends; afterwards you sign in with the new password.",
+      "text": "For {{name}}. Every sign-in in a browser ends; then you sign in with the new password and see which devices still have access.",
       "title": "Set a new password"
     }
   },
@@ -197,7 +109,6 @@
     "log_level_from_environment": "The log level is fixed by NEXTIME_LOG_LEVEL.",
     "mail_failed": "The mail server did not accept the mail.",
     "mail_off": "No mail server is set up.",
-    "name_missing": "Enter a name.",
     "name_taken": "This name is taken.",
     "network": "The server cannot be reached.",
     "no_offer": "There is no address to take.",
@@ -394,13 +305,11 @@
     "browser_only": "This only works in a browser.",
     "push_ticket_invalid": "The ticket or the key for notifications is not usable.",
     "too_many_ops": "At most 50 changes at once.",
-    "event_unknown": "The event is not there yet. The file waits until it has been made."
+    "event_unknown": "The event is not there yet. The file waits until it has been made.",
+    "use_logout": "Sign out of this browser with Sign out."
   },
   "me": {
-    "emailDecline": "Don't ask again",
     "emailDeclined": "nextime no longer asks about this address.",
-    "emailOffer": "A sign-in provider knows you as {{address}}. Should nextime take this address?",
-    "emailTake": "Take it",
     "emailTaken": "Address taken.",
     "linked": "Your account is linked to {{name}}.",
     "looks": {
@@ -421,23 +330,14 @@
       "submit": "Change password"
     },
     "profile": {
-      "role": "Role: {{role}}",
       "saved": "Profile saved.",
-      "title": "Profile",
       "viaPassword": "Signs in with a password",
       "viaProvider": "Signs in through {{name}}",
-      "provider": "a provider",
-      "factorOn": "second factor on",
-      "factorOff": "second factor off",
-      "factorProvider": "second factor at the provider"
+      "provider": "a provider"
     },
-    "security": {
-      "title": "Sign-in and security"
-    },
+    "security": {},
     "sessions": {
-      "done": "Every other browser is signed out.",
-      "submit": "Sign out everywhere else",
-      "text": "Signs you out everywhere except here, for example after losing a phone."
+      "done": "Every other browser is signed out."
     },
     "setupFirst": "The operator requires a second factor. Set it up here, then you can go on.",
     "signOut": {
@@ -450,10 +350,7 @@
     "picture": {
       "remove": "Remove picture",
       "saved": "Profile picture saved.",
-      "removed": "Profile picture removed.",
-      "hint": "Shows on your events in shared calendars.",
-      "change": "Another picture",
-      "add": "Upload a profile picture"
+      "removed": "Profile picture removed."
     }
   },
   "nav": {
@@ -622,7 +519,7 @@
     "texts_other": "{{count}} texts",
     "trash": "Empty the trash after",
     "twoFactorRequired": "Require a second factor",
-    "twoFactorRequiredHint": "Every account that signs in with a password must set one up before it gets further. Accounts from a sign-in provider bring the provider's. An account with a password is not affected either when it comes in through a provider for which “{{trusts}}” is on.",
+    "twoFactorRequiredHint": "Accounts from a sign-in provider bring the provider's. An account with a password is not affected either when it comes in through a provider for which “{{trusts}}” is on.",
     "untitled": "Untitled",
     "upload": "Upload language",
     "uploadBackup": "Upload a backup",
@@ -708,11 +605,8 @@
     "showLog": "Show log"
   },
   "session": {
-    "again": "Sign in again",
     "blockedText": "The operator has blocked your account. Nothing more is saved. Ask the operator.",
     "blockedTitle": "Your account is blocked",
-    "expiredText": "Your sign-in has expired. What you wrote stays here and is saved as soon as you are signed in again.",
-    "expiredTitle": "Please sign in again",
     "leave": "To the sign-in",
     "signOutAnyway": "Sign out anyway",
     "wait": "Wait",
@@ -797,19 +691,16 @@
         "title": "Take along and move",
         "text": "Save calendars as files, load files and move away from iCloud or Google."
       }
-    }
+    },
+    "later": "Comes in a later version."
   },
   "setup": {
-    "code": "Setup code",
-    "codeHint": "It is in the container's log, or you set it yourself.",
     "folder": "Data folder {{path}}",
     "free": "{{size}} free",
-    "passwordHint_one": "At least {{count}} character. You set up the second factor right afterwards.",
-    "passwordHint_other": "At least {{count}} characters. You set up the second factor right afterwards.",
+    "passwordHint_one": "At least {{count}} character.",
+    "passwordHint_other": "At least {{count}} characters.",
     "share": "The data folder lies on a network share (NFS or SMB). That can damage events. A local disk is better.",
     "submit": "Set up",
-    "text": "The first account becomes the operator. You find the setup code in the log of the container.",
-    "title": "Set up nextime",
     "version": "Version {{version}}"
   },
   "theme": {
@@ -826,21 +717,14 @@
     "codesLead": "Each one signs you in once, when the phone is not at hand. They are shown only now: copy them or save them as a file, and keep them apart from the phone.",
     "codesTitle": "Your recovery codes",
     "confirm": "Turn on",
-    "disable": "Turn off",
     "disableText": "From then on the password alone signs you in. Enter it to turn the second factor off.",
-    "enable": "Set up",
     "lowCodes": "Few recovery codes left. Create new ones while you can still sign in.",
-    "off": "Off.",
-    "on_one": "On. {{count}} recovery code left.",
-    "on_other": "On. {{count}} recovery codes left.",
     "passwordHint": "Proves it is you at the keyboard.",
     "provider": "You sign in through the provider; its second factor applies.",
     "qr": "QR code for the authenticator app",
-    "renew": "New recovery codes",
     "renewText": "The old recovery codes stop working. Enter your password to create new ones.",
     "scan": "Scan this code with the app, or type the key below into it. Then enter the code the app shows, and your password.",
-    "secret": "Key to type in:",
-    "title": "Second factor"
+    "secret": "Key to type in:"
   },
   "views": {
     "weekNumber": "W{{number}}",
@@ -957,9 +841,6 @@
       "more": "Show more"
     },
     "nextEvents": "Next events"
-  },
-  "account": {
-    "later": "Comes in a later version."
   },
   "display": {
     "weekStart": "First day of the week",
@@ -1271,7 +1152,7 @@
     "codeValid_other": "The code is valid for {{count}} minutes.",
     "others": "Android, Thunderbird and others",
     "address": "Address",
-    "user": "Name",
+    "user": "Username",
     "password": "Device password",
     "onlyNow": "The device password is visible only now.",
     "noSignInPassword": "You do not need your sign-in password there.",
@@ -2528,5 +2409,9 @@
     "invalid": "The nextime app opens this page itself. Start connecting in the app.",
     "doneTitle": "Connected",
     "done": "Carry on in the app."
+  },
+  "emailLink": {
+    "title": "Confirm the new address",
+    "submit": "Confirm"
   }
 }

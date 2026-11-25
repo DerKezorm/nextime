@@ -11,6 +11,7 @@ import { api, ApiError } from './api/client'
 import de from './i18n/de.json'
 import en from './i18n/en.json'
 import i18n from './i18n'
+import { errorText } from './lib/errors'
 import { AuthProvider } from './state/auth'
 
 type Answer = { status: number; body: unknown }
@@ -89,7 +90,8 @@ const refusal = (code: string): Answer => ({ status: 422, body: { detail: { code
 /** The page's text, and that the refusal's sentence is in it with the server's number. */
 function shows(code: string): void {
   expect(document.body.textContent).not.toContain('{{')
-  expect(document.body.textContent).toContain(i18n.t(`errors.${code}`, VALUES[code]))
+  // The sentence the page builds (``errorText``): a code of the shared account module in its words (account.*).
+  expect(document.body.textContent).toContain(errorText(code, VALUES[code]))
 }
 
 const SETUP = { needs_setup: true, code_required: true, signed_in: false, version: '0.1.0', min_password: 12, data_on_share: false }
@@ -110,7 +112,7 @@ describe.each(['en', 'de'])('no raw placeholder in a refusal (%s)', (language) =
     const fields = [...box.querySelectorAll('input')]
     type(fields[0], 'AB12-CD34-EF56')
     type(fields[1], 'Robin')
-    type(fields[3], 'eleven char')
+    type(fields[4], 'eleven char')
     await act(async () => box.querySelector('form')!.requestSubmit())
     await settle()
     shows('password_too_short')
@@ -126,8 +128,8 @@ describe.each(['en', 'de'])('no raw placeholder in a refusal (%s)', (language) =
     await render(<AuthProvider><SetupPage /></AuthProvider>, '/setup')
     const fields = [...box.querySelectorAll('input')]
     type(fields[1], 'Robin')
-    type(fields[3], 'twelve chars')
     type(fields[4], 'twelve chars')
+    type(fields[5], 'twelve chars')
     await act(async () => box.querySelector('form')!.requestSubmit())
     await settle()
     shows(code)
@@ -152,8 +154,8 @@ describe.each(['en', 'de'])('no raw placeholder in a refusal (%s)', (language) =
     )
     const fields = [...box.querySelectorAll('input')]
     type(fields[0], 'Lena')
-    type(fields[2], 'eleven char')
     type(fields[3], 'eleven char')
+    type(fields[4], 'eleven char')
     await act(async () => box.querySelector('form')!.requestSubmit())
     await settle()
     shows(code)

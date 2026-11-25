@@ -8,6 +8,8 @@ import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { waitingChanges } from '../state/account'
+import { Notice } from '../vendor/nexui'
+import { AccountButton } from './AccountButton'
 import { useAuth } from '../state/auth'
 
 /** `ask` signs out at once, or first sets `waiting` to the changes that would be lost; `wait` takes the question back. */
@@ -29,16 +31,17 @@ export function useSignOut() {
 export function SignOutWaiting({ count, onAnyway, onWait }: { count: number; onAnyway: () => void; onWait: () => void }) {
   const { t } = useTranslation()
   return (
-    <div role="alert" className="space-y-3 rounded-[10px] border border-warn-500/40 px-3.5 py-3" data-testid="sign-out-waiting">
-      <p className="text-sm font-medium text-warn-500">{t('session.waitingText', { count })}</p>
-      <div className="flex flex-wrap justify-end gap-2">
-        <button type="button" className="nt-btn nt-btn-ghost" data-testid="sign-out-anyway" onClick={onAnyway}>
-          {t('session.signOutAnyway')}
-        </button>
-        <button type="button" className="nt-btn nt-btn-accent" data-testid="sign-out-wait" onClick={onWait}>
-          {t('session.wait')}
-        </button>
-      </div>
+    <div role="alert" data-testid="sign-out-waiting">
+      <Notice tone="warn" title={t('session.waitingText', { count })}>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <AccountButton name="back" testId="sign-out-wait" onClick={onWait}>
+            {t('session.wait')}
+          </AccountButton>
+          <AccountButton name="signOut" testId="sign-out-anyway" onClick={onAnyway}>
+            {t('session.signOutAnyway')}
+          </AccountButton>
+        </div>
+      </Notice>
     </div>
   )
 }

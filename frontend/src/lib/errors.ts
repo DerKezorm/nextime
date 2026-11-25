@@ -1,9 +1,27 @@
 import { ApiError } from '../api/client'
 import i18n from '../i18n'
+import { accountErrorKey } from '../vendor/nexkonten/konten'
+import { mailErrorKey } from '../vendor/nexpost/post'
 import { oidcErrorKey } from '../vendor/nexoidc/oidc'
 
-/** The sentence for a server's error code, in the language of the page; an unknown code gets the general one. */
+/** The codes nextime answered with before the shared account module, and the module's names for them (the server's
+ * `konten_store.OLD_CODES` the other way round). */
+export const OLD_ACCOUNT_CODES: Readonly<Record<string, string>> = {
+  invalid_email: 'email_invalid',
+  name_taken: 'username_taken',
+  invalid_account_name: 'username_invalid',
+  totp_code_wrong: 'code_wrong',
+  second_factor_expired: 'sign_in_expired',
+}
+
+/** The sentence for a server's error code, in the language of the page; an unknown code gets the general one. The
+ * codes of the shared account and post modules bring their sentences with the modules (`account.*`, `mail.error.*`),
+ * the same in every nex app. */
 export function errorText(code: string, values: Record<string, unknown> = {}): string {
+  const account = accountErrorKey(code, OLD_ACCOUNT_CODES)
+  if (account !== 'account.error.unknown' && i18n.exists(account)) return i18n.t(account, values)
+  const mail = mailErrorKey(code)
+  if (mail !== 'mail.error.unknown' && i18n.exists(mail)) return i18n.t(mail, values)
   const key = `errors.${code}`
   if (i18n.exists(key)) return i18n.t(key, values)
   // The fixed codes of sign-in through a provider bring their sentences with the shared module (`oidc.error.*`).

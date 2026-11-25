@@ -76,11 +76,14 @@ describe('TIME-2 My account', () => {
     }))
     await render(<AuthProvider><App /></AuthProvider>, '/settings/profile')
     expect(box.querySelector('[data-testid="sign-in-way"]')!.textContent).toContain('Anmeldung mit Passwort')
-    expect(box.querySelector('[data-testid="second-factor-state"]')!.textContent).toBe('zweiter Faktor an')
     const name = [...box.querySelectorAll<HTMLInputElement>('#profile input')].find((field) => field.value === 'Anna')!
     type(name, 'Anna Berg')
     await click(byText('Speichern', box.querySelector('#profile')!))
+    // Display name, username and address go with one button (konten 0.3.7); an unchanged username is not sent.
     expect(saved).toEqual({ display_name: 'Anna Berg', email: 'anna@example.com' })
+    // Whether the second factor is on, says Security since the shared account module ("An" beside its heading).
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/security')
+    expect(box.querySelector('[data-testid="second-factor-state"]')!.textContent).toBe('An')
   })
 
   it('TIME-2 AC-8 an account from authentik reads "Anmeldung über authentik"', async () => {
@@ -101,7 +104,8 @@ describe('TIME-2 My account', () => {
     })
     await render(<AuthProvider><App /></AuthProvider>, '/settings/profile')
     expect(box.textContent).toContain('Profilbild hochladen')
-    expect(box.textContent).toContain('Erscheint an deinen Terminen in geteilten Kalendern.')
+    // Who sees it, in the words of the shared account module (konten 0.3.6, `PAGES.profile`).
+    expect(box.textContent).toContain(i18n.t('account.pictureHint'))
     const input = box.querySelector<HTMLInputElement>('[data-testid="picture-file"]')!
     const file = new File([new Uint8Array([0xff, 0xd8, 0xff])], 'me.jpg', { type: 'image/jpeg' })
     Object.defineProperty(input, 'files', { value: [file] })
@@ -109,10 +113,9 @@ describe('TIME-2 My account', () => {
     await settle()
     expect(calls.some((call) => call.method === 'PUT' && call.path === '/api/auth/avatar')).toBe(true)
     expect(box.querySelector('[data-testid="profile-picture"] img')!.getAttribute('src')).toContain('/api/avatars/1')
-    // With a picture, as in nexnotes: "Anderes Bild" and "Bild entfernen".
+    // With a picture, as the module says: "Profilbild hochladen" stays, "Bild entfernen" comes.
     const shownPicture = box.querySelector<HTMLElement>('[data-testid="profile-picture"]')!
-    expect(shownPicture.textContent).toContain('Anderes Bild')
-    expect(shownPicture.textContent).not.toContain('Profilbild hochladen')
+    expect(shownPicture.textContent).toContain('Profilbild hochladen')
     expect(byText('Bild entfernen', shownPicture)).toBeDefined()
   })
 
@@ -139,7 +142,10 @@ describe('TIME-2 the accounts of the server', () => {
     { id: 1, name: 'tester', display_name: 'Tester', email: 'tester@example.com', role: 'operator', sign_in: 'password', language: '', two_factor: false, created_at: '2026-11-01T00:00:00Z', last_seen_at: '2026-11-22T09:00:00Z', locked: false, blocked: false, blocked_at: null, deleted_at: null, purge_at: null, has_password: true, providers: [], storage_used: 1024, storage_limit: null },
     { id: 2, name: 'anna', display_name: '<b>Anna</b> 🦄', email: 'anna@example.com', role: 'member', sign_in: 'password', language: '', two_factor: false, created_at: '2026-11-02T00:00:00Z', last_seen_at: null, locked: false, blocked: false, blocked_at: null, deleted_at: null, purge_at: null, has_password: true, providers: [], storage_used: 0, storage_limit: null },
   ]
-  const INVITES = [{ id: 5, role: 'member', email: 'ben@example.com', by: 'Tester', created_at: '2026-11-20T00:00:00Z', expires_at: '2026-11-27T00:00:00Z' }]
+  const INVITES = [
+    { id: 5, role: 'member', email: 'ben@example.com', by: 'Tester', created_at: '2026-11-20T00:00:00Z', expires_at: '2099-11-27T00:00:00Z' },
+    { id: 6, role: 'operator', email: '', display_name: 'Lena', by: 'Tester', created_at: '2026-11-01T00:00:00Z', expires_at: '2026-11-02T00:00:00Z', expired: true },
+  ]
 
   function accounts() {
     return signedIn(OPERATOR, (_method, path) => {
@@ -150,16 +156,42 @@ describe('TIME-2 the accounts of the server', () => {
     })
   }
 
-  it('TIME-2 AC-3 AC-6 lists persons with role and the invited person with "Einladung offen", and the sentence below', async () => {
+  it('TIME-2 AC-3 AC-6 lists every person with picture, badges and "Verwalten", the open invitations, and the sentence below', async () => {
     serve(accounts())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/accounts')
-    const heads = [...box.querySelectorAll('[data-testid="account-table"] th')].map((head) => head.textContent)
-    expect(heads.slice(0, 4)).toEqual(['Person', 'Rolle', 'Speicher', 'Zuletzt angemeldet'])
-    const invite = box.querySelector('[data-testid="invite-row"]')!
-    expect(invite.textContent).toContain('ben@example.com')
-    expect(invite.textContent).toContain('eingeladen')
-    expect(invite.querySelector('[data-testid="invite-open"]')!.textContent).toBe('Einladung offen')
+    // The list of the shared account module (konten 0.3.9): one row per account, no table, no menu.
+    expect(box.querySelector('table')).toBeNull()
+    expect(box.querySelector('#accounts')!.textContent).toContain('2 Konten')
+    const own = box.querySelector('[data-testid="account-tester"]')!
+    expect(own.textContent).toContain('Betreiber')
+    expect(own.textContent).toContain('Du')
+    expect(own.textContent).toContain('tester · tester@example.com')
+    expect(byText('Verwalten', own)).toBeDefined()
+    // The invitations as the module's card, an expired one stays until withdrawn.
+    const invites = [...box.querySelectorAll('[data-testid="invite-row"]')]
+    expect(invites[0].textContent).toContain('ben@example.com')
+    expect(invites[0].textContent).toContain('Gilt bis')
+    expect(invites[1].textContent).toContain('Lena')
+    expect(invites[1].textContent).toContain('Abgelaufen')
+    expect(byText('Zurücknehmen', invites[1] as HTMLElement)).toBeDefined()
     expect(box.querySelector('[data-testid="accounts-privacy"]')!.textContent).toBe('Du siehst Namen, Speicher und Anmeldung, nie Kalender, Termine oder Zugangsdaten.')
+  })
+
+  it('TIME-2 AC-6 "Verwalten" shows the facts with the storage and the acts in their groups, nothing forbidden on the own account', async () => {
+    serve(accounts())
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/accounts')
+    await click(byText('Verwalten', box.querySelector<HTMLElement>('[data-testid="account-anna"]')!))
+    const dialog = document.querySelector<HTMLElement>('[data-testid="manage-dialog"]')!
+    expect(dialog.querySelector('[data-testid="fact-storage"]')!.textContent).toContain('ohne Grenze')
+    expect([...dialog.querySelectorAll('h3')].map((head) => head.textContent)).toEqual(['Ändern', 'Zugang', 'Beenden'])
+    const change = dialog.querySelector<HTMLElement>('[data-testid="manage-change"]')!
+    expect([...change.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
+      'Anzeigenamen ändern', 'Benutzernamen ändern', 'Zum Betreiber machen', 'Speichergrenze', 'Adresse entfernen',
+    ])
+    await click(byText('Schließen', dialog) ?? dialog.querySelector<HTMLElement>('button[aria-label]'))
+    await click(byText('Verwalten', box.querySelector<HTMLElement>('[data-testid="account-tester"]')!))
+    const mine = document.querySelector<HTMLElement>('[data-testid="manage-dialog"]')!
+    for (const word of ['Sperren', 'Konto löschen', 'Zum Mitglied machen', 'Link erstellen']) expect(byText(word, mine)).toBeUndefined()
   })
 
   it('TIME-2 EC-7 a name with code shows as text, umlauts and emoji stay', async () => {
@@ -173,11 +205,14 @@ describe('TIME-2 the accounts of the server', () => {
   it('TIME-2 AC-4 deleting asks with the number of calendars, events and shared calendars and the 30 days', async () => {
     serve(accounts())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/accounts')
-    await click(box.querySelector('[data-testid="account-anna"] [data-testid="account-menu-button"]'))
-    await click(byText('Konto löschen …') ?? byText('Löschen …') ?? [...document.querySelectorAll('[role="menuitem"]')].at(-1))
-    const dialog = document.querySelector('[role="dialog"]')!
-    expect(dialog.textContent).toContain('2 Kalender mit 17 Termine und 1 geteilten Kalender')
-    expect(dialog.textContent).toContain('30 Tage')
+    await click(byText('Verwalten', box.querySelector<HTMLElement>('[data-testid="account-anna"]')!))
+    await click(byText('Konto löschen', document.querySelector<HTMLElement>('[data-testid="manage-dialog"]')!))
+    const dialogs = [...document.querySelectorAll('[role="dialog"]')]
+    const dialog = dialogs[dialogs.length - 1]!
+    // The module's sentence, then nextime's numbers, then how long it can come back (konten 0.3.9, `removeLines`).
+    expect(dialog.textContent).toContain('wird gelöscht')
+    expect(dialog.querySelector('[data-testid="remove-numbers"]')!.textContent).toContain('2 Kalender mit 17 Termine und 1 geteilten Kalender')
+    expect(dialog.textContent).toContain('30 Tage lang kannst du es zurückholen')
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false)
   })
 
@@ -198,7 +233,7 @@ describe('TIME-2 the accounts of the server', () => {
 })
 
 describe('TIME-2 passwords and sessions', () => {
-  it('TIME-2 AC-2 a wrong address or password says "Adresse oder Passwort stimmt nicht."', async () => {
+  it('TIME-2 AC-2 a wrong address or password says "Benutzername, E-Mail oder Passwort stimmt nicht."', async () => {
     serve((method, path) => {
       if (path === '/api/setup') return ok({ needs_setup: false, code_required: true, signed_in: false, version: '0.1.0', min_password: 12 })
       if (path === '/api/auth/methods') return ok({ password: true, providers: [] })
@@ -211,24 +246,26 @@ describe('TIME-2 passwords and sessions', () => {
     type(fields[1], 'a wrong password')
     await act(async () => box.querySelector('form')!.requestSubmit())
     await settle()
-    expect(box.textContent).toContain('Adresse oder Passwort stimmt nicht.')
+    // One sentence for all of it, the shared account module's (`account.wrong`).
+    expect(box.textContent).toContain('Benutzername, E-Mail oder Passwort stimmt nicht.')
   })
 
   it('TIME-2 AC-10 the second password field says when the two differ and nothing is sent', async () => {
     serve((_method, path) => (path === '/api/setup' ? ok({ needs_setup: true, code_required: true, signed_in: false, version: '0.1.0', min_password: 12, https: true }) : undefined))
     await render(<AuthProvider><App /></AuthProvider>, '/setup')
+    // Code, display name, username, address, password, password again (konten `SCREENS.setup`).
     const fields = [...box.querySelectorAll('input')]
     type(fields[0], 'AB12-CD34-EF56')
     type(fields[1], 'Robin')
-    type(fields[3], 'twelve chars')
-    type(fields[4], 'twelve charz')
+    type(fields[4], 'twelve chars')
+    type(fields[5], 'twelve charz')
     await click(byText('Einrichten', box))
     expect(calls.some((call) => call.method === 'POST')).toBe(false)
-    const confirm = fields[4]
+    const confirm = fields[5]
     expect(confirm.getAttribute('aria-invalid')).toBe('true')
     // Eleven characters: said before anything is sent.
-    type(fields[3], 'eleven char')
     type(fields[4], 'eleven char')
+    type(fields[5], 'eleven char')
     await click(byText('Einrichten', box))
     expect(calls.some((call) => call.method === 'POST')).toBe(false)
     expect(box.textContent).toContain('12')

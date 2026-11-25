@@ -244,6 +244,8 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
       await open(`/settings/${slug}`)
       for (const card of box.querySelectorAll<HTMLElement>('main section')) {
         if (card.getAttribute('aria-labelledby') === 'about-facts-title') continue
+        // A box inside a card (the shared kit's `Box`, `ButtonGroup`) is part of that card, not a card of its own.
+        if (card.parentElement?.closest('main section')) continue
         const head = card.firstElementChild!
         // The connection to another app shows that app's mark instead of the symbol (as nexnotes).
         if (head.querySelector('[data-testid="card-logo"]')) {
@@ -251,7 +253,8 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
           continue
         }
         expect(head.querySelector('span svg'), `${slug} ${card.id}`).not.toBeNull()
-        expect(head.querySelector('span')!.className, `${slug} ${card.id}`).toContain('bg-[var(--color-accent-wash)]')
+        // The app's own cards and those of the shared kit (bauplaene/ui) tint the box with the accent alike.
+        expect(head.querySelector('span')!.className, `${slug} ${card.id}`).toMatch(/bg-\[var\(--color-accent-wash\)\]|bg-\[color-mix\(in_srgb,var\(--nexui-accent\)/)
         expect(head.querySelector('h2')?.textContent, `${slug} ${card.id}`).toBeTruthy()
       }
     }
@@ -294,7 +297,8 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     ['storage', ['backups']],
     ['google', ['google']],
     ['devices', ['app-devices', 'devices-new', 'devices-list']],
-    ['accounts', ['accounts']],
+    // The module's list (konten 0.3.9), then nextime's own card with the sentence on what the operator sees.
+    ['accounts', ['accounts', 'accounts-privacy-card']],
     ['log', ['log']],
   ])('TIME-2 AC-7 %s shows its cards and no others', async (slug, ids) => {
     serve(server())
@@ -312,16 +316,18 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     await open('/settings/profile')
     expect($('display-fields')).toBeNull()
     expect($('profile-picture')).not.toBeNull()
-    // As in nexnotes: picture, name and address beside each other with "Speichern", the role, then the language.
+    // As the shared account module lays it out (konten 0.3.7): picture, then display name, username and address one
+    // under the other with one "Speichern", the language, the role small at the end.
     const profile = box.querySelector('#profile')!
     const order = ['profile-picture', 'language-select'].map((id) => profile.querySelector(`[data-testid="${id}"]`)!)
     expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     const form = profile.querySelector('form')!
-    expect(form.className).toContain('sm:grid-cols-[1fr_1fr_auto]')
-    expect([...form.querySelectorAll('input')].map((field) => field.type)).toEqual(['text', 'email'])
+    expect(form.className).toContain('flex-col')
+    expect([...form.querySelectorAll('input')].map((field) => field.type)).toEqual(['text', 'text', 'email'])
     expect(byText('Speichern', form)).toBeDefined()
-    const role = [...profile.querySelectorAll('p')].find((line) => line.textContent === 'Rolle: Mitglied')!
-    expect(role.compareDocumentPosition($('language-select')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const role = $('profile-role')!
+    expect(role.textContent).toContain('Mitglied')
+    expect($('language-select')!.compareDocumentPosition(role) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Below it a card of its own: "Abmelden" with its line and button.
     expect(cards()).toEqual(['profile', 'sign-out'])
     expect(box.querySelector('#sign-out')!.textContent).toContain(i18n.t('me.signOut.text'))

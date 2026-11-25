@@ -83,8 +83,11 @@ describe('TIME-3 the section "Darstellung"', () => {
     expect(looks.querySelector<HTMLSelectElement>('#display-week-start')!.options).toHaveLength(7)
     // As in nexnotes, the language travels with the account and stands in the profile, with its hint.
     await render(<AuthProvider><App /></AuthProvider>, '/settings/profile')
-    const language = box.querySelector('#profile [data-testid="language-select"]')!.closest('label')!
-    expect(language.textContent).toContain('Sprache (gilt auf allen deinen Geräten)')
+    // The field of the shared account module (`PAGES.profile`, "Sprache") with nextime's hint joined to it.
+    const select = box.querySelector<HTMLSelectElement>('#profile [data-testid="language-select"]')!
+    expect(box.querySelector(`label[for="${select.id}"]`)!.textContent).toBe('Sprache')
+    const hints = (select.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent)
+    expect(hints).toContain(i18n.t('me.looks.languageHint'))
   })
 
   it('TIME-3 AC-2 AC-3 AC-8 AC-6 each choice goes to the account at once', async () => {

@@ -167,7 +167,7 @@ describe('the account page', () => {
       if (path === '/api/oidc/me') return { status: 200, body: mine }
       if (path === '/api/locales') return { status: 200, body: [] }
       if (path === '/api/oidc/entra/link' && method === 'POST') return { status: 200, body: { url: 'https://login.example.com/authorize' } }
-      if (path === '/api/oidc/me/address') return { status: 200, body: { email: 'alex@example.com' } }
+      if (path === '/api/oidc/me/address') return { status: 200, body: { ...me, ...change, email: 'alex@example.com', provider_email: '' } }
       if (path === '/api/auth/me') return { status: 200, body: { ...me, ...change } }
       return undefined
     }
@@ -185,10 +185,12 @@ describe('the account page', () => {
       `Microsoft${i18n.t('oidc.account.notLinked')}${i18n.t('oidc.account.link')}`,
     ])
     await click(i18n.t('oidc.account.link'))
-    const field = rows[1].querySelector<HTMLInputElement>('input[type="password"]')!
+    // The password is asked in a dialog of the shared kit (ConfirmDialog), as in nexmail.
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!
+    const field = dialog.querySelector<HTMLInputElement>('input[type="password"]')!
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, 'secret words')
     act(() => void field.dispatchEvent(new Event('input', { bubbles: true })))
-    await act(async () => rows[1].querySelector('form')!.requestSubmit())
+    await act(async () => dialog.querySelector('form')!.requestSubmit())
     await settle()
     expect(calls.find((call) => call.path === '/api/oidc/entra/link')?.body).toEqual({ password: 'secret words' })
     expect(assigned).toEqual(['https://login.example.com/authorize'])
@@ -199,16 +201,46 @@ describe('the account page', () => {
     expect(box.textContent).toContain(i18n.t('me.linked', { name: 'Microsoft' }))
   })
 
+  it('says that the profile is saved, and that a provider is linked, in one green notice of the shared kit, as nexmail does', async () => {
+    await account('/account?linked=entra', [{ slug: 'entra', label: 'Microsoft', linked: true, managed: '' }])
+    const plain = (line: Element | null) => {
+      expect(line).not.toBeNull()
+      expect(line!.className).toContain('var(--nexui-ok)')
+      return line!.textContent
+    }
+    expect(plain(box.querySelector('[role="status"]'))).toBe(i18n.t('me.linked', { name: 'Microsoft' }))
+
+    const shown = handler
+    handler = (method, path, body) =>
+      path === '/api/me/profile' && method === 'PUT' ? { status: 200, body: { ...me, display_name: 'Alex A.' } } : shown(method, path, body)
+    const name = box.querySelector<HTMLInputElement>('input[autocomplete="name"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Alex A.')
+    act(() => void name.dispatchEvent(new Event('input', { bubbles: true })))
+    await act(async () => name.closest('form')!.requestSubmit())
+    await settle()
+    expect(calls.find((call) => call.path === '/api/me/profile')?.body).toEqual({ display_name: 'Alex A.', email: '' })
+    expect(plain(box.querySelector('[role="status"]'))).toBe(i18n.t('me.profile.saved'))
+  })
+
   it('keeps the last link of an account without a password, and says so', async () => {
     await account('/settings/security', [{ slug: 'entra', label: 'Microsoft', linked: true, managed: '' }], { sign_in: 'oidc' })
     expect(buttons()).not.toContain(i18n.t('oidc.account.unlink'))
     expect(box.textContent).toContain(i18n.t('oidc.account.only', { name: 'Microsoft' }))
   })
 
-  it('offers the address a provider knows; taking it asks the server', async () => {
-    await account('/settings/profile', [], { provider_email: 'alex@example.com' })
-    expect(box.querySelector('[data-testid="mail-offer"]')?.textContent).toContain('alex@example.com')
-    await click(i18n.t('me.emailTake'))
-    expect(calls.some((call) => call.method === 'POST' && call.path === '/api/oidc/me/address')).toBe(true)
+  it('offers the address a provider knows; taking it asks the own password, then the server', async () => {
+    await account('/account', [{ slug: 'entra', label: 'Microsoft', linked: true, managed: '' }], { provider_email: 'alex@example.com' })
+    const offer = box.querySelector('[data-testid="mail-offer"]')?.textContent ?? ''
+    expect(offer).toContain(i18n.t('account.providerEmailOffer', { provider: 'Microsoft' }))
+    expect(offer).toContain('alex@example.com')
+    await click(i18n.t('account.providerEmailTake'))
+    expect(calls.some((call) => call.path === '/api/oidc/me/address')).toBe(false)
+    const field = document.querySelector<HTMLInputElement>('input[autocomplete="current-password"]')!
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(field, 'secret words')
+    act(() => void field.dispatchEvent(new Event('input', { bubbles: true })))
+    await act(async () => field.form!.requestSubmit())
+    await settle()
+    const taken = calls.find((call) => call.method === 'POST' && call.path === '/api/oidc/me/address')
+    expect(taken?.body).toEqual({ password: 'secret words' })
   })
 })

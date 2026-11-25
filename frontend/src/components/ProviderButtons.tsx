@@ -7,17 +7,8 @@ import { useTranslation } from 'react-i18next'
 
 import type { ProviderButton } from '../api/client'
 import { go, startAddress } from '../lib/providers'
-
-export function OrLine() {
-  const { t } = useTranslation()
-  return (
-    <div className="my-4 flex items-center gap-3 text-xs text-mist-600">
-      <span className="h-px flex-1 bg-ink-700" />
-      {t('oidc.login.or')}
-      <span className="h-px flex-1 bg-ink-700" />
-    </div>
-  )
-}
+import { OrLine } from '../vendor/nexui'
+import { AccountButton } from './AccountButton'
 
 export function ProviderButtons({
   providers,
@@ -37,17 +28,12 @@ export function ProviderButtons({
   if (providers.length === 0) return null
   return (
     <>
-      {withOr && <OrLine />}
-      <div className="space-y-2" data-testid="provider-buttons">
+      {withOr && <OrLine>{t('oidc.login.or')}</OrLine>}
+      <div className="flex flex-col gap-2" data-testid="provider-buttons">
         {providers.map((provider) => (
-          <button
-            key={provider.slug}
-            type="button"
-            onClick={() => go(startAddress(provider.slug, { invite, next }))}
-            className="nt-btn nt-btn-ghost w-full"
-          >
+          <AccountButton key={provider.slug} name="oidc.login.button" wide onClick={() => go(startAddress(provider.slug, { invite, next }))}>
             {invite ? t('oidc.invite.button', { name: provider.label }) : t('oidc.login.button', { name: provider.label })}
-          </button>
+          </AccountButton>
         ))}
       </div>
     </>
