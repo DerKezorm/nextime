@@ -265,6 +265,7 @@ for module in ROUTERS + FEATURE_ROUTERS:
 # Google's way back after "Continue to Google", and the operator's Google set-up (TIME-16).
 app.include_router(sources_router.callback_router)
 app.include_router(sources_router.server_router)
+app.include_router(settings_router.mail_router)
 app.include_router(sources_router.invitations_router)
 # The description of the API for programs, for members signed in (TIME-26 AC-8).
 app.include_router(api_v1_router.docs_router)

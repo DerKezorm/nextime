@@ -60,7 +60,7 @@ def deliver_now(db: Session, mail: nexkonten.Mail) -> None:
         raise mailer.MailError("mail_off", "No mail server is set up.")
     account = db.get(Account, int(mail.account_id)) if str(mail.account_id).isdigit() else None
     letter = nexpost.letters.from_account_mail(mail, language=mailer.language_for(db, account), link=link_for(db, mail))
-    mailer.deliver_letter(db, letter)
+    mailer.deliver_now(db, letter)
 
 
 def queue(db: Session, mail: nexkonten.Mail | None, *, by: str = "", where: str = "", days: int = 0) -> bool:

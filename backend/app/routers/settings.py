@@ -15,13 +15,16 @@ from pydantic import BaseModel, Field, StrictBool, StrictInt
 from sqlalchemy import func, select
 
 from ..config import get_settings
-from ..deps import DbSession, OperatorAccount, unknown_proxy_seen
+from ..deps import DbSession, OperatorAccount, require_operator, unknown_proxy_seen
 from ..errors import error
 from ..models import Account as AccountRow
 from ..security import encrypt_secret
 from ..services import accounts, backup_hooks, mailer, mounts, settings_service, storage
 from ..services.oidc_store import SqlStore
+from ..services.post_store import PostStore
+from ..vendor import nexpost
 from ..vendor.nexoidc import authentik
+from ..vendor.nexpost import api as nexpost_api
 from ..vendor.nexsicherung.model import TIME as TIME_PATTERN
 from . import server_signin
 
@@ -243,7 +246,20 @@ def mail_test(payload: TestMailIn, operator: OperatorAccount, db: DbSession) -> 
     known = db.scalar(select(AccountRow).where(func.lower(AccountRow.email) == to.lower()).limit(1))
     language = mailer.language_for(db, known, *mailer.languages(operator, payload.language))
     try:
-        mailer.send_test(db, to, language)
-    except mailer.MailError as exc:
+        # The post module's test mail (post 1.1.0): the app's logo, the same in every app.
+        nexpost.outbox.test_mail(PostStore(db), to, language=language)
+    except nexpost.MailError as exc:
+        # The server's answer can quote addresses; only its kind goes to the log.
+        logger.warning("Mail not sent code=%s", exc.code)
         # No mail server is a setting, not a failing server: no gateway error, no ERROR in the log.
-        raise error(exc.code, str(exc), 409 if exc.code == "mail_off" else 502) from exc
+        code = mailer.old_code(exc.code)
+        raise error(code, str(exc), 409 if code == "mail_off" else 502, mail_code=exc.code) from exc
+
+
+def _post_store(db: DbSession) -> PostStore:
+    return PostStore(db)
+
+
+#: Server › Mail of the shared post module (post 1.1.0): view, save, test mail under ``/api/server/mail``. The old ways
+#: (``/api/settings`` with ``smtp_*``, ``POST /api/settings/mail-test``) stay as they were.
+mail_router = nexpost_api.router(operator=require_operator, store=_post_store, error=error, tags=["settings"])

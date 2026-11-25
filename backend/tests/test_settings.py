@@ -158,11 +158,15 @@ def test_a_failing_mail_server_says_so_without_its_answer(
 
 
 def test_mail_off_without_a_server() -> None:
+    """The test mail of the post module (post 1.1.0) without a mail server: ``mail_off``, as nextime said before."""
+    from app.services.post_store import PostStore
+    from app.vendor import nexpost
+
     with SessionLocal() as db:
         assert mailer.configured(db) is False
-        with pytest.raises(mailer.MailError) as caught:
-            mailer.send_test(db, "dora@example.com")
-    assert caught.value.code == "mail_off"
+        with pytest.raises(nexpost.MailError) as caught:
+            nexpost.outbox.test_mail(PostStore(db), "dora@example.com")
+    assert caught.value.code == "mail_off" and mailer.old_code(caught.value.code) == "mail_off"
 
 
 def test_a_backup_keeps_the_secret_key_and_a_restore_signs_everybody_out(

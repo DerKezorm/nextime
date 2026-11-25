@@ -26,8 +26,9 @@ function leaves(tree: Tree, prefix = ''): [string, string][] {
   })
 }
 
-const values = { email: 'kim@example.com', when: 'today', error: 'mail_unreachable' }
-const fill: Record<string, string> = { ...postVariables(APP_NAME), ...values }
+// post 1.1.0 asks for a count too ("Wartende Mails: {{count}}"); the module's template of this file leaves it out.
+const values = { email: 'kim@example.com', when: 'today', error: 'mail_unreachable', count: 3 }
+const fill: Record<string, string> = { ...postVariables(APP_NAME), ...values, count: '3' }
 
 describe('the post texts', () => {
   for (const [language, tree] of [['de', de], ['en', en]] as const) {

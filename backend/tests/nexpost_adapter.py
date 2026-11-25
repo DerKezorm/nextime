@@ -106,3 +106,35 @@ class Adapter(StandardAdapter):
         assert letters, "no letter about the new sign-in"
         return letters[-1]
 
+
+    # --- post 1.1.0 --------------------------------------------------------------------------------------------------
+
+    mail_prefix = "/api/server/mail"
+
+    def account(self, address: str, *, language: str, name: str, confirmed: bool) -> Any:
+        """A new account with this address, language and name, committed; its id as ``PostStore.recipient`` takes
+        it."""
+        import secrets
+
+        from app.db import SessionLocal
+        from app.models import Account
+
+        with SessionLocal() as db:
+            row = Account(name=f"p{secrets.token_hex(4)}", display_name=name, email=address, language=language,
+                          email_confirmed=confirmed, password_hash="")
+            db.add(row)
+            db.commit()
+            return row.id
+
+    def client(self, role: str) -> Any:
+        """nextime's own TestClient, signed in as nobody, a member or the operator (the routes are mounted in
+        ``main``)."""
+        from app.models import MEMBER, OPERATOR
+        from tests.conftest import make_account, new_client
+
+        if role == "anonymous":
+            return new_client()
+        import secrets
+
+        name = f"{role[:4]}{secrets.token_hex(3)}"
+        return new_client(make_account(name, OPERATOR if role == "operator" else MEMBER))

@@ -129,8 +129,7 @@ def invite(payload: InviteIn, request: Request, operator: OperatorAccount, db: D
     if payload.send:
         try:
             language = mailer.language_for(db, None, *mailer.languages(operator, payload.language))
-            mailer.send_invite(db, email, link, by=operator.shown_name, until=row.expires_at.date(),
-                               language=language, days=payload.days)
+            mailer.send_invite(db, email, link, by=operator.shown_name, language=language, days=payload.days)
             sent = True
             # Whoever comes through this link proved the address.
             row.mailed = True

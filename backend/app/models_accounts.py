@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, Integer, LargeBinary, String, Text
+from sqlalchemy import ForeignKey, Index, Integer, LargeBinary, String, Text, text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .models import Base, UtcDateTime, utcnow
@@ -89,3 +89,7 @@ class MailOutbox(Base):
     attempts: Mapped[int] = mapped_column(Integer, default=0)
     sent_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     error: Mapped[str] = mapped_column(String(500), default="")
+    #: A letter that may go only once (post 1.1.0, ``Letter.key``); empty for every mail of before.
+    key: Mapped[str | None] = mapped_column(String(200), nullable=True)
+
+    __table_args__ = (Index("ux_mail_outbox_key", "key", unique=True, sqlite_where=text("key IS NOT NULL")),)
