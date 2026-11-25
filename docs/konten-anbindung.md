@@ -20,6 +20,19 @@ gegen 1.0.1 Datei für Datei dreiseitig auf nextime gelegt, dann das Eigene von 
 unverändert 0.4.0 (kein Release vorbereitet). Die Abschnitte 1 bis 13 sind der Plan vom 24.11.2026; wo der Bau anders
 entschieden hat, steht es hier.
 
+**Nachgezogen auf `konten` 0.3.10, `ui` 0.1.2, `oidc` 1.1.1, `post` 0.1.2 (25.11.2026):** Anmelden über
+`login.sign_in` (wartet nur der Topf des Kontos, antwortet die Anmeldung wie bei falschem Passwort, 401; 429 erst bei
+vollem Absender-Topf); „5 frei“ heißt genau 5 an jeder Tür (App-Tests angepasst); „Zuletzt geändert am …“ im Kasten
+Passwort (`passwordChanged`, Spalte `password_changed_at` gab es schon); Zugänge mit den festen Arten des Moduls
+(`device`, `calendar`, `api_key`, `passkey`); `account_code` neben der alten Kennung, die Seite liest sie über
+`accountErrorKeyOf`; „Passwort vergessen“ schickt sofort über den Mailserver (`kontenpost.deliver_now`), nie über die
+Ausgangsliste, eine gescheiterte Mail nimmt ihren Link mit; die Kontenliste malt den Buchstaben auf die
+Personenfarbe (`ListedAccount.color`, `Avatar color`), wie überall in nextime; am eigenen Konto kein „Überall
+abmelden“ und kein „Lösen“ (`NOT_ON_SELF`). Vertragsadapter mit `sign_in_from` und `listed_invites` über nextimes
+Routen. Bestand-Fixture fängt Post aus der Ausgangsliste und aus `nexpost.send.deliver`; die Prüfungen sind unverändert.
+Läufe danach: Backend 1627 grün, 12 übersprungen; Frontend 1180 grün in 66 Dateien; lint, `tsc -b`, build, ruff sauber;
+`sync.py check` aller vier Module grün.
+
 **Backend:**
 
 | Teil | Wo |
@@ -78,12 +91,12 @@ Akzentfarbe Schieferblau über `--nexui-*`, Avatar-Variablen hell und dunkel in 
 
 - Der eigene Wortlaut `account.later` hieß wie der Namensraum des Moduls (`account`) und wäre beim Zusammenführen der
   Texte verloren gegangen; er heißt jetzt `settings.later`.
-- Das Profilbild ohne Foto zeigt in der Kontenliste den Buchstaben auf dem Farbton aus dem Namen (Modul, `Avatar` aus
-  `ui`); im Rest der App (geteilte Kalender, Personen) bleibt nextimes Personenfarbe aus TIME-2 EC-11.
+- Das Profilbild ohne Foto zeigt überall, auch in der Kontenliste, den Buchstaben auf nextimes Personenfarbe aus
+  TIME-2 EC-11 (seit `ui` 0.1.2 `Avatar color`; Entscheidung: gibt es eine Personenfarbe, nimmt das Ersatzbild sie).
 - Der eigene Hinweis am Profilbild („Erscheint an deinen Terminen …“) weicht dem Satz des Moduls („Alle angemeldeten
   Konten auf diesem Server sehen es.“).
 - Ob der zweite Faktor an ist, steht nicht mehr im Profil, sondern unter Sicherheit („An“/„Aus“, Modul).
-- Kein Satz „Deine Kalenderprogramme laufen weiter“ beim Umbenennen (Frage 4 blieb offen; nichts gebaut).
+- Kein Satz „Deine Kalenderprogramme laufen weiter“ beim Umbenennen (entschieden: keiner).
 
 **Tests:** Bestand ohne `xfail` (die drei Fälle des Umbaus halten: doppelte Adresse meldet keinen an, „Passwort
 vergessen“ per Mail, umbenanntes Konto behält sein Kalenderprogramm); die Post-Fixture liest jetzt aus `mail_outbox`.
