@@ -1,6 +1,6 @@
 # Anbindung des Kontenmoduls (`nexkonten`) an nextime
 
-Stand 24.11.2026, Zweig `konten`. Vorbereitung, noch nichts angebunden. Maßgeblich sind der Entwurf in nexlore
+Plan vom 24.11.2026, gebaut am 25.11.2026 (Abschnitt 0). Maßgeblich sind der Entwurf in nexlore
 (`Development/nexapps/Baupläne/Entwurf Konten, Einrichtung und Anmeldung.md`) und die Schnittstelle des Moduls
 (`bauplaene/konten/SCHNITTSTELLE.md`, Zweig `konten`, Fassung 0.1.0). Wo nextime etwas braucht, das die Schnittstelle
 nicht hergibt, steht es unter „Passt das Modul?“ (Abschnitt 12).
@@ -11,6 +11,94 @@ Kleinigkeiten, geprüft per `diff`). Was im Plan von nexnotes (`nexnotes/docs/ko
 steht, gilt hier genauso; dieser Plan nennt das Gleiche kurz und das Eigene ausführlich. **Das Eigene ist das
 Kalenderkonto (CalDAV)**: Dort ist der Benutzername Teil jeder Adresse und der Anmeldung, und ein Umbenennen würde
 heute jedes eingerichtete iPhone, jeden Mac und jedes DAVx5 abhängen.
+
+## 0. Stand
+
+Stand 25.11.2026, Zweig `konten`. **Gebaut.** Module aus `bauplaene` (Zweig `konten`), kopiert mit `tools/sync.py copy`,
+`check` grün: `konten` 0.3.9, `oidc` 1.1.0, `post` 0.1.1, `ui` 0.1.1. Vorlage war nexnotes 1.1.0 (dessen Änderungen
+gegen 1.0.1 Datei für Datei dreiseitig auf nextime gelegt, dann das Eigene von nextime nachgezogen). App-Fassung
+unverändert 0.4.0 (kein Release vorbereitet). Die Abschnitte 1 bis 13 sind der Plan vom 24.11.2026; wo der Bau anders
+entschieden hat, steht es hier.
+
+**Backend:**
+
+| Teil | Wo |
+|---|---|
+| Store | `services/konten_store.py` (Store, FactorStore, PasskeyStore, SessionStore, PictureStore) über `accounts`, `invites`, `password_resets`, `auth_sessions`, `app_devices`, `devices`, `api_keys` und die Tabellen aus `models_accounts.py` (`former_names`, `setup_claims`, `email_changes`, `passkeys`, `failed_unknown`, `mail_outbox`) |
+| Neue Spalten | wie nexnotes (`accounts.email_confirmed` 1, `email_proven` 0, `provider_email_from`, `totp_pending(_until)`, `avatar_source`, `passkey_handle`, `new_sign_in_mail` 1, `new_password_origin`; `auth_sessions.uid`, `remember` 1, `stage`, `kind`; `invites.display_name`, `mailed`; `password_resets.origin` `operator`), dazu **`accounts.dav_name`** |
+| Wanderung | `services/konten_wanderung.py` aus `db.init_db`: `uid` für alte Sitzungen, **`dav_name = name` für jedes Konto ohne**, eindeutiger Index auf `lower(name)` erst nach Zählen, Indizes auf `lower(email)` und `former_names`. Nur ergänzend, Sicherung davor wie bisher |
+| Anmelden, Einrichtung, Einladung, Passwort vergessen, Reset-Link, Profil, Sitzungen, Passkeys, zweiter Faktor, OIDC 1.1.0, Mails | wie nexnotes 1.1.0 (dort Abschnitt 0), Routen und Feldnamen gleich; Mails über `services/post_store.py` und `services/kontenpost.py`, Logo `app/mail-logo.png` (nextimes Symbol 192 px) |
+| Alte Fehlerkennungen | `konten_store.OLD_CODES` (`invalid_email`, `name_taken`, `invalid_account_name`) |
+| Betreiber | `PUT /api/accounts/{id}/name`, `/display-name`, `DELETE /api/accounts/{id}/email`; **Speichergrenze jetzt mit eigenem Passwort** (`current_password`, konten 0.3.9); `GET /api/invites` liefert auch abgelaufene Einladungen mit `expired` (bleiben sichtbar bis zum Zurücknehmen) |
+| Notfallbefehl | `python -m app.emergency reset-link <Benutzername oder E-Mail> [--days 1/7/30]` (README) |
+| Nothammer | `NEXTIME_SECOND_FACTOR_OFF` (README, Warnung beim Start, Hinweis in „Mein Konto“) |
+
+**Kalenderkonto (CalDAV), umgesetzt wie Abschnitt 2 „Lösung“, mit den Entscheidungen vom 24.11.2026:**
+
+- **Feste Kennung je Konto:** `accounts.dav_name`. Bestandskonten bekommen beim ersten Start ihren heutigen Namen
+  (Wanderung), neue Konten ihren ersten Benutzernamen (`before_insert` in `models.py`, also auf jedem Weg:
+  Einrichtung, Einladung, Anbieter). Ein Umbenennen fasst `dav_name` nie an. Alle Adressen unter `/dav/` (Principal,
+  Kalenderheim, Kalender, Termine, `DAV:owner` geteilter Kalender) und die `CalDAVPrincipalURL` neuer Profile kommen
+  aus `devices.dav_name_of(account)` (leer: der Name, wie 0.4.0).
+- **Benutzer beim DAV-Anmelden:** aktueller Benutzername, jeder frühere oder die Adresse, ohne Groß/Klein
+  (`login.background_account` des Moduls); entscheidend bleibt das Geräte-Passwort, und der Benutzer muss dasselbe
+  Konto nennen. Eine Tabelle `account_aliases` (Plan) gibt es nicht: frühere Namen führt das Modul in `former_names`.
+  **Frühere Adressen zählen nicht** (das Modul kennt sie nicht): wer seine Adresse als Benutzer von Hand eingetippt
+  hat und sie ändert, tippt im Programm den Benutzernamen ein.
+- **Alte Namen sind für immer reserviert** (Modul): kein anderes Konto bekommt sie, also nennt niemand mit ihnen ein
+  fremdes Konto.
+- **Neue Geräte** (`/api/devices`, `/api/device-setup/…`, App) bekommen den aktuellen Benutzernamen zum Abtippen
+  (`user`, Feldname bleibt) und den Principal aus `dav_name`. Beschriftung „Benutzername“ statt „Name“.
+- **Neues Passwort, „Überall abmelden“, Betreiber-Abmelden:** Kalender-Programme bleiben angemeldet (eigene
+  Geräte-Passwörter). Sie stehen nach einem Link in „Diese Geräte haben noch Zugriff“ (`Access.kind = "calendar"`,
+  neben `device` für die iPhone-App, `api_key`, `passkey`); „Alle trennen“ nimmt sie mit (samt offener
+  Einrichtungslinks), ebenso die gekoppelten Apps, Schlüssel und Passkeys.
+- **Umbenennen ist gleich mit diesem Umbau freigeschaltet** (Entscheidungstabelle des Entwurfs), im Profil und unter
+  Konten.
+
+**⚠️ Rückweg auf 0.4.0:** geht eine Fassung lang (nur neue Spalten und Tabellen). **Wer in dieser Fassung umbenannt
+wurde, muss nach dem Rückweg seine Kalender neu einrichten:** 0.4.0 kennt `dav_name` nicht, baut die Adressen wieder
+aus dem (neuen) Namen und nimmt nur den aktuellen Namen oder die Adresse als Benutzer; jedes Gerät, das vorher
+eingerichtet wurde, bekommt 404 bzw. 401. Konten, die nicht umbenannt wurden, merken vom Rückweg nichts. Vor dem
+Rückweg also nachsehen, ob jemand umbenannt wurde (`SELECT name, dav_name FROM accounts WHERE name <> dav_name`), und
+die Betroffenen vorwarnen; nach dem Rückweg dort in „Auf iPhone und Co“ ein neues Gerät einrichten.
+
+**Frontend:** Anmelden, Einrichten, Einladung, Passwort vergessen, neues Passwort, Adresse bestätigen (`/forgot`,
+`/email/:token`), „Sitzung abgelaufen“ wie nexnotes aus `SCREENS`/`PAGES` und dem Bausatz `ui`; Profil und Sicherheit
+aus `PAGES`, danach nextimes Eigenes (`APP_PAGES`: Abmelden, Anbieter; im Profil die Zeile „Anmeldung mit …“,
+TIME-2 AC-8). **Kontenliste aus konten 0.3.9** (`pages/settings/AccountsTab.tsx`, `accountList.ts`): je Konto eine
+Zeile mit Bild, Marken, „Benutzername · E-Mail“ und „Verwalten“; Fenster mit Angaben (dazu „Speicher“), Gruppen
+Ändern, Zugang, Beenden. Schalter (`APP_CAPS`): alle zehn. Eigenes: Knopf „Speichergrenze“ (`storageLimit`, Ändern,
+nach „Zum Mitglied machen“), Angabe Speicher mit Grenze, Lösch-Rückfrage mit Kalendern, Terminen und geteilten
+Kalendern, dann „30 Tage lang kannst du es zurückholen“. Offene Einladungen als Karte des Moduls (abgelaufene bleiben),
+darunter die Karten der App: „Was du siehst“ mit dem Datenschutzsatz `accounts.privacy` und „Schlüssel aller Konten“.
+Akzentfarbe Schieferblau über `--nexui-*`, Avatar-Variablen hell und dunkel in `styles/index.css`.
+
+**Bewusst anders als der Plan bzw. als nexnotes:**
+
+- Der eigene Wortlaut `account.later` hieß wie der Namensraum des Moduls (`account`) und wäre beim Zusammenführen der
+  Texte verloren gegangen; er heißt jetzt `settings.later`.
+- Das Profilbild ohne Foto zeigt in der Kontenliste den Buchstaben auf dem Farbton aus dem Namen (Modul, `Avatar` aus
+  `ui`); im Rest der App (geteilte Kalender, Personen) bleibt nextimes Personenfarbe aus TIME-2 EC-11.
+- Der eigene Hinweis am Profilbild („Erscheint an deinen Terminen …“) weicht dem Satz des Moduls („Alle angemeldeten
+  Konten auf diesem Server sehen es.“).
+- Ob der zweite Faktor an ist, steht nicht mehr im Profil, sondern unter Sicherheit („An“/„Aus“, Modul).
+- Kein Satz „Deine Kalenderprogramme laufen weiter“ beim Umbenennen (Frage 4 blieb offen; nichts gebaut).
+
+**Tests:** Bestand ohne `xfail` (die drei Fälle des Umbaus halten: doppelte Adresse meldet keinen an, „Passwort
+vergessen“ per Mail, umbenanntes Konto behält sein Kalenderprogramm); die Post-Fixture liest jetzt aus `mail_outbox`.
+Neu `tests/test_konten_dav.py` (feste Kennung, alle Namen und die Adresse als DAV-Benutzer, fremde Namen nie, Umbenennen
+durch Betreiber, neues Passwort und „Überall abmelden“ lassen Kalender-Programme, Einrichtung und Einladung setzen
+`dav_name`, Notfallbefehl). Vertragsadapter `tests/nexkonten_adapter.py`, `tests/nexpost_adapter.py` (App-Geräte,
+API-Schlüssel, Kalender-Programme als Zugänge). vitest-Vorlagen `nexkonten.test.ts` (mit Kontenliste),
+`nexpost.test.ts`, `nexui.vendored.test.ts`. Läufe am 25.11.2026: Backend `pytest -n 2` 1619 grün, 12 übersprungen
+(darin Vertrag `tests/nexkonten`, `tests/nexpost`, `tests/nexoidc` 360 grün, 2 übersprungen; Bestand 54 grün;
+`test_konten_dav.py` 8 grün), ruff sauber; Frontend `vitest --maxWorkers=2` 1175 grün in 66 Dateien, `npm run lint`,
+`tsc -b` und `npm run build` sauber; `sync.py check` aller vier Module grün. Playwright hat nextime nicht.
+
+**Offen:** Sichtprüfung im Browser; Probe auf einer Kopie der Live-Datenbank (doppelte Adressen zählen, Namen nur in
+Groß/Klein verschieden); echtes iPhone: umbenennen und prüfen, dass Apple Kalender ohne Rückfrage weiter abgleicht;
+nextime-ios „Angemeldet als“ auffrischen und „Benutzername“ (Begleit-App, bricht nichts).
 
 ## 1. Bestand heute (0.4.0)
 

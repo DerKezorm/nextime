@@ -110,12 +110,19 @@ Open `http://<your-host>:8585` and create the first account: it becomes the oper
 log (`docker logs nextime`). Calendars on iPhones and Android connect only over HTTPS: put nextime behind a reverse
 proxy that ends TLS and name it in `NEXTIME_TRUSTED_PROXIES`.
 
+Locked out as the operator? A link to set a new password comes from inside the container:
+
+```
+docker exec -u nextime nextime python -m app.emergency reset-link <username or email>
+```
+
 ## Settings
 
 | Variable | Meaning |
 |---|---|
 | `NEXTIME_DATA_DIR` | Database, attachments, backups, logs, added languages. In the container `/data`. A local disk, never a network share. |
-| `NEXTIME_SETUP_TOKEN` | The code the first account needs. Without it nextime makes one at every start until it is set up and writes it to the log. |
+| `NEXTIME_SETUP_TOKEN` | The code the first account needs, at least 16 characters. Without it nextime makes one at every start until it is set up and writes it to the log. |
+| `NEXTIME_SECOND_FACTOR_OFF` | Emergency only: `true` asks nobody for a second factor (passkey or code) until it is removed. The log warns while it is set. |
 | `NEXTIME_PUBLIC_URL` | The address people reach nextime under (invitation links, the providers' redirect). Can also be set in the interface. |
 | `NEXTIME_TRUSTED_PROXIES` | Addresses or networks of reverse proxies whose `X-Forwarded-For` and `X-Forwarded-Proto` count. |
 | `NEXTIME_OPERATOR_NETWORKS` | Networks the operator's settings may be changed from. Empty: from anywhere. |
