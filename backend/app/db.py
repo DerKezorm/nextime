@@ -88,7 +88,7 @@ def get_db() -> Iterator[Session]:
 
 def init_db() -> None:
     Base.metadata.create_all(engine)
-    _add_missing_columns()
+    added = _add_missing_columns()
     # create_all makes the indexes of new tables only; one added to an existing table comes here.
     for table in Base.metadata.sorted_tables:
         for table_index in table.indexes:
@@ -96,7 +96,7 @@ def init_db() -> None:
     # What the shared account module needs of a database of an older version (only adding).
     from .services import konten_wanderung
 
-    konten_wanderung.run(engine)
+    konten_wanderung.run(engine, added=added)
 
 
 def _sql_literal(value: Any) -> str:
@@ -109,7 +109,9 @@ def _sql_literal(value: Any) -> str:
     return "'" + str(value).replace("'", "''") + "'"
 
 
-def _add_missing_columns() -> None:
+def _add_missing_columns() -> list[str]:
+    """Adds the columns a newer version brings, with their defaults; answers which (``table.column``), so that a
+    migration that belongs to a column runs exactly once, at the start that made it."""
     inspector = inspect(engine)
     missing = [
         column
@@ -123,6 +125,7 @@ def _add_missing_columns() -> None:
         from .services import backups
 
         backups.create(kind=backups.UPDATE, note="before adding columns")
+    added: list[str] = []
     with engine.begin() as connection:
         for table in Base.metadata.sorted_tables:
             existing = {column["name"] for column in inspector.get_columns(table.name)}
@@ -143,3 +146,5 @@ def _add_missing_columns() -> None:
                     statement += f" DEFAULT {_sql_literal(default)}"
                 connection.execute(text(statement))
                 logger.info("Added column name=%s", f"{table.name}.{column.name}")
+                added.append(f"{table.name}.{column.name}")
+    return added

@@ -36,35 +36,20 @@ def limit_storage(account: Account, size: int) -> None:
         db.commit()
 
 
-def test_time9_ec12_the_storage_of_the_account_is_counted_while_the_file_comes(client: TestClient,
-                                                                               account: Account) -> None:
+def test_time9_ec12_a_storage_limit_per_account_of_before_counts_for_nothing_since_konten_1_1_0(
+    client: TestClient, account: Account
+) -> None:
+    """Plan "Einstellungen" E24 (decided 25.11.2026): nextime has no storage limit per account any more. A limit an
+    operator set in 0.4.0 stays in its column and stops no upload, declared or streamed; nothing is left behind."""
     made = make_event(client, "Probe")
     limit_storage(account, 2 * MB)
     assert upload(client, made["id"], "eins.bin", b"\1" * MB).status_code == 201
-    declared = upload(client, made["id"], "zwei.bin", b"\2" * (2 * MB))
-    assert declared.status_code == 507 and code(declared) == "storage_limit_reached"
-    # Without a declared length (chunked): stopped while it comes, nothing kept, no work file.
+    assert upload(client, made["id"], "zwei.bin", b"\2" * (2 * MB)).status_code == 201
     streamed = upload(client, made["id"], "drei.bin", (b"\3" * (256 * 1024) for _ in range(8)))
-    assert streamed.status_code == 507 and code(streamed) == "storage_limit_reached"
-    assert [item["name"] for item in shown(client, made["id"])["attachments"]] == ["eins.bin"]
+    assert streamed.status_code == 201, streamed.text
+    assert sorted(item["name"] for item in shown(client, made["id"])["attachments"]) == ["drei.bin", "eins.bin",
+                                                                                          "zwei.bin"]
     assert work_files() == []
-
-
-def test_time9_ec12_the_real_size_is_counted_again_at_the_end(client: TestClient, account: Account,
-                                                              monkeypatch: pytest.MonkeyPatch) -> None:
-    made = make_event(client, "Probe")
-    limit_storage(account, 2 * MB)
-    real = attachments.finish
-
-    def finish(upload_: Any, work: Any) -> Any:
-        # Another upload filled the storage meanwhile.
-        limit_storage(account, MB)
-        return real(upload_, work)
-
-    monkeypatch.setattr(attachments, "finish", finish)
-    late = upload(client, made["id"], "spaet.bin", b"\4" * (MB + 1))
-    assert late.status_code == 507 and code(late) == "storage_limit_reached"
-    assert shown(client, made["id"])["attachments"] == [] and work_files() == []
 
 
 def test_time9_ac5_an_event_moved_to_icloud_while_its_file_comes_takes_nothing(client: TestClient, account: Account,

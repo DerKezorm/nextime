@@ -48,6 +48,7 @@ from .routers import passkeys as passkeys_router
 from .routers import places as places_router
 from .routers import reminders as reminders_router
 from .routers import search as search_router
+from .routers import server_signin as server_signin_router
 from .routers import settings as settings_router
 from .routers import shares as shares_router
 from .routers import sources as sources_router
@@ -79,7 +80,7 @@ logger = logging.getLogger("nextime")
 ROUTERS = [
     health, about, locales_router, logs_router, auth, totp_router, passkeys_router, oidc,
     accounts_router, invites, settings_router,
-    backups_router, avatars_router, server,
+    backups_router, avatars_router, server, server_signin_router,
 ]
 #: Routers of the calendar features (calendars, events, sharing ...), registered after the frame's.
 FEATURE_ROUTERS: list = [calendars_router, collections_router, events_router, devices_router, live_router, dav_router,

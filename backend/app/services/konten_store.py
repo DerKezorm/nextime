@@ -185,6 +185,11 @@ class KontenStore:
             declined_email=row.provider_email_off or "",
             # "Last changed on" under Security (konten 0.3.10); empty where 0.4.0 never wrote it.
             password_changed_at=_aware(row.password_changed_at) if row.password_changed_at else None,
+            # konten 1.1.0: the operator's account functions and the theme at the account. nextime has no storage limit
+            # per account any more (E24) and no rights of the module's table (no AI, no Immich).
+            blocked_at=_aware(row.blocked_at) if row.blocked_at else None,
+            deleted_at=_aware(row.deleted_at) if row.deleted_at else None,
+            theme=row.theme or "",
         )
 
     @staticmethod
@@ -595,6 +600,18 @@ class KontenStore:
                 self.db.commit()
         elif event.kind == nexkonten.EVENT_RENAMED:
             logger.info("Username changed account_id=%s", event.account_id)
+        elif event.kind in (nexkonten.EVENT_BLOCKED, nexkonten.EVENT_DELETED):
+            from ..security import sessions_ended
+            from . import content
+
+            # Live connections look again at once (their sessions count for nothing now, ``security.account_out``).
+            sessions_ended()
+            if event.kind == nexkonten.EVENT_DELETED:
+                content.account_deleted(self.db, int(event.account_id))
+        elif event.kind == nexkonten.EVENT_RESTORED:
+            from . import content
+
+            content.account_restored(self.db, int(event.account_id))
 
     # === Part 2: second factor, passkeys, sessions, pictures ========================================================
 
@@ -909,6 +926,115 @@ class KontenStore:
             self.db.flush()
 
     # --- Transaction ---------------------------------------------------------------------------------------------
+    # === konten 1.1.0: the operator's account functions, the theme, the sign-in switches ==========================
+
+    def active_operators(self) -> int:
+        """Operators who can still sign in: neither blocked nor deleted (as nextime counted before the module)."""
+        return int(
+            self.db.scalar(
+                select(func.count())
+                .select_from(Account)
+                .where(Account.role == OPERATOR, Account.blocked_at.is_(None), Account.deleted_at.is_(None))
+            )
+            or 0
+        )
+
+    def set_operator(self, account_id: AccountId, operator: bool) -> None:
+        row = self._row(account_id)
+        if row is not None:
+            row.role = OPERATOR if operator else MEMBER
+            self.db.flush()
+
+    def set_blocked(self, account_id: AccountId, at: datetime | None) -> None:
+        row = self._row(account_id)
+        if row is None:
+            return
+        row.blocked_at = at
+        if at is None:
+            row.failed_logins = 0
+            row.locked_until = None
+        self.db.flush()
+
+    def set_deleted(self, account_id: AccountId, at: datetime | None) -> None:
+        row = self._row(account_id)
+        if row is not None:
+            row.deleted_at = at
+            self.db.flush()
+
+    def shut_out(self, account_id: AccountId) -> None:
+        """What a block or a delete ended in nextime before the module: the paired iPhones and iPads go and hear why
+        (TIME-29 EC-5), no browser counts as known any more. The browser sessions stay as they are but count for
+        nothing while the account is out (``security.account_out``), so that an open window hears that it is blocked
+        instead of being sent to sign in; unblocking and bringing back end them (``end_sessions``). API keys,
+        calendar programs and providers refuse a blocked or deleted account wherever they let it in."""
+        from . import appdevices
+
+        self.renew_device_key(account_id)
+        self.db.flush()
+        appdevices.end_all(self.db, int(account_id))
+
+    def deleted_before(self, moment: datetime) -> list[AccountId]:
+        return list(
+            self.db.scalars(select(Account.id).where(Account.deleted_at.is_not(None), Account.deleted_at <= moment))
+        )
+
+    def purge_account(self, account_id: AccountId) -> None:
+        """Gone for good with everything it owned (``content.account_purged``: calendars, events, attachments,
+        shares); its username and its former ones stay reserved for ever."""
+        from . import content
+
+        row = self._row(account_id)
+        if row is None:
+            return
+        content.account_purged(self.db, row.id)
+        self.db.execute(update(FormerName).where(FormerName.account_id == row.id).values(account_id=None))
+        self.db.add(FormerName(account_id=None, name=row.name))
+        self.db.delete(row)
+        self.db.flush()
+
+    def set_storage_limit(self, account_id: AccountId, limit: int | None) -> None:
+        """nextime has no storage limit per account since konten 1.1.0 (E24); the module never asks."""
+        raise LookupError("storage_limit")
+
+    def set_right(self, account_id: AccountId, right: str, allowed: bool) -> None:
+        """nextime has none of the module's rights (``config.FEATURES``); the module never asks."""
+        raise LookupError(right)
+
+    def set_theme(self, account_id: AccountId, theme: str) -> None:
+        row = self._row(account_id)
+        if row is not None:
+            row.theme = theme
+            self.db.flush()
+
+    def sign_in_settings(self) -> nexkonten.model3.SignInSettings:
+        from . import settings_service
+
+        return nexkonten.model3.SignInSettings(
+            password_login=bool(settings_service.get(self.db, "password_login")),
+            factor_required=self.factor_required(),
+            passkeys_allowed=self.passkeys_allowed(),
+        )
+
+    def save_sign_in_settings(self, settings: nexkonten.model3.SignInSettings) -> None:
+        from . import settings_service
+
+        settings_service.save(
+            self.db,
+            {
+                "password_login": settings.password_login,
+                SWITCH_FACTOR_REQUIRED: settings.factor_required,
+                SWITCH_PASSKEYS: settings.passkeys_allowed,
+            },
+            commit=False,
+        )
+
+    def active_providers(self) -> int:
+        from ..models import OidcProvider
+
+        return int(
+            self.db.scalar(select(func.count()).select_from(OidcProvider).where(OidcProvider.enabled.is_(True))) or 0
+        )
+
     def commit(self) -> None:
         self.db.commit()
 

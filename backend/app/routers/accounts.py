@@ -18,15 +18,14 @@ from sqlalchemy import select
 
 from ..deps import DbSession, OperatorAccount, confirm_operator
 from ..errors import error
-from ..models import DELETE_GRACE_DAYS, OPERATOR
+from ..models import DELETE_GRACE_DAYS, MEMBER, OPERATOR
 from ..models import Account as AccountRow
 from ..security import end_all_sessions
 from ..services import accounts, content, kontenpost, settings_service, totp
-from ..services.accounts import AccountError
 from ..services.konten_store import KontenStore
 from ..services.oidc_store import linked_providers
 from ..vendor import nexkonten
-from ..vendor.nexkonten import invites, profiles, resets
+from ..vendor.nexkonten import invites, manage, profiles, resets
 from ..vendor.nexkonten import login as konten_login
 from .auth import account_view, fail
 
@@ -103,7 +102,8 @@ def _listed(db: DbSession, row: AccountRow, linked: dict[int, list[dict[str, obj
         "has_password": bool(row.password_hash),
         "providers": linked.get(row.id, []),
         "storage_used": used.bytes,
-        "storage_limit": row.storage_limit,
+        # No storage limit per account since konten 1.1.0 (E24): a value of 0.4.0 counts for nothing.
+        "storage_limit": None,
     }
 
 
@@ -131,8 +131,8 @@ def delete_account(
         raise error("cannot_delete_self", "You cannot delete your own account.", 409)
     row = _row(db, account_id)
     try:
-        accounts.delete_account(db, row)
-    except AccountError as exc:
+        manage.remove(KontenStore(db), row.id, actor_id=operator.id, actor_confirmed=True)
+    except nexkonten.AccountError as exc:
         raise fail(exc) from exc
     totp.forget_account(account_id)
     logger.warning("Account deleted name=%s by=%s", row.name, operator.name)
@@ -145,9 +145,10 @@ def restore_account(
     confirm_operator(request, db, operator, payload.current_password)
     row = _row(db, account_id)
     try:
-        accounts.restore_account(db, row)
-    except AccountError as exc:
+        manage.restore(KontenStore(db), row.id, actor_id=operator.id, actor_confirmed=True)
+    except nexkonten.AccountError as exc:
         raise fail(exc) from exc
+    db.refresh(row)
     return _listed(db, row, linked_providers(db))
 
 
@@ -167,8 +168,8 @@ def block_account(
         raise error("cannot_block_self", "You cannot block yourself.", 409)
     row = _row(db, account_id)
     try:
-        accounts.block(db, row)
-    except AccountError as exc:
+        manage.block(KontenStore(db), row.id, actor_id=operator.id, actor_confirmed=True)
+    except nexkonten.AccountError as exc:
         raise fail(exc) from exc
     logger.warning("Account blocked name=%s by=%s", row.name, operator.name)
 
@@ -179,7 +180,10 @@ def unblock_account(
 ) -> None:
     confirm_operator(request, db, operator, payload.current_password)
     row = _row(db, account_id)
-    accounts.unblock(db, row)
+    try:
+        manage.unblock(KontenStore(db), row.id, actor_id=operator.id, actor_confirmed=True)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
     logger.warning("Account unblocked name=%s by=%s", row.name, operator.name)
 
 
@@ -191,22 +195,30 @@ def set_role(
     row = _row(db, account_id)
     if row.id == operator.id and payload.role != OPERATOR:
         raise error("cannot_demote_self", "You cannot take the operator role from yourself.", 409)
-    try:
-        accounts.set_role(db, row, payload.role)
-    except AccountError as exc:
-        raise fail(exc) from exc
+    if payload.role not in (OPERATOR, MEMBER):
+        raise error("invalid_role", "Unknown role.", 422)
+    if row.id != operator.id:
+        try:
+            manage.set_role(KontenStore(db), row.id, payload.role == OPERATOR, actor_id=operator.id,
+                            actor_confirmed=True)
+        except nexkonten.AccountError as exc:
+            raise fail(exc) from exc
+        db.refresh(row)
     logger.warning("Role changed name=%s role=%s by=%s", row.name, payload.role, operator.name)
     return _listed(db, row, linked_providers(db))
 
 
-@router.put("/{account_id}/storage-limit", summary="Set or remove the storage limit of an account")
+@router.put("/{account_id}/storage-limit", summary="Storage limits per account are gone (kept as a way that says so)")
 def set_limit(account_id: int, payload: LimitIn, request: Request, operator: OperatorAccount,
               db: DbSession) -> dict[str, Any]:
     confirm_operator(request, db, operator, payload.current_password)
     row = _row(db, account_id)
-    row.storage_limit = payload.limit
-    db.commit()
-    logger.info("Storage limit set name=%s limit=%s by=%s", row.name, payload.limit or "none", operator.name)
+    # nextime has no storage limit per account since konten 1.1.0 (E24): the old way answers the module's
+    # ``feature_off`` and changes nothing.
+    try:
+        manage.set_storage_limit(KontenStore(db), row.id, payload.limit, actor_id=operator.id, actor_confirmed=True)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
     return _listed(db, row, linked_providers(db))
 
 

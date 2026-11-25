@@ -441,3 +441,48 @@ class Adapter(StandardAdapter):
                 browser.cookies.set(SESSION_COOKIE, start_session(db, row, "127.0.0.1", "contract"))
         return browser.get(f"/api/avatars/{owner}").status_code
 
+
+    # --- konten 1.1.0 ------------------------------------------------------------------------------------------------
+
+    def age_deletion(self, account_id: Any, days: int) -> None:
+        """The account was deleted ``days`` days earlier than it was."""
+        from app.db import SessionLocal
+        from app.models import Account
+
+        with SessionLocal() as db:
+            row = db.get(Account, account_id)
+            assert row is not None and row.deleted_at is not None
+            row.deleted_at = row.deleted_at - timedelta(days=days)
+            db.commit()
+
+    def provider_active(self, on: bool) -> None:
+        """One provider of the module oidc's table, enabled or not (nextime counts ``oidc_providers.enabled``)."""
+        from sqlalchemy import delete
+
+        from app.db import SessionLocal
+        from app.models import OidcProvider
+
+        with SessionLocal() as db:
+            db.execute(delete(OidcProvider).where(OidcProvider.slug == "contract"))
+            db.add(OidcProvider(slug="contract", label="Contract", issuer="https://auth.example.com/", client_id="c",
+                                enabled=on))
+            db.commit()
+
+    def readiness(self, operator: Any) -> dict[str, Any]:
+        """``GET /api/server/sign-in/readiness`` over https, signed in as the operator (a session of its own)."""
+        from fastapi.testclient import TestClient
+
+        from app.db import SessionLocal
+        from app.main import app
+        from app.models import Account
+        from app.security import SESSION_COOKIE, start_session
+
+        with SessionLocal() as db:
+            row = db.get(Account, operator)
+            assert row is not None
+            token = start_session(db, row, "127.0.0.1", "contract")
+        browser = TestClient(app, base_url="https://time.example.com", headers={"X-Nextime-Client": "tab-contract"})
+        browser.cookies.set(SESSION_COOKIE, token)
+        answer = browser.get("/api/server/sign-in/readiness")
+        assert answer.status_code == 200, answer.text
+        return dict(answer.json())

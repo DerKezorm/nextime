@@ -101,6 +101,11 @@ class PasswordChangeIn(BaseModel):
     password_confirm: str | None = Field(default=None, max_length=200)
 
 
+class ThemeIn(BaseModel):
+    #: ``light``, ``dark`` or ``system`` (``nexkonten.profiles.THEMES``); for ``adopt`` whatever the browser kept.
+    theme: str = Field(max_length=32)
+
+
 class LanguageIn(BaseModel):
     language: str = Field(max_length=16)
 
@@ -234,6 +239,11 @@ def account_view(account: AccountRow, db: Session | None = None) -> dict[str, An
         # A password set through a link: the account page lists the ways in that stayed, until put away.
         "new_password_origin": account.new_password_origin or "",
         "language": account.language,
+        # Light, dark or as the system, at the account on every device ("" chose nothing yet, konten 1.1.0).
+        "theme": account.theme or "",
+        # A mail server and the public address: a link in a mail can reach the person (the box "Address not
+        # confirmed yet" offers one only then, konten 1.1.0).
+        "mail_server": kontenpost.can_mail(db) if db is not None else False,
         "two_factor": bool(account.totp_secret_enc),
         # "On" or "Off" beside the heading of the second factor (``SECOND_FACTOR_STATE``, konten 0.3.6).
         "factor_state": nexkonten.factor.state(KontenStore(db), account.id) if db is not None else (
@@ -594,6 +604,22 @@ def resend_email_link(account: Account, db: DbSession) -> dict[str, Any]:
     return account_view(row, db)
 
 
+@router.post("/me/email/prove", summary="A link that proves the address that counts already is the own one")
+def prove_email(account: Account, db: DbSession) -> dict[str, Any]:
+    """"Address not confirmed yet" › "Send link" (konten 1.1.0, ``profiles.prove_email``): the address stays as it is
+    until the link is used."""
+    if not kontenpost.can_mail(db):
+        raise error("mail_off", "No mail server is set up.", 409)
+    try:
+        mail = profiles.prove_email(KontenStore(db), account.id)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    kontenpost.queue(db, mail)
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    return account_view(row, db)
+
+
 @router.delete("/me/email/pending", summary="Withdraw the address that waits for its link")
 def withdraw_email(account: Account, db: DbSession) -> dict[str, Any]:
     profiles.withdraw_email_change(KontenStore(db), account.id)
@@ -736,6 +762,25 @@ def set_display(payload: DisplayIn, account: Account, db: DbSession) -> dict[str
         db.rollback()
         raise error("invalid_display", exc.message, 422, field=exc.field) from exc
     return me_view(row, db, session_of=account)
+
+
+@router.put("/me/theme", summary="Light, dark or as the system, for the own account on every device")
+def set_theme(payload: ThemeIn, account: Account, db: DbSession) -> dict[str, Any]:
+    try:
+        profiles.change_theme(KontenStore(db), account.id, payload.theme)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    return account_view(row, db)
+
+
+@router.post("/me/theme/adopt", summary="Take the browser's theme of before once, while the account has none")
+def adopt_theme(payload: ThemeIn, account: Account, db: DbSession) -> dict[str, Any]:
+    """The first load after konten 1.1.0: an account that never chose takes what this browser kept
+    (``nextime.theme``); one with a choice keeps it (``profiles.adopt_theme``)."""
+    theme = profiles.adopt_theme(KontenStore(db), account.id, payload.theme)
+    return {"theme": theme}
 
 
 @router.put("/me/language", summary="The language of the own account, on every device; empty follows the browser")

@@ -36,10 +36,10 @@ RAISED = re.compile(
 )
 
 
-#: The shared account and post modules bring their own sentences for their codes (``account.error.*``,
-#: ``mail.error.*``, checked in ``frontend/src/nexkonten.test.ts`` and ``nexpost.test.ts``) and name other apps in their
-#: comments; they are not nextime's to word.
-SHARED = {"nexkonten", "nexpost"}
+#: The shared modules bring their own sentences for their codes (``account.error.*``, ``mail.error.*``, the backup
+#: module's ``sicherung`` texts, the key module's ``schluessel`` texts; checked in their own vitest files) and name
+#: other apps in their comments; they are not nextime's to word.
+SHARED = {"nexkonten", "nexpost", "nexsicherung", "nexlog", "nexschluessel"}
 
 
 def _sources(folder: Path, suffixes: tuple[str, ...]) -> str:
@@ -69,7 +69,7 @@ def shared_texts(language: str) -> dict[str, str]:
 def test_the_scan_finds_the_codes_it_should() -> None:
     codes = server_codes()
     # One of each way in: error(), a typed error, a refusal of the middleware, a sign-in redirect.
-    assert {"not_found", "email_taken", "client_required", "oidc_only_account", "last_operator", "backup_too_new",
+    assert {"not_found", "email_taken", "client_required", "oidc_only_account", "last_operator", "invalid_time",
             "storage_full"} <= codes
     # A floor: the scan reads the whole server, not one file.
     assert len(codes) > 60
@@ -90,6 +90,11 @@ def test_every_sentence_belongs_to_a_code_still_used() -> None:
     from app.vendor.nexkonten import CODES
 
     shared = set(CODES) | set(OLD_CODES.values())
+    # The shared log and backup modules answer nextime's old ways (``/api/logs``, ``/api/backups``) with codes the
+    # older pages and scripts know; nextime keeps those sentences (read from the modules' sources).
+    modules = "\n".join(path.read_text(encoding="utf-8") for name in ("nexlog", "nexsicherung")
+                        for path in sorted((APP / "vendor" / name).glob("*.py")))
+    shared |= {code for code in texts("de") if f'"{code}"' in modules}
     unused = [code for code in texts("de") if code not in server_codes() and f'"{code}"' not in backend
               and f"'{code}'" not in frontend and f"errors.{code}" not in frontend and code not in shared]
     assert unused == []

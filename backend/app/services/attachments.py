@@ -206,10 +206,10 @@ def begin(db: Session, account: Account, *, event_id: int | None, pending_ref: s
 
 
 def _room(db: Session, owner_id: int) -> int | None:
-    """What the owner's storage still takes; ``None`` without a limit."""
-    owner = db.get(Account, owner_id)
-    limit = owner.storage_limit if owner is not None else None
-    return None if limit is None else max(0, limit - _used(db, owner_id))
+    """What the owner's storage still takes; ``None`` without a limit. Since konten 1.1.0 nextime has no storage limit
+    per account (plan "Einstellungen", E24): a limit an operator set in 0.4.0 stays in its column and counts for
+    nothing; the limit per file (``upload_max_mb``) and a full disk still stop an upload."""
+    return None
 
 
 def _storage_full() -> AttachmentError:

@@ -12,6 +12,8 @@ a second start finds nothing to do.
   (both still sign in with the name written exactly).
 - Addresses get an index without regard to case, **not** a unique one: 0.4.0 could leave one address at two accounts
   (two profile saves at the same moment), and such a pair signs in by name only (the module, rule 3 of the draft).
+- konten 1.1.0 (E23): at the start that adds the column ``accounts.theme`` (exactly once), every address that counts
+  becomes proven, so the box "Address not confirmed yet" shows only for an address entered from now on.
 """
 
 from __future__ import annotations
@@ -25,8 +27,14 @@ from sqlalchemy.engine import Engine
 logger = logging.getLogger("nextime.db")
 
 
-def run(engine: Engine) -> None:
+def run(engine: Engine, *, added: list[str] | tuple[str, ...] = ()) -> None:
     with engine.begin() as connection:
+        if "accounts.theme" in added:
+            proven = connection.execute(
+                text("UPDATE accounts SET email_proven = 1 WHERE email IS NOT NULL AND email != '' "
+                     "AND email_confirmed = 1 AND email_proven = 0")
+            ).rowcount
+            logger.info("Addresses of before konten 1.1.0 count as proven count=%s", proven or 0)
         missing = [row[0] for row in connection.execute(text("SELECT id FROM auth_sessions WHERE uid IS NULL"))]
         for session_id in missing:
             connection.execute(text("UPDATE auth_sessions SET uid = :uid WHERE id = :id"),

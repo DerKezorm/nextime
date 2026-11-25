@@ -131,8 +131,13 @@ class Account(Base):
     #: The password was set through a reset link of the operator: the account hears so at its next sign-in, until it
     #: puts the notice away (the operator never signs in as somebody else unnoticed).
     password_reset_notice: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
-    #: The most this account may keep, in bytes; None: no limit.
+    #: The most this account could keep, in bytes, until konten 1.1.0; None: no limit. Since then nextime has no storage
+    #: limit per account (plan "Einstellungen", E24): the column stays as it is (nothing is deleted), nothing reads it.
     storage_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: Light, dark or as the system (``light``, ``dark``, ``system``; "" chose nothing yet), kept at the account on
+    #: every device since konten 1.1.0; the first load takes the browser's value of before once
+    #: (``profiles.adopt_theme``).
+    theme: Mapped[str] = mapped_column(String(16), default="", server_default="")
     #: The second factor (``services/totp.py``): the seed encrypted with the server secret, empty while off; the
     #: recovery codes as a JSON list of SHA-256 hashes; the time step of the last code taken (no replay).
     totp_secret_enc: Mapped[str] = mapped_column(Text, default="")
