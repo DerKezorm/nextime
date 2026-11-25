@@ -4,16 +4,14 @@
  * changed, or nexpaper disconnected after asking. A token run out, one that does not read or a nexpaper without
  * deadlines says so here.
  */
-import { FileClock } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
-import { Dialog } from '../../components/Dialog'
-import { Field, Problem } from '../../components/Field'
+import { useDevicePref } from '../../lib/devicePref'
 import { errorText, problemText } from '../../lib/errors'
-import { Card } from '../../pages/settings/ui'
+import { Badge, Button, Buttons, Collapsible, ConfirmDialog, Field, Notice, useNexuiTexts } from '../../vendor/nexui'
 import { useOffline } from '../offline/connection'
 import { nexpaperApi, setNexpaper } from './api'
 import { useNexpaper } from './hooks'
@@ -27,6 +25,9 @@ export function NexpaperSection() {
   const [fresh, setFresh] = useState(false)
   const [leaving, setLeaving] = useState(false)
   const [problem, setProblem] = useState('')
+  const kit = useNexuiTexts()
+  const [folded, setFolded] = useDevicePref('fold.nexpaper', (raw) => raw !== '0')
+  const foldable = Boolean(status?.connected) && !editing && !fresh && !status?.problem
 
   const disconnect = async () => {
     setProblem('')
@@ -40,38 +41,46 @@ export function NexpaperSection() {
   }
 
   return (
-    <Card id="nexpaper" foldable={status?.connected && !editing && !fresh && !status.problem ? 'nexpaper' : undefined} summary={status?.connected ? (
-      <span className="flex min-w-0 items-center gap-2 text-sm" data-testid="nexpaper-summary">
-        <span className="h-2 w-2 shrink-0 rounded-full bg-ok-500" aria-hidden />
-        <span className="font-medium text-ok-500">{t('nexpaper.section.connected')}</span>
-        <span className="min-w-0 truncate text-mist-300">{status.host}</span>
-      </span>
-    ) : undefined} icon={FileClock} logo="/apps/nexpaper.svg" title={t('nexpaper.section.title')} text={t('nexpaper.section.text')}>
-      <Problem text={problem} />
+    <Collapsible
+      variant="card"
+      id="nexpaper"
+      logo="/apps/nexpaper.svg"
+      title={t('nexpaper.section.title')}
+      subtitle={t('nexpaper.section.text')}
+      open={!foldable || !folded}
+      onOpenChange={(open) => setFolded(open ? '0' : null)}
+      status={
+        status?.connected ? (
+          <span className="flex min-w-0 items-center gap-2" data-testid="nexpaper-summary">
+            <Badge tone="on">{t('nexpaper.section.connected')}</Badge>
+            <span className="min-w-0 truncate text-sm text-[var(--nexui-text-muted)]">{status.host}</span>
+          </span>
+        ) : undefined
+      }
+      testId="nexpaper-card"
+    >
+      {problem && <Notice tone="danger">{problem}</Notice>}
       {status?.connected && !editing && (
         <>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" data-testid="nexpaper-connected">
-            <span className="flex items-center gap-2 font-medium text-ok-500">
-              <span className="h-2 w-2 shrink-0 rounded-full bg-ok-500" aria-hidden />
-              {t('nexpaper.section.connected')}
-            </span>
-            <span className="min-w-0 text-mist-300" data-testid="nexpaper-address">
+          <p className="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm" data-testid="nexpaper-connected">
+            <Badge tone="on">{t('nexpaper.section.connected')}</Badge>
+            <span className="min-w-0 text-[var(--nexui-text-muted)]" data-testid="nexpaper-address">
               {status.host} · {t('nexpaper.section.shows')}
             </span>
-          </div>
+          </p>
           {status.problem && (
-            <p role="alert" className="text-sm text-warn-500" data-testid="nexpaper-problem">
-              {errorText(status.problem, {})}
-            </p>
+            <div role="alert" data-testid="nexpaper-problem">
+              <Notice tone="warn">{errorText(status.problem, {})}</Notice>
+            </div>
           )}
-          <div className="flex flex-wrap gap-2">
-            <button type="button" className="nt-btn nt-btn-ghost" disabled={offline} onClick={() => setEditing(true)} data-testid="nexpaper-change">
+          <Buttons>
+            <Button kind="secondary" icon="KeyRound" disabled={offline} onClick={() => setEditing(true)} testId="nexpaper-change">
               {t('nexpaper.section.changeKey')}
-            </button>
-            <button type="button" className="nt-btn nt-btn-ghost" disabled={offline} onClick={() => setLeaving(true)} data-testid="nexpaper-disconnect">
+            </Button>
+            <Button kind="danger" icon="Unplug" disabled={offline} onClick={() => setLeaving(true)} testId="nexpaper-disconnect">
               {t('nexpaper.section.disconnect')}
-            </button>
-          </div>
+            </Button>
+          </Buttons>
         </>
       )}
       {status && (!status.connected || editing) && (
@@ -85,19 +94,18 @@ export function NexpaperSection() {
         />
       )}
       {leaving && (
-        <Dialog title={t('nexpaper.section.disconnectTitle')} onClose={() => setLeaving(false)}>
-          <p className="text-sm text-mist-300">{t('nexpaper.section.disconnectText')}</p>
-          <div className="mt-4 flex justify-end gap-2">
-            <button type="button" className="nt-btn nt-btn-ghost" onClick={() => setLeaving(false)}>
-              {t('common.cancel')}
-            </button>
-            <button type="button" className="nt-btn nt-btn-danger" onClick={() => void disconnect()} data-testid="nexpaper-disconnect-confirm">
-              {t('nexpaper.section.disconnect')}
-            </button>
-          </div>
-        </Dialog>
+        <ConfirmDialog
+          title={t('nexpaper.section.disconnectTitle')}
+          text={t('nexpaper.section.disconnectText')}
+          confirm={{ label: t('nexpaper.section.disconnect'), kind: 'danger', icon: 'Unplug' }}
+          cancel={t('common.cancel')}
+          closeLabel={kit.close}
+          onCancel={() => setLeaving(false)}
+          onConfirm={() => void disconnect()}
+          testId="nexpaper-disconnect-dialog"
+        />
       )}
-    </Card>
+    </Collapsible>
   )
 }
 
@@ -139,29 +147,29 @@ function ConnectForm({ url: before, localAllowed, changing, disabled, onCancel, 
           {t('nexpaper.section.how')}
         </p>
       )}
-      <Field label={t('nexpaper.section.url')} value={url} onChange={setUrl} type="url" maxLength={500} hint={t('nexpaper.section.urlHint')} />
-      <Field label={t('nexpaper.section.key')} value={token} onChange={setToken} type="password" autoComplete="off" maxLength={500} hint={t('nexpaper.section.keyHint')} />
+      <Field label={t('nexpaper.section.url')} value={url} onChange={(event) => setUrl(event.target.value)} type="url" maxLength={500} hints={[t('nexpaper.section.urlHint')]} data-testid="nexpaper-url" />
+      <Field label={t('nexpaper.section.key')} value={token} onChange={(event) => setToken(event.target.value)} type="password" autoComplete="off" maxLength={500} hints={[t('nexpaper.section.keyHint')]} data-testid="nexpaper-key" />
       {!localAllowed && (
         <p className="text-xs text-mist-500" data-testid="nexpaper-local">
           {t('nexpaper.section.localOff')}
         </p>
       )}
-      <Problem text={problem} />
+      {problem && <Notice tone="danger">{problem}</Notice>}
       {ownNetwork && (
         <Link to="/settings/general#switches" className="block text-sm text-accent-400 hover:underline" data-testid="nexpaper-local-switch">
           {t('nexpaper.section.toSwitch')}
         </Link>
       )}
-      <div className="flex justify-end gap-2">
+      <Buttons end>
         {onCancel && (
-          <button type="button" className="nt-btn nt-btn-ghost" onClick={onCancel}>
+          <Button kind="secondary" icon="X" onClick={onCancel}>
             {t('common.cancel')}
-          </button>
+          </Button>
         )}
-        <button type="submit" className="nt-btn nt-btn-accent" disabled={disabled || busy || !url.trim() || !token.trim()} data-testid="nexpaper-connect">
+        <Button kind="primary" icon="Plug" type="submit" busy={busy} disabled={disabled || !url.trim() || !token.trim()} testId="nexpaper-connect">
           {busy ? t('nexpaper.section.checking') : t('nexpaper.section.connect')}
-        </button>
-      </div>
+        </Button>
+      </Buttons>
     </form>
   )
 }

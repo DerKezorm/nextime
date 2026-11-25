@@ -188,7 +188,8 @@ function leaves(tree: Tree, prefix = ''): [string, string][] {
 }
 
 // Every value a text of the module asks for (since 0.3.10 also name, day and providers, the words of 0.3.9; since 1.1.0
-// the words of the cards, nextime's things in the form of "Deine … bleiben").
+// the words of the cards, nextime's things in the form of "Deine … bleiben"). TODO konten 1.1.0: the template gives them
+// none yet; take the module's values once it is fixed.
 const values = { username: 'kim', email: 'kim@example.com', provider: 'Pocket ID', name: 'Kim', day: '25.11.2026', providers: 'Pocket ID, Entra', address: 'https://time.example.com', used: '1 GB', limit: '5 GB', things: 'Kalender', variable: 'NEXTIME_TRUSTED_PROXIES', networks: '0.0.0.0/0', proxy: '172.18.0.2', proxies: '172.18.0.0/16' }
 const fill: Record<string, string | number> = { ...kontenVariables(APP_NAME), ...values }
 /** Plural keys (``days_one``, ``recoveryLeft_other``) are asked by their base with a count that picks them. */

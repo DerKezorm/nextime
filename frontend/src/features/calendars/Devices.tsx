@@ -6,19 +6,18 @@
  *
  * The page `/setup/<code>` is where the QR code leads: the same setup on the phone, without signing in.
  */
-import { Copy, MonitorSmartphone, Smartphone } from 'lucide-react'
+import { MonitorSmartphone, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
 
 import { ApiError } from '../../api/client'
-import { Dialog } from '../../components/Dialog'
 import { Logo } from '../../components/Logo'
 import { copyText } from '../../lib/copy'
 import { errorText, problemText } from '../../lib/errors'
 import { ago } from '../../lib/time'
 import { useTitle } from '../../lib/title'
-import { Card } from '../../pages/settings/ui'
+import { Button, Card, ConfirmDialog } from '../../vendor/nexui'
 import { useAuth } from '../../state/auth'
 import { browser, devicesApi, profileAddress, type ComingAlong, type Credentials, type DeviceOverview, type NewDevice } from './api'
 import { Swatch } from './Swatch'
@@ -40,15 +39,9 @@ function CopyRow({ label, value, testId }: { label: string; value: string; testI
       <span className="min-w-0 font-mono break-all text-mist-100" data-testid={testId}>
         {value}
       </span>
-      <button
-        type="button"
-        className="nt-btn nt-btn-ghost h-8 px-2.5 text-xs"
-        onClick={() => void copyText(value).then((ok) => setDone(ok))}
-        aria-label={`${t('common.copy')}: ${label}`}
-      >
-        <Copy className="h-3.5 w-3.5" aria-hidden />
+      <Button kind="secondary" size="sm" icon={done ? 'Check' : 'Copy'} onClick={() => void copyText(value).then((ok) => setDone(ok))} aria-label={`${t('common.copy')}: ${label}`}>
         {done ? t('common.copied') : t('common.copy')}
-      </button>
+      </Button>
     </div>
   )
 }
@@ -124,13 +117,13 @@ function PhoneSetup({ defaultName, calendars, onProfile, onData, data, busy, pro
           <p className="text-xs text-warn-500">{t('devices.onlyNow')}</p>
         </div>
       ) : android ? (
-        <button type="button" className="nt-btn nt-btn-accent h-12 w-full text-base" disabled={busy || !name.trim()} onClick={() => onData(name.trim())} data-testid="phone-show-data">
+        <Button kind="primary" icon="KeyRound" wide disabled={busy || !name.trim()} onClick={() => onData(name.trim())} testId="phone-show-data">
           {t('devices.showData')}
-        </button>
+        </Button>
       ) : (
-        <button type="button" className="nt-btn nt-btn-accent h-12 w-full text-base" disabled={busy || !name.trim()} onClick={() => onProfile(name.trim())} data-testid="load-profile">
+        <Button kind="primary" icon="Download" wide disabled={busy || !name.trim()} onClick={() => onProfile(name.trim())} testId="load-profile">
           {t('devices.loadProfile')}
-        </button>
+        </Button>
       )}
       {!android && (
         <div className="space-y-2 rounded-[12px] border border-ink-700 bg-ink-850 p-4">
@@ -180,9 +173,9 @@ function DeviceList({ overview, onChanged }: { overview: DeviceOverview; onChang
                       : t('devices.neverSynced')}
                   </p>
                 </div>
-                <button type="button" className="nt-btn nt-btn-ghost h-9" onClick={() => setAsking({ id: device.id, name: device.name })} data-testid="lock-out">
+                <Button kind="danger" size="sm" icon="Ban" onClick={() => setAsking({ id: device.id, name: device.name })} testId="lock-out">
                   {t('devices.lockOut')}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -190,19 +183,16 @@ function DeviceList({ overview, onChanged }: { overview: DeviceOverview; onChang
         <p className="text-xs text-mist-500">{t('devices.lockOutText')}</p>
         {problem && <p className="text-sm text-bad-500">{problem}</p>}
         {asking && (
-          <Dialog title={t('devices.lockOutTitle', { name: asking.name })} onClose={() => setAsking(null)}>
-            <div className="space-y-4" data-testid="lock-out-question">
-              <p className="text-sm text-mist-200">{t('devices.lockOutText')}</p>
-              <div className="flex justify-end gap-2">
-                <button type="button" className="nt-btn nt-btn-ghost" onClick={() => setAsking(null)}>
-                  {t('common.cancel')}
-                </button>
-                <button type="button" className="nt-btn nt-btn-danger" onClick={() => void lockOut()}>
-                  {t('devices.lockOut')}
-                </button>
-              </div>
-            </div>
-          </Dialog>
+          <ConfirmDialog
+            title={t('devices.lockOutTitle', { name: asking.name })}
+            text={t('devices.lockOutText')}
+            confirm={{ label: t('devices.lockOut'), kind: 'danger', icon: 'Ban' }}
+            cancel={t('common.cancel')}
+            closeLabel={t('common.close')}
+            onCancel={() => setAsking(null)}
+            onConfirm={() => void lockOut()}
+            testId="lock-out-question"
+          />
         )}
       </div>
     </Card>
@@ -283,7 +273,7 @@ export function DevicesTab() {
   return (
     <div className="space-y-5" data-testid="devices-tab">
       <div className="flex flex-col gap-5">
-        <Card id="devices-new" icon={Smartphone} title={t('devices.addTitle')} text={t('devices.intro')}>
+        <Card id="devices-new" icon={Smartphone} title={t('devices.addTitle')} subtitle={t('devices.intro')}>
           <form
             className="flex flex-wrap items-end gap-2"
             onSubmit={(event) => {
@@ -295,9 +285,9 @@ export function DevicesTab() {
               <span className="font-medium text-mist-100">{t('devices.device')}</span>
               <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t('devices.defaultName', { name: shown })} className="nt-field mt-1" data-testid="device-name" />
             </label>
-            <button type="submit" className="nt-btn nt-btn-accent" disabled={busy} data-testid="device-create">
+            <Button kind="primary" icon="Plus" type="submit" disabled={busy} testId="device-create">
               {t('devices.create')}
-            </button>
+            </Button>
           </form>
           {problem && (
             <p role="alert" className="text-sm text-bad-500">
@@ -325,9 +315,11 @@ export function DevicesTab() {
             </div>
           )}
           {/Macintosh/.test(navigator.userAgent) && (
-            <button type="button" className="nt-btn nt-btn-quiet text-sm" onClick={() => setHere(true)}>
-              {t('devices.setUpHere')}
-            </button>
+            <div>
+              <Button kind="secondary" icon="Monitor" onClick={() => setHere(true)}>
+                {t('devices.setUpHere')}
+              </Button>
+            </div>
           )}
         </Card>
         <DeviceList overview={overview} onChanged={() => void load()} />

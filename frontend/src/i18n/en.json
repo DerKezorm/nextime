@@ -553,7 +553,8 @@
     "internetOk": "Internet reachable, sync running",
     "internetBad": "Internet not reachable: syncing with iCloud, Google and subscriptions pauses.",
     "httpsMissing": "nextime is not reachable over HTTPS. Calendars on iPhones and Android connect only with HTTPS.",
-    "showLog": "Show log"
+    "showLog": "Show log",
+    "mailSubtitle": "The mail server through which nextime sends invitations, links for a new password, links to confirm an address and the notice of a new sign-in."
   },
   "session": {
     "blockedText": "The operator has blocked your account. Nothing more is saved. Ask the operator.",
@@ -1738,7 +1739,18 @@
   },
   "pwa": {
     "update": "There is a new version of nextime.",
-    "reload": "Reload"
+    "reload": "Reload",
+    "install": {
+      "title": "Install on this device",
+      "text": "Installed, nextime starts like an app: in its own window without the browser's bar, with its own icon.",
+      "button": "Install",
+      "asked": "The browser asked. If you agreed, you find nextime among your apps.",
+      "ios": "On iPhone and iPad: Share › Add to Home Screen.",
+      "installed": "nextime runs as an installed app on this device already.",
+      "safari": "In Safari on the Mac: File › Add to Dock.",
+      "firefox": "Firefox cannot install web apps. Open nextime in another browser for it, such as Chrome, Edge or Safari.",
+      "other": "If your browser offers no button here, installing is in its menu, such as “Install app” or “Add to Home screen”."
+    }
   },
   "offline": {
     "state": "No connection · as of {{when}} · read only",

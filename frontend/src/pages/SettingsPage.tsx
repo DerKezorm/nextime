@@ -1,58 +1,86 @@
 /**
- * Settings (TIME-2 AC-7), laid out as in nexnotes so that whoever comes from another nex app finds the way at once:
- * "My account" (Profile, Security, Appearance, Calendars and accounts, Shares, On iPhone and co, Connections,
- * Reminders) for every account, "Server" (General, Sign-in, Mail, Storage and backups, Set up Google, Accounts, Log)
- * for the operator, "About nextime" for everyone at the end. Each area has its own address (`/settings/<slug>`,
- * `areas.ts`), `/settings` is the profile. An area someone may not open, or an address of before, leads on with the
- * address replaced, so the navigation always marks where one is.
+ * Settings (TIME-2 AC-7, plan "Einstellungen") in the frame of the ui kit: `SettingsLayout` with `SettingsNav` (the
+ * account at the top, "Mein Konto", "Server" for the operator, "Über nextime" set apart at the end) and one
+ * `SettingsPage` per area: its title, one line, then only cards. Each area has its own address (`/settings/<slug>`,
+ * `areas.ts`). `/settings` alone is the list on a phone and the profile beside the navigation on a wider page. An area
+ * someone may not open, or an address of before, leads on with the address replaced, so the navigation always marks
+ * where one is. Without a connection the settings are to read only; signing out stays (TIME-28 AC-3, EC-1).
  */
 import { useTranslation } from 'react-i18next'
-import { Navigate, useLocation, useParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
 
-import { useTitle } from '../lib/title'
+import { Avatar } from '../components/Avatar'
 import { useOffline } from '../features/offline/connection'
+import { useTitle } from '../lib/title'
 import { useAuth } from '../state/auth'
-import { findArea, formerPath, resolveArea } from './settings/areas'
-import { SignOutCard } from './settings/AccountTab'
+import { areaText, languageOf, NEXUI_TEXTS, NexuiLanguage, Notice, SettingsLayout, SettingsNav, SettingsPage as Area, type SettingsGroup } from '../vendor/nexui'
+import { ABOUT_AREA, areaPath, areasFor, findArea, formerPath, GROUPS, resolveArea, type Area as AreaInfo } from './settings/areas'
+import { SignOut } from './settings/AccountTab'
 import { AreaContent } from './settings/SettingsAreas'
-import { SettingsJump, SettingsNav } from './settings/SettingsNav'
+
+const APP = 'nextime'
 
 export function SettingsPage() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { me } = useAuth()
   const { tab: asked } = useParams()
   const { search } = useLocation()
   const where = resolveArea(asked, me?.role, search)
   const area = 'area' in where ? findArea(where.area) : undefined
-  const title = area ? t(`settings.areas.${area.key}.title`) : ''
+  const things = t('settings.things')
+  const words = (info: AreaInfo) =>
+    info.own
+      ? { title: t(`settings.areas.${info.key}.title`), text: t(`settings.areas.${info.key}.text`) }
+      : (areaText(NEXUI_TEXTS[languageOf(i18n.language)], info.slug, { app: APP, things }) ?? { title: info.slug, text: '' })
+  const title = area ? words(area).title : ''
   // Without a connection the settings are to read only (TIME-28 AC-3).
   const offline = useOffline()
   useTitle(area ? `${title} · ${t('settings.title')}` : t('settings.title'))
   if (!me) return null
   if ('redirect' in where) return <Navigate to={where.redirect} replace />
   if (!area) return null
+  const areas = areasFor(me.role)
+  const groups: SettingsGroup[] = GROUPS.map((group) => ({
+    id: group,
+    areas: areas
+      .filter((entry) => entry.group === group)
+      .map((entry) => ({ slug: entry.slug, icon: entry.icon, href: areaPath(entry.slug), title: entry.own ? words(entry).title : undefined })),
+  }))
+  const shown = me.display_name || me.name
+  const own = area.own ? words(area) : null
   return (
-    <div className="@container mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
-      <div className="flex flex-col gap-5 @min-[700px]:flex-row @min-[700px]:items-start @min-[700px]:gap-8">
-        <SettingsNav me={me} current={area.slug} />
-        <SettingsJump me={me} current={area.slug} />
-        <div className="min-w-0 flex-1 space-y-5" data-testid={`settings-area-${area.slug}`}>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-mist-100">{title}</h1>
-            <p className="mt-1 text-sm text-mist-400">{t(`settings.areas.${area.key}.text`)}</p>
-          </div>
-          {offline && (
-            <p role="status" className="rounded-[12px] border border-warn-500/40 bg-warn-wash px-3.5 py-2.5 text-sm text-warn-500" data-testid="settings-offline">
-              {t('offline.settingsOff')}
-            </p>
-          )}
-          <fieldset disabled={offline} className="min-w-0 space-y-6" data-testid="settings-fieldset">
-            <AreaContent key={area.slug} area={area.slug} />
-          </fieldset>
-          {offline && area.slug === 'profile' && <SignOutCard viaProvider={me.sign_in === 'oidc'} />}
-        </div>
+    <NexuiLanguage language={i18n.language}>
+      <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <SettingsLayout
+          list={asked === undefined}
+          back="/settings"
+          link={Link}
+          nav={
+            <SettingsNav
+              app={APP}
+              things={things}
+              groups={groups}
+              about={{ href: areaPath(ABOUT_AREA.slug), slug: ABOUT_AREA.slug }}
+              current={area.slug}
+              account={{ name: shown, role: t(`roles.${me.role}`), picture: <Avatar accountId={me.id} color={me.color} name={shown} stamp={me.avatar} size={40} /> }}
+              link={Link}
+            />
+          }
+        >
+          <Area slug={area.slug} app={APP} things={things} title={own?.title} subtitle={own?.text}>
+            {offline && (
+              <div role="status" data-testid="settings-offline">
+                <Notice tone="warn">{t('offline.settingsOff')}</Notice>
+              </div>
+            )}
+            <fieldset disabled={offline} className="m-0 flex min-w-0 flex-col gap-6 border-0 p-0" data-testid="settings-fieldset">
+              <AreaContent key={area.slug} area={area.slug} />
+            </fieldset>
+            {offline && area.slug === 'profile' && <SignOut />}
+          </Area>
+        </SettingsLayout>
       </div>
-    </div>
+    </NexuiLanguage>
   )
 }
 

@@ -9,7 +9,7 @@ import { RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { onAccountChange } from '../state/account'
-import { startWorker, takeUpdate, tell, usePwa } from './worker'
+import { listenForInstall, startWorker, takeUpdate, tell, usePwa } from './worker'
 
 export function UpdateBanner() {
   const { t } = useTranslation()
@@ -30,3 +30,5 @@ export function UpdateBanner() {
 onAccountChange(() => void tell({ type: 'nextime-forget' }))
 
 if (import.meta.env.PROD) startWorker()
+// The browser's offer to install comes once, early: kept for the card "Auf diesem Gerät installieren".
+listenForInstall()

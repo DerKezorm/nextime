@@ -1,54 +1,64 @@
 /**
- * What each area of the settings shows. The cards themselves stay in their files (`AccountTab`, `ServerCards`,
- * `SignInCards`, `AccountsTab`, `LogCard`, `AboutArea`, `CalendarsArea`, `GoogleArea`, `DevicesTab`, `SharesArea`); an area only
- * picks them.
+ * What each area of the settings shows (plan "Einstellungen"): only cards, in the plan's order. The shared areas take
+ * the cards of the modules (konten, oidc, post, sicherung, log, schluessel) and of the ui kit; nextime's own areas
+ * (Calendars and accounts, Shares, On iPhone and co, Take along and move, Set up Google) keep their cards.
  */
-import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { serverApi, type ServerState } from '../../api/client'
-import { AppDevicesSection } from '../../features/app/AppDevicesSection'
+import { api } from '../../api/client'
+import { moment } from '../../lib/time'
+import { useDisplay } from '../../lib/useDisplay'
 import { DevicesTab } from '../../features/calendars/Devices'
-import { ConnectionsArea } from '../../features/keys/ConnectionsArea'
+import { ConnectionsArea, keyRequest } from '../../features/keys/ConnectionsArea'
 import { RemindersArea } from '../../features/reminders/RemindersArea'
 import { SharesArea } from '../../features/shares/SharesArea'
 import { MoveArea } from '../../features/transfer/MoveArea'
+import { MailCard } from '../../vendor/nexpost/MailCard'
+import type { PostRequest } from '../../vendor/nexpost/mailserver'
+import { InterfacesCard } from '../../vendor/nexschluessel'
 import { AboutArea } from './AboutArea'
 import { AccountsTab } from './AccountsTab'
 import { AccountTab } from './AccountTab'
+import { AppearanceArea } from './AppearanceArea'
 import type { AreaSlug } from './areas'
 import { CalendarsArea } from './CalendarsArea'
+import { FeaturesCard, LanguagesCard, LimitsCard } from './GeneralCards'
 import { GoogleArea } from './GoogleArea'
 import { LogCard } from './LogCard'
-import { BackupsCard, HttpsHint, LanguagesCard, LimitsCard, MailCard, ProxyHint, StateCard, SwitchesCard, useServerSettings } from './ServerCards'
-import { SignInPart } from './SignInCards'
+import { useServerSettings } from './ServerCards'
+import { SignInArea } from './SignInArea'
+import { StorageArea } from './StorageArea'
 
-type ServerArea = 'general' | 'sign-in' | 'mail' | 'storage'
+const mailRequest: PostRequest = <T,>(path: string, init: Parameters<PostRequest>[1] = {}) => api<T>(path, init)
 
 export function AreaContent({ area }: { area: AreaSlug }) {
   switch (area) {
     case 'profile':
     case 'security':
-    case 'appearance':
       return <AccountTab part={area} />
+    case 'appearance':
+      return <AppearanceArea />
     case 'calendars':
       return <CalendarsArea />
     case 'devices':
-      // The iPhone and iPad app first (TIME-29, as nexnotes' "Geräte"), then the calendar account (TIME-20).
-      return (
-        <div className="space-y-8">
-          <AppDevicesSection />
-          <DevicesTab />
-        </div>
-      )
+      // "Auf iPhone und Co" is the calendar account alone now (TIME-20); the iPhone and iPad app is under Connections.
+      return <DevicesTab />
     case 'shares':
       return <SharesArea />
-    case 'reminders':
+    case 'notifications':
       return <RemindersArea />
     case 'move':
       return <MoveArea />
     case 'connections':
       return <ConnectionsArea />
+    case 'general':
+      return <GeneralArea />
+    case 'sign-in':
+      return <SignInArea />
+    case 'mail':
+      return <MailArea />
+    case 'storage':
+      return <StorageArea />
     case 'google':
       return <GoogleArea />
     case 'accounts':
@@ -57,65 +67,26 @@ export function AreaContent({ area }: { area: AreaSlug }) {
       return <LogCard />
     case 'about':
       return <AboutArea />
-    default:
-      return <ServerCardsOf area={area} />
   }
 }
 
-/**
- * The server's own settings, for the operator (TIME-1). The hint about an unnamed proxy concerns the sign-in brake and
- * the addresses: it stands in General and in Sign-in.
- */
-function ServerCardsOf({ area }: { area: ServerArea }) {
+/** Server › Mail (post 1.1.0): the module's card with nextime's sentence; moments in the account's clock and zone. */
+function MailArea() {
+  const { t } = useTranslation()
+  const { timeOptions } = useDisplay()
+  return <MailCard request={mailRequest} subtitle={t('server.mailSubtitle')} when={(iso, language) => moment(iso, language, false, timeOptions)} />
+}
+
+/** Server › General (TIME-1): Limits, Features for every account, the key module's Interfaces, Languages. */
+function GeneralArea() {
   const server = useServerSettings()
-  const state = useServerState(area === 'general')
   if (!server.settings) return null
   return (
-    <div className="space-y-6" data-testid={`server-${area}`}>
-      {(area === 'general' || area === 'sign-in') && <ProxyHint server={server} />}
-      {area === 'general' && (
-        <>
-          {state && !state.https && <HttpsHint />}
-          <LimitsCard server={server} />
-          <SwitchesCard server={server} />
-          <LanguagesCard />
-          <VersionAndState state={state} />
-        </>
-      )}
-      {area === 'sign-in' && <SignInPart server={server} />}
-      {area === 'mail' && <MailCard server={server} />}
-      {area === 'storage' && <BackupsCard server={server} />}
+    <div className="flex flex-col gap-6" data-testid="server-general">
+      <LimitsCard server={server} />
+      <FeaturesCard server={server} />
+      <InterfacesCard request={keyRequest} docsHref="/api/v1/docs" />
+      <LanguagesCard />
     </div>
-  )
-}
-
-/** The state of the server (TIME-1 AC-6, AC-7, AC-9): HTTPS, the internet, the version and a newer one. */
-function useServerState(wanted: boolean): ServerState | null {
-  const [state, setState] = useState<ServerState | null>(null)
-  useEffect(() => {
-    if (wanted) serverApi.state().then(setState, () => undefined)
-  }, [wanted])
-  return state
-}
-
-/** After the cards General shares with nexnotes, nextime's own: the running version with "New version" beside it
- * (TIME-1 AC-7) and the box "State" with HTTPS and the internet (AC-9). The hint without HTTPS (AC-6) stands on top,
- * beside the hint about the proxy. */
-function VersionAndState({ state }: { state: ServerState | null }) {
-  const { t } = useTranslation()
-  return (
-    <>
-      <div className="flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-mist-400" data-testid="server-version">
-          {state ? t('server.version', { version: state.version }) : ''}
-        </span>
-        {state?.newer && (
-          <span className="nt-chosen rounded-full px-2.5 py-1 text-xs font-medium" data-testid="server-newer">
-            {t('server.newer', { version: state.newer })}
-          </span>
-        )}
-      </div>
-      <StateCard state={state} />
-    </>
   )
 }

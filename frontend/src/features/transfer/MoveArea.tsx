@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { errorText, problemText } from '../../lib/errors'
-import { Card } from '../../pages/settings/ui'
+import { Button, Card } from '../../vendor/nexui'
 import { newRef, type CalendarEntry } from '../calendars/api'
 import { CalendarDialog } from '../calendars/CalendarDialogs'
 import { Swatch } from '../calendars/Swatch'
@@ -96,7 +96,7 @@ function ExportCard({ calendars }: { calendars: CalendarEntry[] | null }) {
   const [chosen, setChosen] = useState<number | null>(null)
   const current = chosen ?? shown[0]?.id ?? null
   return (
-    <Card icon={Download} title={t('move.export.title')} text={t('move.export.text')} id="move-export">
+    <Card icon={Download} title={t('move.export.title')} subtitle={t('move.export.text')} id="move-export">
       <label className="block text-sm">
         <span className="sr-only">{t('move.export.calendar')}</span>
         <select className="nt-field" value={current ?? ''} onChange={(event) => setChosen(Number(event.target.value))} data-testid="export-calendar">
@@ -108,24 +108,12 @@ function ExportCard({ calendars }: { calendars: CalendarEntry[] | null }) {
         </select>
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <a
-          className={'nt-btn nt-btn-accent ' + (current === null || offline ? 'pointer-events-none opacity-50' : '')}
-          aria-disabled={current === null || offline}
-          href={current === null ? undefined : transferApi.exportPath(current)}
-          download
-          data-testid="export-download"
-        >
+        <Button kind="primary" icon="Download" href={current === null || offline ? undefined : transferApi.exportPath(current)} disabled={current === null || offline} testId="export-download">
           {t('move.export.download')}
-        </a>
-        <a
-          className={'text-sm font-medium text-accent-400 hover:underline ' + (offline ? 'pointer-events-none opacity-50' : '')}
-          aria-disabled={offline}
-          href={transferApi.zipPath}
-          download
-          data-testid="export-zip"
-        >
+        </Button>
+        <Button kind="secondary" icon="Archive" href={offline ? undefined : transferApi.zipPath} disabled={offline} testId="export-zip">
           {t('move.export.zip', { count: shown.length })}
-        </a>
+        </Button>
       </div>
       <p className="text-xs text-mist-500">{t('move.export.zipNote')}</p>
     </Card>
@@ -209,18 +197,20 @@ function LoadCard({ calendars }: { calendars: CalendarEntry[] | null }) {
   const maxMb = useCalendars().list?.attachment_max_mb ?? 25
   if (calendars !== null && own.length === 0) {
     return (
-      <Card icon={Upload} title={t('move.load.title')} text={t('move.load.text')} id="move-load">
+      <Card icon={Upload} title={t('move.load.title')} subtitle={t('move.load.text')} id="move-load">
         <Hint testId="load-needs-calendar">{t('move.load.needsCalendar')}</Hint>
-        <button type="button" className="nt-btn nt-btn-accent w-fit" disabled={offline} onClick={() => setNewCalendar(true)} data-testid="load-new-calendar">
-          {t('move.load.newCalendar')}
-        </button>
+        <div>
+          <Button kind="primary" icon="Plus" disabled={offline} onClick={() => setNewCalendar(true)} testId="load-new-calendar">
+            {t('move.load.newCalendar')}
+          </Button>
+        </div>
         {newCalendar && <CalendarDialog onDone={() => (announce(), setNewCalendar(false))} onClose={() => setNewCalendar(false)} />}
       </Card>
     )
   }
 
   return (
-    <Card icon={Upload} title={t('move.load.title')} text={t('move.load.text')} id="move-load">
+    <Card icon={Upload} title={t('move.load.title')} subtitle={t('move.load.text')} id="move-load">
       {preview && (
         <div className="space-y-1 rounded-[10px] border border-ink-700 bg-ink-900 p-3" data-testid="load-preview">
           <span className="nt-wrap block text-sm text-mist-100" data-testid="load-name">
@@ -280,9 +270,11 @@ function LoadCard({ calendars }: { calendars: CalendarEntry[] | null }) {
             </select>
           </label>
           {preview.over_limit && <Hint tone="warn" testId="load-limit">{t('move.limit', { count: preview.account_events + preview.new, limit: preview.limit })}</Hint>}
-          <button type="button" className="nt-btn nt-btn-accent w-fit" disabled={offline || making || preview.new === 0} onClick={() => void take()} data-testid="load-apply">
-            {preview.new === 0 ? t('move.load.nothingNew') : t('move.load.apply', { count: preview.new })}
-          </button>
+          <div>
+            <Button kind="primary" icon="Upload" busy={making} disabled={offline || preview.new === 0} onClick={() => void take()} testId="load-apply">
+              {preview.new === 0 ? t('move.load.nothingNew') : t('move.load.apply', { count: preview.new })}
+            </Button>
+          </div>
           {progress && <Progress state={progress} label="move.load.running" />}
         </>
       )}
@@ -329,11 +321,13 @@ function MoveCards() {
   const kinds = (['icloud', 'google'] as const).filter((kind) => movable.some((entry) => entry.kind === kind))
   if (kinds.length === 0) {
     return (
-      <Card icon={ArrowLeftRight} title={t('move.move.title.icloud')} text={t('move.move.text.icloud')} id="move-move">
+      <Card icon={ArrowLeftRight} title={t('move.move.title.icloud')} subtitle={t('move.move.text.icloud')} id="move-move">
         <Hint testId="move-needs-source">{t('move.move.none')}</Hint>
-        <button type="button" className="nt-btn nt-btn-ghost w-fit" onClick={() => setAdding(true)} data-testid="move-add-calendar">
-          {t('calendars.add')}
-        </button>
+        <div>
+          <Button kind="secondary" icon="Plus" onClick={() => setAdding(true)} testId="move-add-calendar">
+            {t('calendars.add')}
+          </Button>
+        </div>
         {adding && <AddCalendar onClose={() => setAdding(false)} />}
       </Card>
     )
@@ -402,7 +396,7 @@ function MoveCard({ kind, calendars }: { kind: 'icloud' | 'google'; calendars: M
   }
 
   return (
-    <Card icon={ArrowLeftRight} title={t(`move.move.title.${kind}`)} text={t(`move.move.text.${kind}`)} id={`move-${kind}`}>
+    <Card icon={ArrowLeftRight} title={t(`move.move.title.${kind}`)} subtitle={t(`move.move.text.${kind}`)} id={`move-${kind}`}>
       {result ? (
         <div className="space-y-2" data-testid="move-result">
           <div className="flex flex-wrap items-center gap-2 text-sm text-mist-100">
@@ -455,9 +449,11 @@ function MoveCard({ kind, calendars }: { kind: 'icloud' | 'google'; calendars: M
             </div>
           )}
           {preview?.over_limit && <Hint tone="warn" testId="move-limit">{t('move.limit', { count: preview.account_events + preview.events, limit: preview.limit })}</Hint>}
-          <button type="button" className="nt-btn nt-btn-accent w-fit" disabled={offline || moving || !preview} onClick={() => void go()} data-testid="move-go">
-            {moving ? t('move.move.moving') : t('move.move.go')}
-          </button>
+          <div>
+            <Button kind="primary" icon="ArrowRightLeft" busy={moving} disabled={offline || !preview} onClick={() => void go()} testId="move-go">
+              {moving ? t('move.move.moving') : t('move.move.go')}
+            </Button>
+          </div>
           {progress && <Progress state={progress} label="move.move.running" />}
         </>
       )}

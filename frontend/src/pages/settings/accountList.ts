@@ -2,26 +2,22 @@
  * its own act at its fixed place, and its rows as the module knows them. */
 import type { AccountRow } from '../../api/client'
 import { avatarUrl, personColor } from '../../lib/avatar'
-import type { AccountCaps, ListedAccount, OwnAction } from '../../vendor/nexkonten/konten'
+import { capsOf, type AccountCaps, type ListedAccount, type OwnAction } from '../../vendor/nexkonten/konten'
 
-/** What nextime's server can do for the operator (konten 0.3.9, `ACCOUNT_CAPS`): everything of the module. */
-export const APP_CAPS: AccountCaps = {
+/** What nextime's server can do for the operator (konten 1.1.0, `capsOf`): everything of the module, the standard
+ * functions of every app, and of the module's features none (no storage limit per account since E24, no AI, no
+ * Immich). */
+export const APP_CAPS: AccountCaps = capsOf('nextime', {
   rename: true,
-  roles: true,
   emailRemove: true,
   resetLink: true,
   factorReset: true,
   signOut: true,
   unlink: true,
-  blocking: true,
-  remove: true,
-  restore: true,
-}
+})
 
-/** nextime's own act in the dialog "Manage": the storage limit, in "Change" after "Make member". */
-export const APP_OWN_ACTIONS: readonly OwnAction[] = [
-  { name: 'storageLimit', label: 'accounts.storageLimit', group: 'change', button: 'storageLimit', after: 'account.makeMember' },
-]
+/** nextime's own acts in the dialog "Manage": none any more (the storage limit went with konten 1.1.0, E24). */
+export const APP_OWN_ACTIONS: readonly OwnAction[] = []
 
 /** One row of nextime's answer as the module's list knows it (the names of the interface stay). */
 export function listedOf(row: AccountRow, ownId: number | undefined): ListedAccount {

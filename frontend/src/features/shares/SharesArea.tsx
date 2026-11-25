@@ -12,7 +12,7 @@ import { useTranslation } from 'react-i18next'
 
 import { day } from '../../lib/format'
 import { problemText } from '../../lib/errors'
-import { Card, Confirm } from '../../pages/settings/ui'
+import { Button, Card, ConfirmDialog, Notice } from '../../vendor/nexui'
 import { announce } from '../calendars/store'
 import { Swatch } from '../calendars/Swatch'
 import { sharesApi, type MineRow, type SharesOverview, type WithMeRow } from './api'
@@ -36,11 +36,22 @@ export function SharesArea() {
   const dated = (value: string) => day(value, i18n.language)
   const source = (kind: string) => (kind === 'own' ? '' : ` (${t(`shares.kinds.${kind}`)})`)
 
+  const [busy, setBusy] = useState(false)
+  const [dialogProblem, setDialogProblem] = useState<string | null>(null)
   const confirm = async () => {
     if (!asking) return
-    if (asking.kind === 'person') await sharesApi.remove(asking.row.calendar.id, asking.row.person.id)
-    else if (asking.kind === 'link') await sharesApi.revokeLink(asking.row.calendar.id)
-    else await sharesApi.leave(asking.row.calendar.id)
+    setBusy(true)
+    setDialogProblem(null)
+    try {
+      if (asking.kind === 'person') await sharesApi.remove(asking.row.calendar.id, asking.row.person.id)
+      else if (asking.kind === 'link') await sharesApi.revokeLink(asking.row.calendar.id)
+      else await sharesApi.leave(asking.row.calendar.id)
+    } catch (error) {
+      setDialogProblem(problemText(error))
+      return
+    } finally {
+      setBusy(false)
+    }
     setAsking(null)
     announce()
     load()
@@ -89,9 +100,9 @@ export function SharesArea() {
                     ? t(row.active ? 'shares.area.until' : 'shares.area.ran', { date: day(`${row.until}T12:00:00`, i18n.language) })
                     : t('shares.link.untilRevoked')}
               </span>
-              <button type="button" className="text-[13px] text-bad-500 hover:underline" onClick={() => setAsking(row.kind === 'person' ? { kind: 'person', row } : { kind: 'link', row })} data-testid="shares-take-back">
+              <Button kind="danger" size="sm" icon="Undo2" onClick={() => setAsking(row.kind === 'person' ? { kind: 'person', row } : { kind: 'link', row })} testId="shares-take-back">
                 {t('shares.area.takeBack')}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -108,28 +119,24 @@ export function SharesArea() {
               <span className="min-w-0 flex-1 truncate text-[13px] text-mist-300">
                 {t('shares.area.from', { name: row.owner, right: t(`shares.right.${rightWord(row.right, row.calendar.kind)}`) })}
               </span>
-              <button type="button" className="text-[13px] text-accent-400 hover:underline" onClick={() => setAsking({ kind: 'leave', row })} data-testid="shares-leave">
+              <Button kind="danger" size="sm" icon="LogOut" onClick={() => setAsking({ kind: 'leave', row })} testId="shares-leave">
                 {t('shares.area.leave')}
-              </button>
+              </Button>
             </li>
           ))}
           {overview.notices.map((notice) => (
             <li key={`n-${notice.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-ink-800 py-2.5 last:border-0" data-testid="shares-notice">
               <span className="min-w-0 flex-1 text-[13px] text-mist-400">{t('shares.area.gone', { calendar: notice.calendar, name: notice.owner })}</span>
-              <button type="button" className="text-[13px] text-mist-400 hover:text-mist-100" onClick={() => void dismiss(notice.id)} data-testid="shares-hide">
+              <Button kind="secondary" size="sm" icon="Check" onClick={() => void dismiss(notice.id)} testId="shares-hide">
                 {t('shares.area.hide')}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
       </Card>
-      {problem && (
-        <p role="alert" className="text-sm text-bad-500">
-          {problem}
-        </p>
-      )}
+      {problem && <Notice tone="danger">{problem}</Notice>}
       {asking && (
-        <Confirm
+        <ConfirmDialog
           title={
             asking.kind === 'person'
               ? t('shares.area.askPerson', { name: asking.row.person.name })
@@ -144,10 +151,13 @@ export function SharesArea() {
                 ? t('shares.area.askLinkText', { calendar: asking.row.calendar.name })
                 : t('shares.area.askLeaveText', { name: asking.row.owner })
           }
-          confirm={asking.kind === 'leave' ? t('shares.area.leave') : t('shares.area.takeBack')}
-          danger
-          onCancel={() => setAsking(null)}
-          onConfirm={confirm}
+          confirm={asking.kind === 'leave' ? { label: t('shares.area.leave'), kind: 'danger', icon: 'LogOut' } : { label: t('shares.area.takeBack'), kind: 'danger', icon: 'Undo2' }}
+          cancel={t('common.cancel')}
+          closeLabel={t('common.close')}
+          busy={busy}
+          error={dialogProblem}
+          onCancel={() => (setAsking(null), setDialogProblem(null))}
+          onConfirm={() => void confirm()}
         />
       )}
     </div>

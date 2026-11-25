@@ -12,9 +12,17 @@ type State = {
   update: boolean
   /** Runs as the installed app. */
   standalone: boolean
+  /** The browser offered its own question to install (`beforeinstallprompt`). */
+  installable: boolean
+  /** An iPhone or iPad: installing goes through Share › Add to Home Screen. */
+  ios: boolean
 }
 
-let state: State = { update: false, standalone: false }
+/** What a browser hands over with `beforeinstallprompt`. */
+type InstallOffer = Event & { prompt: () => Promise<void>; userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }> }
+
+let state: State = { update: false, standalone: false, installable: false, ios: false }
+let offer: InstallOffer | null = null
 let waiting: ServiceWorker | null = null
 const listeners = new Set<() => void>()
 
@@ -138,6 +146,38 @@ export function startWorker(): void {
   worker()
     .then(watch)
     .catch(() => undefined)
+}
+
+export function isIos(agent = navigator.userAgent, touchPoints = navigator.maxTouchPoints ?? 0): boolean {
+  // iPadOS asks for the desktop page and says "Macintosh"; it is the Mac with a touch screen.
+  return /iPhone|iPad|iPod/.test(agent) || (/Macintosh/.test(agent) && touchPoints > 1)
+}
+
+/** The browser's offer to install, kept from the start of the page (it comes once, early). For the card "Auf diesem
+ * Gerät installieren" (plan "Einstellungen", E6, E28). */
+export function listenForInstall(): void {
+  if (typeof window === 'undefined') return
+  set({ standalone: isStandalone(), ios: isIos() })
+  window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault()
+    offer = event as InstallOffer
+    set({ installable: true })
+  })
+  window.addEventListener('appinstalled', () => {
+    offer = null
+    set({ installable: false, standalone: isStandalone() })
+  })
+}
+
+/** The browser's own question to install; true when it was accepted. */
+export async function install(): Promise<boolean> {
+  if (!offer) return false
+  const asked = offer
+  offer = null
+  set({ installable: false })
+  await asked.prompt()
+  const { outcome } = await asked.userChoice
+  return outcome === 'accepted'
 }
 
 /** Takes the waiting version: the worker takes over, the page reloads. */

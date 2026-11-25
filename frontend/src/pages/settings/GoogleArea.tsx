@@ -6,17 +6,16 @@
  * first (EC-2); without HTTPS (EC-4) or after the address of nextime changed (EC-13) the page says so. The secret is
  * never shown again (EC-12).
  */
-import { Check, Cloud, Copy, KeyRound } from 'lucide-react'
+import { Check, Cloud, KeyRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { ApiError } from '../../api/client'
-import { Dialog } from '../../components/Dialog'
 import { googleSetupApi, type GoogleSetup } from '../../features/sources/api'
 import { copyText } from '../../lib/copy'
 import { errorText, problemText } from '../../lib/errors'
 import { useServerSettings } from './ServerCards'
-import { Card, Toggle } from './ui'
+import { Button, Buttons, Card, CheckboxRow, ConfirmDialog, Field, Notice } from '../../vendor/nexui'
 
 const STEPS = ['project', 'api', 'consent', 'client', 'values'] as const
 
@@ -27,13 +26,13 @@ export function GoogleArea() {
   return (
     <div className="space-y-6" data-testid="google-area">
       {s && (
-        <Card id="google" icon={Cloud} title={t('server.google')} text={t('server.googleHint')}>
-          <Toggle
-            label={t('server.google')}
-            note={s.google_configured ? t('server.googleSet') : t('server.googleNotSet')}
+        <Card id="google" icon={Cloud} title={t('server.google')} subtitle={t('server.googleHint')}>
+          <CheckboxRow
+            label={`${t('server.google')} (${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')})`}
             checked={s.google_enabled}
             disabled={!s.google_configured}
             onChange={(google_enabled) => void server.save({ google_enabled })}
+            testId="google-switch"
           />
         </Card>
       )}
@@ -94,16 +93,16 @@ function GoogleSetupCard({ onChanged }: { onChanged: () => void }) {
 
   if (!setup) return problem ? <p role="alert" className="text-sm text-bad-500">{problem}</p> : null
   return (
-    <Card id="google-setup" icon={KeyRound} title={t('googleSetup.title')} text={t('googleSetup.text')}>
+    <Card id="google-setup" icon={KeyRound} title={t('googleSetup.title')} subtitle={t('googleSetup.text')}>
       {!setup.https && (
-        <p role="status" className="rounded-[9px] border border-warn-500/30 bg-warn-wash px-3 py-2 text-sm text-warn-500" data-testid="google-https">
-          {t('googleSetup.noHttps')}
-        </p>
+        <div role="status" data-testid="google-https">
+          <Notice tone="warn">{t('googleSetup.noHttps')}</Notice>
+        </div>
       )}
       {setup.redirect_changed && (
-        <p role="status" className="rounded-[9px] border border-warn-500/30 bg-warn-wash px-3 py-2 text-sm text-warn-500" data-testid="google-moved">
-          {t('googleSetup.moved')}
-        </p>
+        <div role="status" data-testid="google-moved">
+          <Notice tone="warn">{t('googleSetup.moved')}</Notice>
+        </div>
       )}
       <ol className="space-y-2.5" data-testid="google-steps">
         {STEPS.map((step, index) => (
@@ -124,15 +123,9 @@ function GoogleSetupCard({ onChanged }: { onChanged: () => void }) {
           <code className="min-w-0 flex-1 rounded-[9px] border border-ink-700 bg-ink-900 px-3 py-2 font-mono text-xs break-all text-mist-200" data-testid="google-redirect">
             {setup.redirect_uri}
           </code>
-          <button
-            type="button"
-            className="nt-btn nt-btn-ghost h-9 shrink-0 px-3"
-            onClick={() => void copyText(setup.redirect_uri).then((done) => setCopied(done))}
-            data-testid="google-copy"
-          >
-            <Copy className="h-4 w-4" aria-hidden />
+          <Button kind="secondary" size="sm" icon={copied ? 'Check' : 'Copy'} onClick={() => void copyText(setup.redirect_uri).then((done) => setCopied(done))} testId="google-copy">
             {copied ? t('googleSetup.copied') : t('googleSetup.copy')}
-          </button>
+          </Button>
         </div>
       </div>
       <form
@@ -153,9 +146,9 @@ function GoogleSetupCard({ onChanged }: { onChanged: () => void }) {
           testId="google-secret"
         />
         {setup.ready && (
-          <p role="status" className="rounded-[9px] border border-ok-500/30 bg-ok-wash px-3 py-2 text-sm text-ok-500" data-testid="google-ready">
-            {t('googleSetup.ready', { count: setup.members })}
-          </p>
+          <div role="status" data-testid="google-ready">
+            <Notice tone="ok">{t('googleSetup.ready', { count: setup.members })}</Notice>
+          </div>
         )}
         {setup.members > 0 && (
           <p className="text-xs text-warn-500" data-testid="google-warning">
@@ -163,35 +156,31 @@ function GoogleSetupCard({ onChanged }: { onChanged: () => void }) {
           </p>
         )}
         {problem && (
-          <p role="alert" className="rounded-[9px] border border-bad-500/30 bg-bad-500/10 px-3 py-2 text-sm text-bad-500">
-            {problem}
-          </p>
+          <Notice tone="danger">{problem}</Notice>
         )}
-        <div className="flex flex-wrap items-center gap-2">
-          {(setup.ready || setup.client_id) && (
-            <button type="button" className="nt-btn nt-btn-quiet mr-auto text-bad-500" disabled={busy} onClick={() => void remove(false)} data-testid="google-remove">
-              {t('googleSetup.remove')}
-            </button>
-          )}
-          <button type="submit" className="nt-btn nt-btn-accent ml-auto" disabled={busy} data-testid="google-save">
+        <Buttons>
+          <Button kind="primary" icon="Check" type="submit" busy={busy} testId="google-save">
             {busy ? t('sources.checking') : t('common.save')}
-          </button>
-        </div>
+          </Button>
+          {(setup.ready || setup.client_id) && (
+            <Button kind="danger" icon="Trash2" disabled={busy} onClick={() => void remove(false)} testId="google-remove">
+              {t('googleSetup.remove')}
+            </Button>
+          )}
+        </Buttons>
       </form>
       {confirming && (
-        <Dialog title={confirming === 'save' ? t('googleSetup.confirmSave') : t('googleSetup.confirmRemove')} onClose={() => setConfirming(null)}>
-          <div className="space-y-4" data-testid="google-confirm">
-            <p className="text-sm text-mist-200">{t('googleSetup.warning')}</p>
-            <div className="flex justify-end gap-2">
-              <button type="button" className="nt-btn nt-btn-ghost" onClick={() => setConfirming(null)}>
-                {t('common.cancel')}
-              </button>
-              <button type="button" className="nt-btn nt-btn-danger" disabled={busy} onClick={() => void (confirming === 'save' ? save(true) : remove(true))} data-testid="google-confirm-go">
-                {confirming === 'save' ? t('googleSetup.confirmSaveGo') : t('googleSetup.remove')}
-              </button>
-            </div>
-          </div>
-        </Dialog>
+        <ConfirmDialog
+          title={confirming === 'save' ? t('googleSetup.confirmSave') : t('googleSetup.confirmRemove')}
+          text={t('googleSetup.warning')}
+          confirm={confirming === 'save' ? { label: t('googleSetup.confirmSaveGo'), kind: 'danger', icon: 'Check' } : { label: t('googleSetup.remove'), kind: 'danger', icon: 'Trash2' }}
+          cancel={t('common.cancel')}
+          closeLabel={t('common.close')}
+          busy={busy}
+          onCancel={() => setConfirming(null)}
+          onConfirm={() => void (confirming === 'save' ? save(true) : remove(true))}
+          testId="google-confirm"
+        />
       )}
     </Card>
   )
@@ -207,24 +196,6 @@ function Value({ label, value, onChange, type = 'text', placeholder, problem, te
   testId: string
 }) {
   return (
-    <label className="block text-sm">
-      <span className="font-medium text-mist-100">{label}</span>
-      <input
-        type={type}
-        value={value}
-        placeholder={placeholder}
-        autoComplete="off"
-        spellCheck={false}
-        onChange={(event) => onChange(event.target.value)}
-        aria-invalid={problem ? true : undefined}
-        className={'nt-field mt-1 ' + (problem ? 'border-bad-500' : '')}
-        data-testid={testId}
-      />
-      {problem && (
-        <span role="alert" className="mt-1 block text-xs text-bad-500" data-testid={`${testId}-problem`}>
-          {problem}
-        </span>
-      )}
-    </label>
+    <Field label={label} type={type} value={value} placeholder={placeholder} autoComplete="off" spellCheck={false} onChange={(event) => onChange(event.target.value)} error={problem} data-testid={testId} />
   )
 }

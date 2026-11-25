@@ -21,6 +21,8 @@ import i18n, { changeLanguage } from '../i18n'
 import { signedOut } from '../lib/devicePref'
 import { markUnreachable } from '../features/offline/connection'
 import { forgetKept, readKept } from '../features/offline/snapshot'
+import { applyAccountTheme, keptValue } from '../lib/theme'
+import { browserTheme } from '../vendor/nexkonten/konten'
 import { followAccount } from './account'
 
 type Status = 'loading' | 'setup' | 'signedOut' | 'signedIn' | 'offline'
@@ -93,6 +95,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus('signedIn')
     // The account's language wins over the browser's, on every device (TIME-3 AC-1).
     if (next.language && next.language !== i18n.language) void changeLanguage(next.language, false)
+    // Light or dark belongs to the account on every device (konten 1.1.0, E5). An account that never chose takes
+    // what this browser kept before, once (`profiles.adopt_theme`); afterwards the account's counts.
+    if (next.theme) applyAccountTheme(next.theme)
+    else {
+      const kept = browserTheme(keptValue())
+      if (kept && kept !== 'system') {
+        authApi.adoptTheme(kept).then((found) => applyAccountTheme(found.theme), () => undefined)
+      }
+    }
   }, [])
 
   const refresh = useCallback(async () => {

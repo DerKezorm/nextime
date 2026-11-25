@@ -553,7 +553,8 @@
     "internetOk": "Internet erreichbar, Abgleich läuft",
     "internetBad": "Internet nicht erreichbar: der Abgleich mit iCloud, Google und Abos pausiert.",
     "httpsMissing": "nextime ist nicht über HTTPS erreichbar. Kalender auf iPhones und Android verbinden sich erst mit HTTPS.",
-    "showLog": "Log ansehen"
+    "showLog": "Log ansehen",
+    "mailSubtitle": "Der Mailserver, über den nextime Einladungen, Links für ein neues Passwort, Links zum Bestätigen einer Adresse und den Hinweis bei einer neuen Anmeldung verschickt."
   },
   "session": {
     "blockedText": "Der Betreiber hat dein Konto gesperrt. Es wird nichts mehr gespeichert. Wende dich an den Betreiber.",
@@ -1738,7 +1739,18 @@
   },
   "pwa": {
     "update": "Es gibt eine neue Version von nextime.",
-    "reload": "Neu laden"
+    "reload": "Neu laden",
+    "install": {
+      "title": "Auf diesem Gerät installieren",
+      "text": "Installiert startet nextime wie eine App: im eigenen Fenster ohne Browserleiste und mit eigenem Symbol.",
+      "button": "Installieren",
+      "asked": "Der Browser hat gefragt. Hast du zugestimmt, findest du nextime bei deinen Apps.",
+      "ios": "Auf iPhone und iPad: Teilen › Zum Home-Bildschirm.",
+      "installed": "nextime läuft auf diesem Gerät schon als installierte App.",
+      "safari": "In Safari auf dem Mac: Ablage › Zum Dock hinzufügen.",
+      "firefox": "Firefox kann Web-Apps nicht installieren. Öffne nextime dafür in einem anderen Browser, etwa Chrome, Edge oder Safari.",
+      "other": "Bietet dein Browser hier keinen Knopf an, findest du das Installieren in seinem Menü, etwa unter „App installieren“ oder „Zum Startbildschirm hinzufügen“."
+    }
   },
   "offline": {
     "state": "Ohne Verbindung · Stand von {{when}} · nur lesen",

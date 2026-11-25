@@ -10,17 +10,18 @@
  * under the list (expired ones stay until withdrawn). Under them stay nextime's own cards: the sentence about what the
  * operator sees, and "Keys of all accounts" (TIME-26). `?invite` in the address opens "Invite a person" at once.
  */
-import { KeyRound, Mail, Users } from 'lucide-react'
+import { Mail, Users } from 'lucide-react'
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import { accountsApi, invitesApi, oidcAdminApi, type AccountRow, type FactorResetOverview, type Invite } from '../../api/client'
 import { AccountButton } from '../../components/AccountButton'
-import { AllKeysCard } from '../../features/keys/KeysSection'
+import { keyRequest, useKeyWords } from '../../features/keys/ConnectionsArea'
 import { confirmOf } from '../../lib/accountButton'
 import { copyText } from '../../lib/copy'
 import { bytes, day, dayTime } from '../../lib/format'
+import { moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
 import { useAuth } from '../../state/auth'
 import {
@@ -55,11 +56,13 @@ import {
   type ListedAccount,
   type ListedInvite,
 } from '../../vendor/nexkonten/konten'
+import { WhatYouSeeCard } from '../../vendor/nexkonten/AccountCards'
+import { AllKeysCard } from '../../vendor/nexschluessel'
 import { Avatar, Badge, Button, ButtonGroup, Card, CheckboxRow, ConfirmDialog, Dialog, Facts, Field, Notice, Row, Rows, SelectField, type IconName } from '../../vendor/nexui'
 import { APP_CAPS, APP_OWN_ACTIONS, listedOf } from './accountList'
-import { Feedback, useAction } from './ui'
+import { useAction } from './actions'
+import { Outcome as Feedback } from './Outcome'
 
-const GB = 1024 ** 3
 
 /** The badges of a row or an invitation, in the kit's look; a day in the app's way of writing it. */
 function Badges({ shown }: { shown: BadgeShown[] }) {
@@ -84,6 +87,9 @@ function Picture({ row, size }: { row: ListedAccount; size: 32 | 48 }) {
 export function AccountsTab() {
   const { t } = useTranslation()
   const { me } = useAuth()
+  const { timeOptions } = useDisplay()
+  const keyWords = useKeyWords()
+  const translate = (key: string, values?: Record<string, unknown>) => t(key, values)
   const [rows, setRows] = useState<AccountRow[] | null>(null)
   const [invites, setInvites] = useState<Invite[]>([])
   const [params, setParams] = useSearchParams()
@@ -151,13 +157,12 @@ export function AccountsTab() {
         </Card>
       )}
 
-      {/* nextime's own cards under the module's: what the operator sees and never sees, and every account's keys. */}
-      <Card id="accounts-privacy-card" icon={KeyRound} title={t('accounts.privacyTitle')} testId="accounts-privacy-card">
-        <p className="m-0 text-sm text-[var(--nexui-text-muted)]" data-testid="accounts-privacy">
-          {t('accounts.privacy')}
-        </p>
-      </Card>
-      <AllKeysCard />
+      {/* "Was du siehst" of the module with nextime's sentence, then "API-Schlüssel aller Konten" of the key module
+          (plan "Einstellungen", Konten 3 and 4). */}
+      <div data-testid="accounts-privacy">
+        <WhatYouSeeCard t={translate} text={t('accounts.privacy')} />
+      </div>
+      <AllKeysCard request={keyRequest} words={keyWords} when={(iso, language) => moment(iso, language, false, timeOptions)} />
 
       {open && (
         <ManageDialog
@@ -241,7 +246,6 @@ function ManageDialog({ row, listed, operatorHasPassword, mailServer, onClose, o
   const [pending, setPending] = useState<Pending | null>(null)
   const [naming, setNaming] = useState<'name' | 'display_name' | null>(null)
   const [resetting, setResetting] = useState(false)
-  const [limiting, setLimiting] = useState(false)
 
   const storage: FactShown = {
     fact: 'storage',
@@ -268,7 +272,6 @@ function ManageDialog({ row, listed, operatorHasPassword, mailServer, onClose, o
     if (base === 'account.changeUsername') return setNaming('name')
     if (base === 'account.changeDisplayName') return setNaming('display_name')
     if (base === 'account.resetLink') return setResetting(true)
-    if (base === 'storageLimit') return setLimiting(true)
     if (base === 'account.remove') {
       return void action.run(async () => setPending({ action: act, impact: await accountsApi.impact(row.id) }))
     }
@@ -321,7 +324,6 @@ function ManageDialog({ row, listed, operatorHasPassword, mailServer, onClose, o
       )}
       {naming && <NameDialog row={row} field={naming} operatorHasPassword={operatorHasPassword} onClose={() => setNaming(null)} onSaved={onChanged} />}
       {resetting && <ResetLinkDialog row={row} name={name} mailServer={mailServer} operatorHasPassword={operatorHasPassword} onClose={() => setResetting(false)} />}
-      {limiting && <LimitDialog row={row} name={name} operatorHasPassword={operatorHasPassword} onClose={() => setLimiting(false)} onSaved={onChanged} />}
     </>
   )
 }
@@ -545,57 +547,6 @@ function ResetLinkDialog({ row, name, mailServer, operatorHasPassword, onClose }
           </div>
         </form>
       )}
-    </Dialog>
-  )
-}
-
-/** nextime's own act: the storage limit of the account (attachments stop at it, writing goes on), with the
- * operator's own password (konten 0.3.9: everything that changes an account asks for it). */
-function LimitDialog({ row, name, operatorHasPassword, onClose, onSaved }: {
-  row: AccountRow
-  name: string
-  operatorHasPassword: boolean
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const { t, i18n } = useTranslation()
-  const [value, setValue] = useState(row.storage_limit ? String(Math.round((row.storage_limit / GB) * 10) / 10) : '')
-  const [own, setOwn] = useState('')
-  const action = useAction()
-  const save = (limit: number | null) =>
-    void action.run(async () => {
-      await accountsApi.limit(row.id, limit, own)
-      onSaved()
-      onClose()
-    })
-  return (
-    <Dialog title={t('accounts.limitTitle', { name })} onClose={onClose} closeLabel={t('common.close')} testId="limit-dialog">
-      <form
-        className="flex flex-col gap-3"
-        onSubmit={(event) => {
-          event.preventDefault()
-          const gigabytes = Number(value.replace(',', '.'))
-          if (!gigabytes || gigabytes <= 0) return
-          save(Math.round(gigabytes * GB))
-        }}
-      >
-        <p className="m-0 text-sm">{t('accounts.limitText')}</p>
-        <p className="m-0 text-xs text-[var(--nexui-text-muted)]">{t('accounts.limitUsed', { used: bytes(row.storage_used, i18n.language) })}</p>
-        <Field label={t('accounts.limitField')} type="number" min={0} value={value} onChange={(event) => setValue(event.target.value)} />
-        <p className="m-0 text-sm text-[var(--nexui-text-muted)]">{t(confirmLine(operatorHasPassword))}</p>
-        {operatorHasPassword && <Field label={t('account.currentPassword')} type="password" autoComplete="current-password" value={own} onChange={(event) => setOwn(event.target.value)} />}
-        <Feedback problem={action.problem} />
-        <div className="flex flex-wrap justify-end gap-2">
-          {row.storage_limit !== null && (
-            <AccountButton name="removeValue" disabled={action.busy || (operatorHasPassword && !own)} onClick={() => save(null)}>
-              {t('accounts.limitRemove')}
-            </AccountButton>
-          )}
-          <AccountButton name="storageLimit" type="submit" disabled={action.busy || !value || (operatorHasPassword && !own)}>
-            {t('accounts.limitSet')}
-          </AccountButton>
-        </div>
-      </form>
     </Dialog>
   )
 }

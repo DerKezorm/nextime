@@ -26,7 +26,7 @@ function leaves(tree: Tree, prefix = ''): [string, string][] {
   })
 }
 
-// post 1.1.0 asks for a count too ("Wartende Mails: {{count}}"); the module's template of this file leaves it out.
+// TODO post 1.1.0: the template of this file gives the new count ("Wartende Mails: {{count}}") no value yet.
 const values = { email: 'kim@example.com', when: 'today', error: 'mail_unreachable', count: 3 }
 const fill: Record<string, string> = { ...postVariables(APP_NAME), ...values, count: '3' }
 

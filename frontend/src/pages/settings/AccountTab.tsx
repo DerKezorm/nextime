@@ -10,7 +10,7 @@
  * card (the password too), the providers a `Box` with a `Row` each in the card "Security", every button of the module
  * through `AccountButton` (kind and symbol from `BUTTONS`, konten 0.3.8).
  */
-import { KeyRound, LogOut, Palette, ShieldCheck, UserRound } from 'lucide-react'
+import { KeyRound, ShieldCheck, UserRound } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
@@ -18,8 +18,6 @@ import { useSearchParams } from 'react-router-dom'
 import { api, authApi, type Me, type MyProvider } from '../../api/client'
 import { AccountButton } from '../../components/AccountButton'
 import { Avatar } from '../../components/Avatar'
-import { SignOutWaiting, useSignOut } from '../../components/SignOut'
-import { ThemeSwitcher } from '../../components/ThemeSwitcher'
 import { useOffline } from '../../features/offline/connection'
 import { browserLanguage, changeLanguage, languageOptions, type LanguageOption } from '../../i18n'
 import { confirmOf } from '../../lib/accountButton'
@@ -28,16 +26,19 @@ import { errorText, problemText, signInErrorText } from '../../lib/errors'
 import { day } from '../../lib/format'
 import { usePasswordConfirm } from '../../lib/passwordConfirm'
 import { go } from '../../lib/providers'
+import { knownZones, zonePlace } from '../../lib/display'
+import { useDisplay } from '../../lib/useDisplay'
+import { waitingChanges } from '../../state/account'
 import { useAuth } from '../../state/auth'
-import { DISPLAY_NAME_MAX, EMAIL_MAX, FIELDS, PAGES, passwordChanged, screenFields, SECOND_FACTOR_STATE, USERNAME_MAX } from '../../vendor/nexkonten/konten'
+import { SignOutCard, UnconfirmedEmailBox } from '../../vendor/nexkonten/AccountCards'
+import { DISPLAY_NAME_MAX, EMAIL_MAX, FIELDS, PAGES, passwordChanged, screenFields, SECOND_FACTOR_STATE, showUnconfirmed, USERNAME_MAX } from '../../vendor/nexkonten/konten'
 import { Badge, Box, Card, CheckboxRow, ConfirmDialog, Field, Notice, Row, Rows, SelectField } from '../../vendor/nexui'
 import { pagePart } from './accountPages'
-import { DisplayFields } from './DisplayFields'
 import { Notice as Done, PasskeysBox, RemainingAccess, SecondFactorOffNotice, SessionsBox } from './SecurityBoxes'
-import { Card as OwnCard, saveAsFile } from './ui'
+import { saveAsFile } from './actions'
 
 /** The part of "My account" an area of the settings shows. */
-export type AccountPart = 'profile' | 'security' | 'appearance'
+export type AccountPart = 'profile' | 'security'
 
 export function AccountTab({ part }: { part?: AccountPart } = {}) {
   const { t, i18n } = useTranslation()
@@ -148,11 +149,6 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
   }
 
   const picture = pagePart('profile', 'picture')
-  const linkedNames = (providers ?? []).filter((entry) => entry.linked).map((entry) => entry.label)
-  const signInWay =
-    me.sign_in === 'oidc' || (linkedNames.length > 0 && me.sign_in !== 'password')
-      ? t('me.profile.viaProvider', { name: linkedNames.join(', ') || t('me.profile.provider') })
-      : t('me.profile.viaPassword')
   const lastLinkOf = (provider: MyProvider) => me.sign_in === 'oidc' && provider.linked && (providers ?? []).filter((entry) => entry.linked).length === 1
 
   return (
@@ -221,6 +217,9 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
                   </>
                 }
               />
+            )}
+            {showUnconfirmed({ email: me.email, emailConfirmed: me.email_confirmed, emailProven: me.email_proven, pendingEmail: me.pending_email }, !!me.mail_server) && (
+              <UnconfirmedEmailBox t={t} email={me.email} errorText={problemText} onSend={async () => setMe(await authApi.proveEmail())} />
             )}
             <div>
               <AccountButton
@@ -300,19 +299,17 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
               }, '')
             }}
           />
+          {/* The time zone of the account (plan "Einstellungen", E14): under the language, as a choice; it counts on
+              every device (TIME-3 AC-6, AC-7). */}
+          <ZoneField />
           <p className="m-0 text-xs leading-4 text-[var(--nexui-text-muted)]" data-testid="profile-role">
             {t(pagePart('profile', 'role').title)}: {t(`roles.${me.role}`)}
-          </p>
-          {/* nextime's own line after the module's parts: how the account signs in (TIME-2 AC-5, AC-8); whether the
-              second factor is on says Security. */}
-          <p className="m-0 text-xs leading-4 text-[var(--nexui-text-muted)]" data-testid="sign-in-way">
-            {signInWay}
           </p>
         </Card>
       )}
 
       {/* Without a connection the settings are read only; signing out stays, outside of them (TIME-28 EC-1). */}
-      {shows('profile') && !offline && <SignOutCard viaProvider={me.sign_in === 'oidc'} />}
+      {shows('profile') && !offline && <SignOut />}
 
       {shows('security') && (
         <Card id="security" icon={ShieldCheck} title={t(PAGES.security.title)}>
@@ -461,17 +458,6 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
         </Card>
       )}
 
-      {shows('appearance') && (
-        <OwnCard id="looks" icon={Palette} title={t('me.looks.title')}>
-          <div className="text-sm">
-            <span className="font-medium">{t('me.looks.appearance')}</span> <span className="text-xs text-mist-500">{t('me.looks.appearanceHint')}</span>
-            <div className="mt-1.5">
-              <ThemeSwitcher withWords />
-            </div>
-          </div>
-          <DisplayFields />
-        </OwnCard>
-      )}
     </div>
   )
 }
@@ -692,24 +678,40 @@ function SecondFactor({ me }: { me: Me }) {
 }
 
 /**
- * "Sign out" (TIME-2 AC-9), the one button for it, here in "My account"; on a phone the settings are the same page.
- * Changes that still wait ask first, as in the session's dialog. A provider's own session stays: only nextime ends.
+ * "Sign out" (TIME-2 AC-9), the one button for it, here in "My account"; on a phone the settings are the same page. The
+ * card of the shared account module with its sentence ("Deine Kalender bleiben, wie sie sind."); changes that still
+ * wait ask first, as in the session's dialog. A provider's own session stays: only nextime ends.
  */
-export function SignOutCard({ viaProvider }: { viaProvider: boolean }) {
+export function SignOut() {
   const { t } = useTranslation()
-  const leaving = useSignOut()
+  const { me, signOut } = useAuth()
+  return <SignOutCard t={t} things={t('settings.thingsKept')} provider={me?.sign_in === 'oidc'} pending={waitingChanges()} onSignOut={signOut} />
+}
+
+/** The account's time zone, under the language in the profile (plan "Einstellungen", E14): saved at once. */
+function ZoneField() {
+  const { t } = useTranslation()
+  const { setMe } = useAuth()
+  const { display, device } = useDisplay()
+  const [problem, setProblem] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+  const zones = knownZones()
   return (
-    <Card id="sign-out" icon={LogOut} title={t('me.signOut.title')} subtitle={t('me.signOut.text')} testId="sign-out-card">
-      {viaProvider && <p className="m-0 text-xs leading-4 text-[var(--nexui-text-muted)]">{t('me.signOut.provider')}</p>}
-      {leaving.waiting > 0 ? (
-        <SignOutWaiting count={leaving.waiting} onAnyway={leaving.anyway} onWait={leaving.wait} />
-      ) : (
-        <div>
-          <AccountButton name="signOut" testId="sign-out" onClick={leaving.ask}>
-            {t('me.signOut.button')}
-          </AccountButton>
-        </div>
-      )}
-    </Card>
+    <SelectField
+      label={t('display.zone')}
+      value={display.time_zone}
+      disabled={busy}
+      hints={[t('display.zoneHint')]}
+      error={problem ?? undefined}
+      data-testid="display-zone"
+      id="display-zone"
+      options={[{ value: '', label: t('display.zoneDevice', { place: zonePlace(device || 'UTC') }) }, ...zones.map((zone) => ({ value: zone, label: zone.replace(/_/g, ' ') }))]}
+      onChange={(event) => {
+        const zone = event.target.value
+        setBusy(true)
+        setProblem(null)
+        authApi.display({ time_zone: zone }).then(setMe, (error: unknown) => setProblem(problemText(error))).finally(() => setBusy(false))
+      }}
+    />
   )
 }

@@ -62,3 +62,18 @@ export function followSystem(): void {
     // An old browser: the mode stays as it was at the start.
   }
 }
+
+/** The raw value this browser kept before konten 1.1.0 (`nextime.theme`), for the server to take once
+ * (`profiles.adopt_theme`); '' when it kept none. */
+export function keptValue(): string {
+  try {
+    return localStorage.getItem(KEY) ?? ''
+  } catch {
+    return ''
+  }
+}
+
+/** The account's theme (`light`, `dark`, `system`) on this device: painted and kept for the pages before signing in. */
+export function applyAccountTheme(theme: string): void {
+  applyMode(theme === 'light' || theme === 'dark' ? theme : 'system')
+}

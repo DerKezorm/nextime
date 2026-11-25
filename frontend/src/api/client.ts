@@ -5,6 +5,7 @@
  * its sentence from `errors.<code>` in the language files.
  */
 
+import type { Readiness } from '../vendor/nexkonten/konten'
 import type { AuthentikAddress } from '../vendor/nexoidc/oidc'
 
 export class ApiError extends Error {
@@ -190,6 +191,12 @@ export type Me = {
   new_sign_in_mail?: boolean
   /** A password set through a link: the page lists what still has access, until put away. */
   new_password_origin?: string
+  /** The address proved by a link (konten 1.1.0): an address of before counts as proven (E23). */
+  email_proven?: boolean
+  /** A mail server and the public address: "Address not confirmed yet" offers a link only then (konten 1.1.0). */
+  mail_server?: boolean
+  /** Light, dark or as the system, at the account on every device; "" chose nothing yet (konten 1.1.0). */
+  theme?: string
 }
 
 /** How the account sees its times (TIME-3). `week_start`: 0 Sunday … 6 Saturday. `clock`: `auto` follows the
@@ -469,6 +476,12 @@ export const authApi = {
   logoutEverywhere: () => api<void>('/api/auth/logout-all', { method: 'POST' }),
   me: () => api<Me>('/api/auth/me'),
   language: (language: string) => api<Me>('/api/me/language', { method: 'PUT', body: { language } }),
+  /** Light, dark or as the system, for the account on every device (konten 1.1.0). */
+  theme: (theme: string) => api<Me>('/api/me/theme', { method: 'PUT', body: { theme } }),
+  /** The first load after konten 1.1.0: the browser's choice of before, once, while the account has none. */
+  adoptTheme: (theme: string) => api<{ theme: string }>('/api/me/theme/adopt', { method: 'POST', body: { theme } }),
+  /** "Address not confirmed yet" › "Send link" (konten 1.1.0). */
+  proveEmail: () => api<Me>('/api/me/email/prove', { method: 'POST' }),
   display: (change: Partial<Omit<Display, 'home_zone'>>) => api<Me>('/api/me/display', { method: 'PUT', body: change }),
   avatar: (picture: Blob) => api<Me>('/api/auth/avatar', { method: 'PUT', raw: picture }),
   removeAvatar: () => api<Me>('/api/auth/avatar', { method: 'DELETE' }),
@@ -584,6 +597,26 @@ export const accountsApi = {
       method: 'POST',
       body: { current_password, disconnect_devices, remove_passkeys },
     }),
+}
+
+/** Server › Sign-in (konten 1.1.0): the switches with what may change, the public address, whether the operator has a
+ * password. */
+export type SignInSettingsView = {
+  password_login: boolean
+  factor_required: boolean
+  passkeys_allowed: boolean
+  password_may_go_off: boolean
+  factor_may_go_on: boolean
+  second_factor_off?: boolean
+  public_url: string
+  operator_has_password: boolean
+}
+
+export const signInApi = {
+  read: () => api<SignInSettingsView>('/api/server/sign-in'),
+  save: (change: { password_login?: boolean; factor_required?: boolean; passkeys_allowed?: boolean }, current_password = '') =>
+    api<SignInSettingsView>('/api/server/sign-in', { method: 'PUT', body: { ...change, current_password } }),
+  readiness: () => api<Readiness>('/api/server/sign-in/readiness'),
 }
 
 export const settingsApi = {
