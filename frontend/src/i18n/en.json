@@ -441,7 +441,6 @@
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
     "deleteBackup": "Delete",
-    "detail": "Detail",
     "download": "Download",
     "features": "Features for every account",
     "forBackup": "{{action}}: backup of {{name}}",
@@ -457,18 +456,10 @@
     "languages": "Languages",
     "languagesHint": "German and English are built in. Add more as a JSON file; missing texts fall back to English.",
     "lastBackup": "Last backup: {{time}}",
-    "level": "Level",
     "limits": "Limits",
     "limitsHint": "You set the storage per account under “Accounts”.",
     "linkPreviews": "Link previews",
     "linkPreviewsHint": "The server fetches title and picture of linked pages.",
-    "log": "Log",
-    "logClear": "Clear log",
-    "logClearText": "Every line is removed. New ones come as before.",
-    "logEmpty": "Nothing in the log.",
-    "logHint": "Four levels. The two deep ones switch themselves off after an hour. Never the content of events, passwords or keys.",
-    "logSearch": "Search in the text …",
-    "logUntil": "Back to normal at {{time}}.",
     "mail": "Mail",
     "mailHint": "For invitations and reset links. Without a server, the link to copy is enough.",
     "mailSent": "The test mail went out.",
@@ -529,20 +520,6 @@
     "weekly": "every week",
     "years_one": "{{count}} year",
     "years_other": "{{count}} years",
-    "levels": {
-      "quiet": "Quiet",
-      "normal": "Normal",
-      "detailed": "Detailed (1 hour)",
-      "trace": "Everything (1 hour)"
-    },
-    "logAll": "All",
-    "logLevelHint": "A filter always shows the higher levels too: WARNING includes the errors.",
-    "logTime": "Time",
-    "logSource": "Source",
-    "logRequest": "No. / account",
-    "logMessage": "Message",
-    "logMore": "Load older",
-    "logRequestHint": "Show only this request",
     "localNetwork": "Connections into the local network",
     "localNetworkHint": "Members may connect their nextasks at an address in the local network (LAN, VPN) too. Then every member can have nextime ask addresses there.",
     "api": "API for members",
@@ -691,7 +668,8 @@
         "text": "Save calendars as files, load files and move away from iCloud or Google."
       }
     },
-    "later": "Comes in a later version."
+    "later": "Comes in a later version.",
+    "things": "calendars"
   },
   "setup": {
     "folder": "Data folder {{path}}",

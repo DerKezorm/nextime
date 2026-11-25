@@ -441,7 +441,6 @@
     "days_one": "{{count}} Tag",
     "days_other": "{{count}} Tagen",
     "deleteBackup": "Löschen",
-    "detail": "Ausführlichkeit",
     "download": "Herunterladen",
     "features": "Funktionen für alle Konten",
     "forBackup": "{{action}}: Backup vom {{name}}",
@@ -457,18 +456,10 @@
     "languages": "Sprachen",
     "languagesHint": "Deutsch und Englisch sind eingebaut. Weitere als JSON-Datei hinzufügen, fehlende Texte fallen auf Englisch zurück.",
     "lastBackup": "Letztes Backup: {{time}}",
-    "level": "Stufe",
     "limits": "Grenzen",
     "limitsHint": "Speicher je Konto setzt du unter „Konten“.",
     "linkPreviews": "Link-Vorschauen",
     "linkPreviewsHint": "Der Server holt Titel und Bild verlinkter Seiten.",
-    "log": "Log",
-    "logClear": "Protokoll leeren",
-    "logClearText": "Jede Zeile geht. Neue kommen wie bisher.",
-    "logEmpty": "Nichts im Log.",
-    "logHint": "Vier Stufen. Die beiden tiefen schalten sich nach einer Stunde selbst ab. Nie Inhalte von Terminen, Passwörter oder Schlüssel.",
-    "logSearch": "Im Text suchen …",
-    "logUntil": "Um {{time}} zurück auf normal.",
     "mail": "Mail",
     "mailHint": "Für Einladungen und Links zum Zurücksetzen. Ohne Server reicht der Link zum Kopieren.",
     "mailSent": "Die Testmail ist raus.",
@@ -529,20 +520,6 @@
     "weekly": "jede Woche",
     "years_one": "{{count}} Jahr",
     "years_other": "{{count}} Jahren",
-    "levels": {
-      "quiet": "Ruhig",
-      "normal": "Normal",
-      "detailed": "Ausführlich (1 Stunde)",
-      "trace": "Alles (1 Stunde)"
-    },
-    "logAll": "Alle",
-    "logLevelHint": "Ein Filter zeigt immer auch die höheren Stufen: „WARNING“ enthält also die Fehler.",
-    "logTime": "Zeit",
-    "logSource": "Quelle",
-    "logRequest": "Nr. / Konto",
-    "logMessage": "Meldung",
-    "logMore": "Ältere laden",
-    "logRequestHint": "Nur diese Anfrage zeigen",
     "localNetwork": "Verbindungen ins eigene Netz",
     "localNetworkHint": "Mitglieder dürfen ihr nextasks auch unter einer Adresse im eigenen Netz (LAN, VPN) verbinden. Dann kann jedes Mitglied nextime Adressen dort ansprechen lassen.",
     "api": "Programmschnittstelle (API) für Mitglieder",
@@ -691,7 +668,8 @@
         "text": "Kalender als Datei sichern, Dateien laden und aus iCloud oder Google umziehen."
       }
     },
-    "later": "Kommt in einer späteren Version."
+    "later": "Kommt in einer späteren Version.",
+    "things": "Kalendern"
   },
   "setup": {
     "folder": "Datenordner {{path}}",
