@@ -1,6 +1,6 @@
 # Anbindung des Kontenmoduls (`nexkonten`) an nextime
 
-Plan vom 24.11.2026, gebaut am 25.11.2026 (Abschnitt 0). Maßgeblich sind der Entwurf in nexlore
+Plan vom 24.11.2026, gebaut am 25.11.2026 auf den Modulen 1.0.0 (Abschnitt 0). Maßgeblich sind der Entwurf in nexlore
 (`Development/nexapps/Baupläne/Entwurf Konten, Einrichtung und Anmeldung.md`) und die Schnittstelle des Moduls
 (`bauplaene/konten/SCHNITTSTELLE.md`, Zweig `konten`, Fassung 0.1.0). Wo nextime etwas braucht, das die Schnittstelle
 nicht hergibt, steht es unter „Passt das Modul?“ (Abschnitt 12).
@@ -19,6 +19,17 @@ Stand 25.11.2026, Zweig `konten`. **Gebaut.** Module aus `bauplaene` (Zweig `kon
 gegen 1.0.1 Datei für Datei dreiseitig auf nextime gelegt, dann das Eigene von nextime nachgezogen). App-Fassung
 unverändert 0.4.0 (kein Release vorbereitet). Die Abschnitte 1 bis 13 sind der Plan vom 24.11.2026; wo der Bau anders
 entschieden hat, steht es hier.
+
+**Auf den Modulen 1.0.0** (`konten` 1.0.0, `ui` 1.0.0, `post` 1.0.0, `oidc` 1.1.2, eingefroren; 25.11.2026): die Mail
+„Neue Anmeldung“ führt zur Seite Sicherheit (`/settings/security`) und nennt die Uhrzeit in der Zeitzone der Person
+(`display.zone_of`: gewählte Zone, sonst Heimatzone, sonst die des Servers), nie eine Netzadresse; „Grenze entfernen“
+mit dem Knopf `removeValue` des Moduls; **Profilbilder sieht jedes angemeldete Konto** (Regel aller nex-Apps, Vertragstest
+über nextimes Route; bis hierhin nur, wer einen Kalender mit der Person sah, TIME-2 AC-5/TIME-14 AC-2), gesperrte und
+gelöschte Personen weiter nur für sich und den Betreiber (TIME-14 EC-8). Vertragsadapter mit `forgot_through_route`,
+`picture_status` (Konten) und `new_sign_in_letter` (Post) über nextimes Routen; vitest-Vorlage mit dem Abschnitt
+„Helpers“. Die Bestand-Fixture behält ihren eigenen Post-Fänger (Ausgangsliste und `nexpost.send.deliver`).
+Läufe: Backend 1629 grün, 12 übersprungen (Vertrag nexkonten, nexoidc, nexpost im selben Lauf); Frontend 1180 grün in
+66 Dateien; `tsc -b`, lint, build, ruff sauber; `sync.py check` aller vier Module grün.
 
 **Nachgezogen auf `konten` 0.3.10, `ui` 0.1.2, `oidc` 1.1.1, `post` 0.1.2 (25.11.2026):** Anmelden über
 `login.sign_in` (wartet nur der Topf des Kontos, antwortet die Anmeldung wie bei falschem Passwort, 401; 429 erst bei
