@@ -306,7 +306,8 @@
     "push_ticket_invalid": "Ticket oder Schlüssel für Mitteilungen sind nicht brauchbar.",
     "too_many_ops": "Höchstens 50 Änderungen auf einmal.",
     "event_unknown": "Den Termin gibt es noch nicht. Die Datei wartet, bis er angelegt ist.",
-    "use_logout": "Diesen Browser meldest du mit „Abmelden“ ab."
+    "use_logout": "Diesen Browser meldest du mit „Abmelden“ ab.",
+    "name_missing": "Gib einen Namen ein."
   },
   "me": {
     "emailDeclined": "nextime fragt nicht mehr nach dieser Adresse.",

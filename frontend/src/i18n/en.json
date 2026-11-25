@@ -306,7 +306,8 @@
     "push_ticket_invalid": "The ticket or the key for notifications is not usable.",
     "too_many_ops": "At most 50 changes at once.",
     "event_unknown": "The event is not there yet. The file waits until it has been made.",
-    "use_logout": "Sign out of this browser with Sign out."
+    "use_logout": "Sign out of this browser with Sign out.",
+    "name_missing": "Enter a name."
   },
   "me": {
     "emailDeclined": "nextime no longer asks about this address.",

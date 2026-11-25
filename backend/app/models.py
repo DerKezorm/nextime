@@ -88,8 +88,7 @@ class Account(Base):
     #: when the account was made and never changed after, also not by a rename, so that no calendar program loses its
     #: calendars. Accounts of 0.4.0 get their name of then at the first start (``services/konten_wanderung``); while
     #: it is empty the name counts (``devices.dav_name_of``).
-    dav_name: Mapped[str] = mapped_column(String(64), default=lambda context: _first_name(context),
-                                          server_default="")
+    dav_name: Mapped[str] = mapped_column(String(64), default="", server_default="")
     #: What people see: the name as typed (umlauts and emoji kept, blanks at the edges gone).
     display_name: Mapped[str] = mapped_column(String(80), default="")
     #: The version whose "What's new" the account has read or put away.
@@ -174,12 +173,6 @@ class Account(Base):
         return self.display_name or self.name
 
 
-def _first_name(context: Any) -> str:
-    """``accounts.dav_name`` of a new row: its username, whichever way the account is made (setup, invitation,
-    provider, tests)."""
-    return str(context.get_current_parameters().get("name") or "")
-
-
 def new_device_key() -> str:
     return secrets.token_urlsafe(24)
 
@@ -188,6 +181,10 @@ def new_device_key() -> str:
 def _first_device_key(_mapper: Any, _connection: Any, target: Account) -> None:
     if not target.device_key:
         target.device_key = new_device_key()
+    # The calendar account's fixed name: the first username, whichever way the account is made (setup, invitation,
+    # provider, tests); a rename never touches it.
+    if not target.dav_name:
+        target.dav_name = target.name
 
 
 @event.listens_for(Account.password_hash, "set")
