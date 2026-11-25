@@ -124,9 +124,13 @@ def client_ip(request: Request) -> str:
     return normal_address(hops[0] if hops else peer)
 
 
-#: What an account that must set up its second factor may still reach: itself, the way out, and the setup.
+#: What an account that must set up its second factor may still reach: itself, the way out, and the setup. Since the
+#: shared key module (schluessel 1.0.0, decided 24.11.2026) also its own list of API keys and making one: the keys
+#: rest until the second factor is there ("Wirkt erst, wenn du einen zweiten Faktor einrichtest."), and
+#: ``apikeys.authenticate`` refuses them meanwhile.
 SETUP_ONLY_PATHS = {
     "/api/auth/me", "/api/auth/logout", "/api/auth/totp/begin", "/api/auth/totp/setup", "/api/auth/totp/confirm",
+    "/api/connections/keys",
 }
 
 

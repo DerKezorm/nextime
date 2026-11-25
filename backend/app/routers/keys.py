@@ -16,8 +16,11 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Path, Request, Response
 from pydantic import BaseModel, Field
 
-from ..deps import Account, DbSession, OperatorAccount
+from ..db import SessionLocal
+from ..deps import Account, DbSession, OperatorAccount, require_account, require_operator
 from ..services import apikeys, calendars
+from ..services.schluessel_store import CONFIG, KeyStore
+from ..vendor.nexschluessel import api as schluessel_api
 from . import devices
 
 router = APIRouter(tags=["keys"])
@@ -73,3 +76,19 @@ def overview(_operator: OperatorAccount, db: DbSession) -> dict[str, Any]:
     rows = apikeys.overview(db)
     return {"accounts": rows, "keys": sum(row["keys"] for row in rows), "mcp": sum(row["mcp"] for row in rows),
             "api_allowed": apikeys.api_on(db), "mcp_allowed": apikeys.mcp_on(db)}
+
+
+def _key_store(db: DbSession) -> KeyStore:
+    return KeyStore(db)
+
+
+def _address(request: Request) -> str:
+    with SessionLocal() as db:
+        return devices.base_url(request, db)
+
+
+#: The ways of the shared key module (schluessel 1.0.0) for the cards "API-Schlüssel", "KI-Werkzeuge (MCP)",
+#: "Schnittstellen" and "API-Schlüssel aller Konten": list, make, change, revoke one's own; lock and unlock any, the
+#: switches (operator). Only a browser session manages keys (``require_account``), never a key or a device.
+connections_router = schluessel_api.router(config=CONFIG, store=_key_store, account=require_account,
+                                           operator=require_operator, address=_address)

@@ -1022,6 +1022,9 @@ class ApiKey(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     expires_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: Locked by the operator (the shared key module, E27): refused until unlocked. New with schluessel 1.0.0; an older
+    #: version does not read it, so a locked key works there again (the way back: ``docs/konten-anbindung.md``).
+    blocked_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
 
 
 class NextasksConnection(Base):

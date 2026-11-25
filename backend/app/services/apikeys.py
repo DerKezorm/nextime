@@ -146,6 +146,9 @@ def authenticate(db: Session, token: str | None) -> tuple[Account, ApiKey] | Non
     now = clock()
     if row.expires_at is not None and row.expires_at <= now:
         return None
+    # Locked by the operator (the shared key module, E27): refused until unlocked.
+    if row.blocked_at is not None:
+        return None
     account = db.get(Account, row.account_id)
     if account is None or account_out(account) or totp.setup_required(db, account):
         return None
@@ -180,6 +183,8 @@ def key_out(db: Session, row: ApiKey, now: datetime | None = None,
         "expires_at": _iso(row.expires_at),
         "expired": row.expires_at is not None and row.expires_at <= now,
         "last_used_at": _iso(row.last_used_at),
+        # Locked by the operator since schluessel 1.0.0 (E27); every key of 0.4.0 is not.
+        "blocked": row.blocked_at is not None,
     }
 
 

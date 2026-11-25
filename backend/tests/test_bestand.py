@@ -599,3 +599,34 @@ def test_after_the_change_a_renamed_account_keeps_its_calendar_program(bestand):
     assert zugang["kalender"] in hrefs(dav("PROPFIND", f"/dav/calendars/{alt}/", alt, zugang["passwort_name"],
                                            Depth="1"))
     assert dav("GET", zugang["termin"], alt, zugang["passwort_name"]).status_code == 200
+
+
+# --- After the change (settings pass, plan "Einstellungen"): what the modules of 25.11.2026 change on purpose --------
+
+
+def test_after_the_settings_pass_an_api_key_of_0_4_0_can_be_locked_and_unlocked(bestand):
+    """E27: the column for the lock (``api_keys.blocked_at``) comes empty, so the key of 0.4.0 works as before; the
+    operator locks it (refused at once) and unlocks it (works again), on the module's ways."""
+    konto = next(k for k in KONTEN if k.get("api_token"))
+    kopf = {"Authorization": f"Bearer {konto['api_token']}"}
+    assert browser().get("/api/v1/me", headers=kopf).status_code == 200
+    betrieb = browser()
+    anmelden(betrieb, next(k for k in KONTEN if k.get("operator") and k.get("passwort")))
+    alle = betrieb.get("/api/connections/admin/keys")
+    assert alle.status_code == 200, alle.text
+    (schluessel,) = [k for k in alle.json()["keys"] if k["account"]["name"] == _name(konto)]
+    assert schluessel["blocked"] is False and schluessel["prefix"].startswith("nt_api_")
+    assert betrieb.post(f"/api/connections/admin/keys/{schluessel['id']}/block").status_code == 200
+    assert browser().get("/api/v1/me", headers=kopf).status_code == 401
+    assert betrieb.post(f"/api/connections/admin/keys/{schluessel['id']}/unblock").status_code == 200
+    assert browser().get("/api/v1/me", headers=kopf).status_code == 200
+
+
+def test_after_the_settings_pass_addresses_of_0_4_0_need_no_link(bestand):
+    """E23: an address that counted in 0.4.0 counts as proven, so "Adresse noch nicht bestätigt" never shows for it;
+    the theme is not chosen yet (the first load takes the browser's)."""
+    konto = next(k for k in EINDEUTIGE_ADRESSE if k.get("passwort"))
+    klient = browser()
+    anmelden(klient, konto)
+    selbst = ich(klient)
+    assert selbst["email_proven"] is True and selbst["theme"] == ""
