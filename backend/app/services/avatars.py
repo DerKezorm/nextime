@@ -5,8 +5,9 @@ no device, no hidden second picture, no script in an SVG (an SVG is not taken at
 Kept in the database next to the account (a few kilobytes), so every backup carries it, and an account deleted for
 good takes it along.
 
-Seen by the account itself and the operator (its list of accounts). Whoever shares a calendar with the account sees it
-too: sharing (TIME-19) adds its rule to ``SEE_RULES`` (TIME-2 AC-5).
+Seen by every account signed in on this server, the same in every nex app (the shared account module, decided
+24.11.2026; konten 1.0.0 holds it in a contract test), never by anybody signed out. Before, only those who shared a
+calendar with the account saw it (TIME-2 AC-5); ``SEE_RULES`` stays for a rule an app may still add.
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from collections.abc import Callable
 
 from sqlalchemy.orm import Session
 
-from ..models import OPERATOR, Account
+from ..models import Account
 
 logger = logging.getLogger("nextime.accounts")
 
@@ -101,7 +102,7 @@ def make(data: bytes) -> bytes:
 
 
 def may_see(db: Session, viewer: Account, owner_id: int) -> bool:
-    """The account itself, the operator, and whoever a rule of ``SEE_RULES`` lets in."""
-    if viewer.id == owner_id or viewer.role == OPERATOR:
-        return True
-    return any(rule(db, viewer, owner_id) for rule in SEE_RULES)
+    """Every signed-in account (``viewer`` is one): the rule of every nex app. A blocked or deleted person is left to
+    the routes (TIME-14 EC-8: only for itself and the operator)."""
+    del db, owner_id
+    return viewer is not None

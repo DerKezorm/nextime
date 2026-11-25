@@ -76,3 +76,33 @@ class Adapter(StandardAdapter):
             ),
             queued=0,
         )
+
+    def new_sign_in_letter(self, where: str, sender: str) -> Any:
+        """Since 1.0.0: an account with a confirmed address signs in through ``POST /api/auth/login`` from a browser
+        it does not know (User-Agent ``where``, address ``sender``); the letter nextime writes for it."""
+        from fastapi.testclient import TestClient
+
+        from app.db import SessionLocal
+        from app.main import app
+        from app.models import OPERATOR, Account
+        from app.security import brake, hash_password
+        from app.services import settings_service
+        from app.vendor.nexpost import testing
+
+        secret = password()
+        with SessionLocal() as db:
+            settings_service.save(db, {"smtp_host": "smtp.example.com", "smtp_from": "kalender@example.com",
+                                       "public_url": "https://kalender.example.com"})
+            db.add(Account(name="alex", display_name="Alex", email="alex@example.com", role=OPERATOR,
+                           password_hash=hash_password(secret)))
+            db.commit()
+        brake.forget()
+        with testing.catch_mail() as caught:
+            browser = TestClient(app, base_url="https://kalender.example.com", client=(sender, 50000),
+                                 headers={"X-Nextime-Client": "tab-contract", "User-Agent": where})
+            answer = browser.post("/api/auth/login", json={"name": "alex", "password": secret})
+            assert answer.status_code == 200, answer.text
+        letters = [letter for letter in caught.letters if letter.kind == "new_sign_in"]
+        assert letters, "no letter about the new sign-in"
+        return letters[-1]
+

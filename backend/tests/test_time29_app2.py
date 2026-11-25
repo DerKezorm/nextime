@@ -231,7 +231,8 @@ def test_TIME29_app2_people_carry_picture_and_color_and_the_picture_follows_the_
     owner = next(row for row in body["calendars"] if row["id"] == family)["owner"]
     assert owner["id"] == account.id and owner["avatar"] == "" and isinstance(owner["color"], int)
     assert call("GET", f"/avatars/{mika.id}", device["token"]).status_code == 200
-    assert call("GET", f"/avatars/{stranger.id}", device["token"]).status_code == 404
+    # Every signed-in account sees every picture (konten 1.0.0), the app's device too.
+    assert call("GET", f"/avatars/{stranger.id}", device["token"]).status_code == 200
     with SessionLocal() as db:
         row = db.get(Account, mika.id)
         assert row is not None

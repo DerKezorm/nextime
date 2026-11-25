@@ -587,7 +587,7 @@ function LimitDialog({ row, name, operatorHasPassword, onClose, onSaved }: {
         <Feedback problem={action.problem} />
         <div className="flex flex-wrap justify-end gap-2">
           {row.storage_limit !== null && (
-            <AccountButton name="account.emailRemove" disabled={action.busy || (operatorHasPassword && !own)} onClick={() => save(null)}>
+            <AccountButton name="removeValue" disabled={action.busy || (operatorHasPassword && !own)} onClick={() => save(null)}>
               {t('accounts.limitRemove')}
             </AccountButton>
           )}

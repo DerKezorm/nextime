@@ -341,7 +341,10 @@ def _picture(account_id: int) -> None:
     _set(account_id, avatar=b"RIFF-picture", avatar_at=datetime(2026, 11, 20, 12, 0, tzinfo=UTC))
 
 
-def test_time14_ac2_people_without_a_calendar_in_common_see_no_picture(client: TestClient, account: Account) -> None:
+def test_time14_ac2_every_signed_in_person_sees_the_picture_shared_calendar_or_not(client: TestClient,
+                                                                                    account: Account) -> None:
+    """Since the shared account module (konten 1.0.0, the rule of every nex app): a picture is for every account
+    signed in on the server, not only for those who see a calendar together (the rule of 0.4.0)."""
     anna, bob = make_account("anna"), make_account("bob")
     _picture(anna.id)
     with new_client(anna) as browser:
@@ -349,24 +352,11 @@ def test_time14_ac2_people_without_a_calendar_in_common_see_no_picture(client: T
     with new_client(bob) as browser:
         make_calendar(browser, "Bob")
         address = f"/api/avatars/{anna.id}?v=1"
-        assert browser.get(address).status_code == 404
+        assert browser.get(address).status_code == 200
         share(annas, bob.id, RIGHT_READ)
         assert browser.get(address).status_code == 200
         unshare(annas, bob.id)
-        assert browser.get(address).status_code == 404
-
-
-def test_time14_ac2_a_calendar_in_the_trash_joins_nobody(client: TestClient, account: Account) -> None:
-    anna, bob, carl = make_account("anna"), make_account("bob"), make_account("carl")
-    _picture(anna.id)
-    with new_client(carl) as browser:
-        garten = make_calendar(browser, "Garten")
-        share(garten, anna.id, RIGHT_READ)
-        share(garten, bob.id, RIGHT_READ)
-        with new_client(bob) as other:
-            assert other.get(f"/api/avatars/{anna.id}?v=1").status_code == 200
-            assert browser.delete(f"/api/calendars/{garten}").status_code == 200
-            assert other.get(f"/api/avatars/{anna.id}?v=1").status_code == 404
+        assert browser.get(address).status_code == 200
 
 
 def test_time14_ec8_the_picture_of_a_blocked_or_deleted_person_reaches_nobody_else(client: TestClient,

@@ -31,7 +31,7 @@ from ..models import (
     Source,
     utcnow,
 )
-from . import avatars, content, live
+from . import content, live
 
 OWNER = "owner"
 #: The groups of the calendar list in the order of the sidebar (AC-9); the sources after "own" come with later
@@ -493,26 +493,3 @@ def _counts(db: Session, account_id: int) -> content.Counts:
 
 
 content.register_counter(_counts)
-
-
-# --- Who sees whose profile picture (TIME-14 AC-2) ---------------------------------------------------------------
-
-
-def _visible_ids(account_id: int) -> object:
-    own = select(Calendar.id).where(Calendar.owner_id == account_id, Calendar.deleted_at.is_(None))
-    # A calendar in the trash joins nobody any more.
-    shared = select(CalendarShare.calendar_id).join(Calendar, Calendar.id == CalendarShare.calendar_id).where(
-        CalendarShare.account_id == account_id, Calendar.deleted_at.is_(None))
-    return own.union(shared)
-
-
-def _share_a_calendar(db: Session, viewer: Account, owner_id: int) -> bool:
-    """Two people who see the same calendar see each other's picture at its events (TIME-2 AC-5, TIME-14 AC-2)."""
-    mine = set(db.scalars(_visible_ids(viewer.id)))  # type: ignore[arg-type]
-    if not mine:
-        return False
-    theirs = set(db.scalars(_visible_ids(owner_id)))  # type: ignore[arg-type]
-    return bool(mine & theirs)
-
-
-avatars.SEE_RULES.append(_share_a_calendar)

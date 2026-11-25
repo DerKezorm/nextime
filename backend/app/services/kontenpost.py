@@ -7,6 +7,7 @@ operator's, else English (``mailer.language_for``).
 from __future__ import annotations
 
 import logging
+from datetime import tzinfo
 
 from sqlalchemy.orm import Session
 
@@ -22,13 +23,28 @@ PAGES = {
     nexkonten.MAIL_RESET: "/reset/",
     nexkonten.MAIL_CONFIRM_EMAIL: "/email/",
 }
+#: The page the mail "New sign-in" leads to (its button "See signed-in devices", konten 1.0.0): Security.
+SECURITY_PAGE = "/settings/security"
 
 
 def link_for(db: Session, mail: nexkonten.Mail) -> str:
+    if mail.kind == nexkonten.MAIL_NEW_SIGN_IN:
+        base = settings_service.public_url(db)
+        return f"{base}{SECURITY_PAGE}" if base else ""
     page = PAGES.get(mail.kind)
     if not page or not mail.token:
         return ""
     return f"{settings_service.public_url(db)}{page}{mail.token}"
+
+
+def zone_for(account: Account | None) -> tzinfo | None:
+    """The person's time zone (the one chosen under Appearance, else the home zone): the mail "New sign-in" names the
+    moment in it. None: the post module's own choice."""
+    if account is None:
+        return None
+    from . import display
+
+    return display.zone_of(account)
 
 
 def can_mail(db: Session) -> bool:
@@ -56,7 +72,7 @@ def queue(db: Session, mail: nexkonten.Mail | None, *, by: str = "", where: str 
     language = mailer.language_for(db, account)
     try:
         letter = nexpost.letters.from_account_mail(mail, language=language, link=link_for(db, mail), by=by,
-                                                   where=where, days=days)
+                                                   where=where, days=days, time_zone=zone_for(account))
     except (nexpost.MailError, ValueError) as exc:
         logger.warning("Mail not queued kind=%s reason=%s", mail.kind, type(exc).__name__)
         return False
