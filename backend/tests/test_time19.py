@@ -35,6 +35,7 @@ from app.models import (
 )
 from app.security import brake
 from app.services import accounts, backups, events, guest, ical, live, settings_service, shares, sources, sync
+from app.vendor.nexsicherung import restore
 
 from .calendar_helpers import code, make_calendar, make_event, named, window
 from .conftest import make_account, new_client
@@ -840,7 +841,7 @@ def test_time19_ec21_after_a_restored_backup_the_link_holds_with_the_same_addres
     link = link_on(client, familie)
     name = backups.create().name
     client.delete(f"/api/calendars/{familie}/guest-link")
-    monkeypatch.setattr(backups, "restart_soon", lambda: None)
+    monkeypatch.setattr(restore, "restart_soon", lambda: None)
     backups.stage_restore(name)
     assert backups.apply_pending() is True
     with guest_client() as browser:

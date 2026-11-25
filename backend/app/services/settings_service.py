@@ -21,11 +21,13 @@ DEFAULTS: dict[str, Any] = {
     "running_version": "",
     "log_mode": "normal",
     "log_mode_until": None,
-    #: off | daily. Daily at 03:00 in the server's time zone, the last 14 kept (TIME-1 AC-2).
+    #: off | daily | weekly | monthly (the shared module sicherung). Daily at 03:00 in the server's time zone, the
+    #: last 14 kept (TIME-1 AC-2).
     "backup_schedule": "daily",
     "backup_time": "03:00",
     "backup_keep": 14,
-    #: The last backup that failed, with its reason; gone with the next one that works (TIME-1 EC-7).
+    #: Before the module sicherung: the last backup that failed (TIME-1 EC-7). The module keeps that in its own state
+    #: now; the key stays so that nothing of an older version is lost.
     "backup_failure": None,
     #: Largest single attachment in MB: 25 from the start (TIME-1 AC-4).
     "upload_max_mb": 25,

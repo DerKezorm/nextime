@@ -22,7 +22,7 @@ from app.db import SessionLocal
 from app.main import app
 from app.models import RIGHT_BUSY, RIGHT_EDIT, RIGHT_READ, Account, Calendar
 from app.security import SESSION_COOKIE, start_session
-from app.services import backups, calendars, live
+from app.services import backup_hooks, calendars, live
 
 from .calendar_helpers import calendars_of, make_calendar, make_event, named, share, unshare
 from .conftest import make_account, new_client
@@ -227,7 +227,7 @@ def test_time20_ec20_a_restored_backup_gives_tokens_and_tags_a_new_mark(client: 
     make_event(client, "Eins")
     _status, _entries, token = _sync_report(account, password, calendar)
     tag = _ctag(account, password, calendar)
-    backups._new_sync_mark(get_settings().database_path)
+    backup_hooks.new_sync_mark(get_settings().database_path)
     status, _entries, _token = _sync_report(account, password, calendar, token)
     assert status == 403
     assert _ctag(account, password, calendar) != tag

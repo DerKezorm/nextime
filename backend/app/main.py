@@ -61,7 +61,6 @@ from .services import (
     cleanup,
     locales,
     logs,
-    mounts,
     nextasks,
     oidc_store,
     post_store,
@@ -150,11 +149,17 @@ def _remember_version() -> None:
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     logs.setup()
     settings = get_settings()
+    # The shared backup module on this data folder (a test may have moved it since the import).
+    backups.configure()
+    # What a stopped copy left (hidden parts, an empty file under a backup's name) goes at once.
+    backups.tidy_at_start()
     # Said at every start while it lasts: a database on a share can lose events.
-    mounts.warn_at_start(settings.data_dir, settings.database_path)
+    backups.warn_at_start()
     backups.apply_pending()
     _backup_before_update()
     init_db()
+    # A restore that failed at this start: the operators hear it once (the log; the page says it too).
+    backups.report_failed_restore()
     with SessionLocal() as db:
         nextasks.move_choices(db)
     _remember_version()

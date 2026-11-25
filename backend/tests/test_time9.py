@@ -23,6 +23,7 @@ from sqlalchemy import select
 from app.db import SessionLocal
 from app.models import RIGHT_BUSY, RIGHT_EDIT, RIGHT_READ, Account, Attachment, Event, Source, utcnow
 from app.services import attachments, backups, events, media_worker, remote_files, subscriptions, vault
+from app.vendor.nexsicherung import restore
 
 from .calendar_helpers import code, make_calendar, make_event
 from .conftest import MEDIA, make_account, new_client
@@ -399,7 +400,7 @@ def test_time9_ec16_a_restored_backup_brings_the_attachments_back(client: TestCl
     with zipfile.ZipFile(backups.path_of(name)) as made_archive:
         assert f"attachments/{item['id']}" in made_archive.namelist()
     assert client.delete(f"/api/attachments/{item['id']}").status_code == 204
-    monkeypatch.setattr(backups, "restart_soon", lambda: None)
+    monkeypatch.setattr(restore, "restart_soon", lambda: None)
     assert client.post(f"/api/backups/{name}/restore", json={"password": "correct horse battery"}).status_code == 202
     assert backups.apply_pending() is True
     assert (MEDIA / item["id"]).is_file()

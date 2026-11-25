@@ -171,6 +171,8 @@ MAX_BODY = 16 * 1024 * 1024
 #: Features with uploads add their paths here.
 LARGE_BODIES: dict[str, int] = {
     "/api/backups/upload": 64 * 1024**3,
+    # The same upload on the way of the shared module sicherung (Settings, Storage and backups).
+    "/api/server/storage/backups/upload": 64 * 1024**3,
     # Attachments (TIME-9): the operator's limit is at most 10,000 MB; the route checks the one set.
     "/api/attachments": 10_000 * 1024**2,
     # The same from the iPhone app (TIME-29, interface 0.5).

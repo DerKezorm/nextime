@@ -20,9 +20,10 @@ from ..errors import error
 from ..models import SIGN_IN_PASSWORD
 from ..models import Account as AccountRow
 from ..security import encrypt_secret
-from ..services import accounts, backups, mailer, mounts, settings_service, storage
+from ..services import accounts, backup_hooks, mailer, mounts, settings_service, storage
 from ..services.oidc_store import SqlStore
 from ..vendor.nexoidc import authentik, providers
+from ..vendor.nexsicherung.model import TIME as TIME_PATTERN
 
 logger = logging.getLogger("nextime.settings")
 
@@ -81,7 +82,7 @@ class SettingsIn(BaseModel):
     confirm_address: bool = False
     password_login: StrictBool | None = None
     two_factor_required: StrictBool | None = None
-    backup_schedule: Literal["off", "daily"] | None = None
+    backup_schedule: Literal["off", "daily", "weekly", "monthly"] | None = None
     backup_time: str | None = Field(default=None, max_length=8)
     backup_keep: StrictInt | None = None
     smtp_host: str | None = Field(default=None, max_length=255)
@@ -123,13 +124,14 @@ def _view(db: DbSession) -> SettingsOut:
     folder = get_settings().data_dir
     used = storage.usage(folder)
     own = storage.footprint(folder)
+    schedule = backup_hooks.schedule_of(values)
     return SettingsOut(
         public_url=values["public_url"],
         password_login=values["password_login"],
         two_factor_required=bool(values["two_factor_required"]),
-        backup_schedule=backups.schedule(db),
-        backup_time=backups.time_of_day(db),
-        backup_keep=backups.keep(db),
+        backup_schedule=schedule.every,
+        backup_time=schedule.time,
+        backup_keep=schedule.keep,
         smtp_host=values["smtp_host"],
         smtp_port=values["smtp_port"],
         smtp_security=values["smtp_security"],
@@ -206,7 +208,7 @@ def save(payload: SettingsIn, request: Request, operator: OperatorAccount, db: D
                             fields=[key], field=key, lowest=lowest, highest=highest)
         elif key == "backup_time":
             value = value.strip()
-            if not backups.TIME_PATTERN.match(value):
+            if not TIME_PATTERN.match(value):
                 raise error("invalid_time", "Enter a time such as 03:00.", 422, fields=[key], field=key)
         elif key == "google_enabled" and not settings_service.google_configured(db):
             # The switch stands on "Server" and on "Set up Google" alike; without a set-up Google there is nothing

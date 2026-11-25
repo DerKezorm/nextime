@@ -20,7 +20,8 @@ from app.config import Settings, StartupError, get_settings
 from app.db import SessionLocal
 from app.main import app
 from app.models import OPERATOR, Account
-from app.services import accounts, backups, internet, settings_service, storage
+from app.services import accounts, backup_hooks, backups, internet, settings_service, storage
+from app.vendor.nexsicherung import Schedule, archives, plan, restore
 
 from .conftest import PASSWORD, SETUP_CODE, make_account, new_client, sign_in
 
@@ -184,19 +185,32 @@ def test_time1_ac2_daily_at_three_in_the_servers_zone_and_fourteen_kept_from_the
 
 
 def test_time1_ec3_the_backup_runs_at_three_in_the_servers_zone_whatever_utc_says() -> None:
+    daily = Schedule("daily", "03:00", 14)
+
+    def due(now: datetime, zone: ZoneInfo) -> bool:
+        # The copy of the night before was made at three in that zone.
+        last = datetime(2026, 1, 14, 3, 0, tzinfo=zone)
+        return plan.due(daily, last, now, zone)
+
     # 01:59 UTC is 02:59 in Berlin in winter: not yet; 02:00 UTC is 03:00 there: due.
-    assert backups.due("daily", "03:00", now=datetime(2026, 1, 15, 1, 59, tzinfo=UTC), zone=BERLIN) is False
-    assert backups.due("daily", "03:00", now=datetime(2026, 1, 15, 2, 0, tzinfo=UTC), zone=BERLIN) is True
+    assert due(datetime(2026, 1, 15, 1, 59, tzinfo=UTC), BERLIN) is False
+    assert due(datetime(2026, 1, 15, 2, 0, tzinfo=UTC), BERLIN) is True
     # In UTC itself the same moment is not three yet.
-    assert backups.due("daily", "03:00", now=datetime(2026, 1, 15, 2, 0, tzinfo=UTC), zone=ZoneInfo("UTC")) is False
+    assert due(datetime(2026, 1, 15, 2, 0, tzinfo=UTC), ZoneInfo("UTC")) is False
+
+
+def test_time1_ac2_the_first_scheduled_backup_comes_at_once() -> None:
+    """The shared module sicherung (plan "Einstellungen", E22): a server without any scheduled copy makes the first one
+    at the next look, not only at the next three o'clock."""
+    assert plan.due(Schedule("daily", "03:00", 14), None, datetime(2026, 1, 15, 1, 0, tzinfo=UTC), BERLIN) is True
 
 
 def _run_over(start: datetime, hours: int, zone: ZoneInfo, monkeypatch: pytest.MonkeyPatch) -> list[datetime]:
     """Runs the schedule every 15 minutes from ``start`` for ``hours``; the clock of the backups is moved along."""
     made: list[datetime] = []
     monkeypatch.setattr(config, "server_zone", lambda: config.ServerZone(zone, str(zone)))
-    monkeypatch.setattr(backups, "server_zone", lambda: config.ServerZone(zone, str(zone)))
-    moment = start
+    # The copy of the evening before (the first scheduled one comes at once, E22): the schedule goes on from there.
+    moment = start - timedelta(minutes=1)
     real_create = ORIGINAL_CREATE
 
     def create(**kwargs):
@@ -214,7 +228,10 @@ def _run_over(start: datetime, hours: int, zone: ZoneInfo, monkeypatch: pytest.M
         made.append(moment)
         return rewritten
 
-    monkeypatch.setattr(backups, "create", create)
+    monkeypatch.setattr(archives, "create", create)
+    create(kind=backups.SCHEDULED)
+    made.clear()
+    moment = start
     while moment < start + timedelta(hours=hours):
         backups.run_job(now=moment)
         moment += timedelta(minutes=15)
@@ -249,8 +266,7 @@ def test_time1_ac2_time_and_number_can_be_changed(client: TestClient, operator: 
     changed = client.put("/api/settings", json={"backup_time": "04:15", "backup_keep": 7})
     assert changed.status_code == 200
     assert changed.json()["backup_time"] == "04:15" and changed.json()["backup_keep"] == 7
-    with SessionLocal() as db:
-        assert backups.time_of_day(db) == "04:15" and backups.keep(db) == 7
+    assert backup_hooks.NextimeHooks().load_schedule() == Schedule("daily", "04:15", 7)
 
 
 def test_time1_ac8_the_box_says_rhythm_zone_last_backup_with_size_and_how_many_are_kept(
@@ -275,7 +291,7 @@ def test_time1_ac8_restoring_checks_first_and_says_what_comes_changes_and_goes(
     # Anna came after the backup: a restore takes her away; nothing comes back.
     assert brief["accounts_remove"] == 1 and brief["accounts_add"] == 0
     assert {"events_add", "events_change", "events_remove"} <= set(brief)
-    monkeypatch.setattr(backups, "restart_soon", lambda: None)
+    monkeypatch.setattr(restore, "restart_soon", lambda: None)
     # Only after the confirmation with the password.
     assert client.post(f"/api/backups/{name}/restore", json={"password": "wrong one"}).status_code == 401
     assert not backups.pending_folder().exists()
@@ -286,13 +302,13 @@ def test_time1_ac8_restoring_checks_first_and_says_what_comes_changes_and_goes(
 
 
 def test_time1_ec15_a_second_click_while_a_backup_runs_makes_none(client: TestClient, operator: Account) -> None:
-    backups._lock.acquire()
+    backups.lock.acquire()
     try:
         refused = client.post("/api/backups", json={})
         assert refused.status_code == 409 and _code(refused) == "backup_running"
         assert client.get("/api/backups/summary").json()["running"] is True
     finally:
-        backups._lock.release()
+        backups.lock.release()
     assert client.post("/api/backups", json={}).status_code == 201
     assert len(backups.entries()) == 1
 
@@ -305,7 +321,8 @@ def test_time1_ec5_a_half_backup_is_no_backup_and_a_half_restore_is_thrown_away(
     (folder / ".nextime-2026-11-22-030000.zip.part").write_bytes(b"PK half")
     with zipfile.ZipFile(folder / "nextime-2026-11-22-030001.zip", "w") as archive:
         archive.writestr(backups.DATABASE_ENTRY, b"half")
-    assert backups.entries() == []
+    assert client.get("/api/backups").json() == []
+    assert [entry.name for entry in backups.entries() if entry.readable] == []
     # Stopped while laying out a restore: the pending folder without its manifest.
     pending = backups.pending_folder()
     pending.mkdir(parents=True)
@@ -316,8 +333,8 @@ def test_time1_ec5_a_half_backup_is_no_backup_and_a_half_restore_is_thrown_away(
         assert db.query(Account).filter_by(name="tester").one() is not None
 
 
-class _Stopped(Exception):
-    """The container stopped here."""
+class _Stopped(BaseException):
+    """The container stopped here: no ``except Exception`` runs, as when the process is killed."""
 
 
 @pytest.mark.parametrize("stop_at", ["database", "secret", "aside", "attachments", "done"])
@@ -337,7 +354,7 @@ def test_time1_ec5_a_restore_stopped_at_any_step_finishes_at_the_next_start_with
         if step == stop_at:
             raise _Stopped(step)
 
-    monkeypatch.setattr(backups, "_step", stop)
+    monkeypatch.setattr(backup_hooks, "step", stop)
     with pytest.raises(_Stopped):
         backups.apply_pending()
     # Nothing of the attachments is lost in between: the old ones aside or in place, the restored ones pending or in
@@ -346,7 +363,7 @@ def test_time1_ec5_a_restore_stopped_at_any_step_finishes_at_the_next_start_with
     names |= {path.name for path in (backups.pending_folder() / backups.ATTACHMENTS).glob("*")}
     assert "RESTORED1234" in names
     # The next start finishes it.
-    monkeypatch.setattr(backups, "_step", lambda _step: None)
+    monkeypatch.setattr(backup_hooks, "step", lambda _step: None)
     assert backups.apply_pending() is True
     assert sorted(path.name for path in media.iterdir()) == ["RESTORED1234"]
     assert (media / "RESTORED1234").read_bytes() == b"in the backup"
@@ -394,7 +411,7 @@ def test_time1_ac2_a_backup_moves_to_another_server(client: TestClient, operator
     header = {"X-Nextime-Password": base64.b64encode(PASSWORD.encode()).decode()}
     uploaded = client.post("/api/backups/upload", content=data, headers=header)
     assert uploaded.status_code == 201, uploaded.text
-    monkeypatch.setattr(backups, "restart_soon", lambda: None)
+    monkeypatch.setattr(restore, "restart_soon", lambda: None)
     restored = client.post(f"/api/backups/{uploaded.json()['name']}/restore", json={"password": PASSWORD})
     assert restored.status_code == 202
     assert backups.apply_pending() is True
@@ -405,14 +422,17 @@ def test_time1_ec7_a_failed_backup_says_why_keeps_the_older_ones_and_tells_the_l
 ) -> None:
     older = backups.create(kind=backups.SCHEDULED).name
 
-    def full(**_kwargs: object) -> Path:
+    def full(*_args: object, **_kwargs: object) -> None:
         raise OSError(errno.ENOSPC, "No space left on device")
 
-    monkeypatch.setattr(backups, "create", full)
+    monkeypatch.setattr(backup_hooks.NextimeHooks, "pack", full)
     with caplog.at_level(logging.ERROR, logger="nextime.backups"):
         refused = client.post("/api/backups", json={})
+    # The old way keeps its old code; the module's own way says it in its words.
     assert refused.status_code == 507 and _code(refused) == "disk_full"
-    assert "Backup failed reason=disk_full" in caplog.text
+    assert "A backup could not be written" in caplog.text and "No space left on device" in caplog.text
+    again = client.post("/api/server/storage/backups", json={})
+    assert again.status_code == 507 and _code(again) == "backup_disk_full"
     summary = client.get("/api/backups/summary").json()
     assert summary["failure"]["reason"] == "disk_full"
     assert [entry.name for entry in backups.entries()] == [older]
@@ -430,7 +450,8 @@ def test_time1_ec14_the_servers_clock_decides_and_the_log_warns_when_it_is_far_o
     assert answer.status_code == 200 and answer.json()["drift"] < -3600
     assert "clock differs" in caplog.text
     # The schedule asks the server's clock: an hour before three it is not due, whatever a browser says.
-    assert backups.due("daily", "03:00", now=datetime(2026, 1, 15, 1, 0, tzinfo=UTC), zone=BERLIN) is False
+    last = datetime(2026, 1, 14, 3, 0, tzinfo=BERLIN)
+    assert plan.due(Schedule("daily", "03:00", 14), last, datetime(2026, 1, 15, 1, 0, tzinfo=UTC), BERLIN) is False
 
 
 # --- AC-4, AC-5, AC-10, EC-11, EC-12: limits and switches -----------------------------------------------------------
