@@ -30,7 +30,7 @@ Ausgangsliste, eine gescheiterte Mail nimmt ihren Link mit; die Kontenliste malt
 Personenfarbe (`ListedAccount.color`, `Avatar color`), wie überall in nextime; am eigenen Konto kein „Überall
 abmelden“ und kein „Lösen“ (`NOT_ON_SELF`). Vertragsadapter mit `sign_in_from` und `listed_invites` über nextimes
 Routen. Bestand-Fixture fängt Post aus der Ausgangsliste und aus `nexpost.send.deliver`; die Prüfungen sind unverändert.
-Läufe danach: Backend 1627 grün, 12 übersprungen; Frontend 1180 grün in 66 Dateien; lint, `tsc -b`, build, ruff sauber;
+Läufe danach: Backend 1627 grün, 12 übersprungen; Frontend 1179 grün in 66 Dateien; lint, `tsc -b`, build, ruff sauber;
 `sync.py check` aller vier Module grün.
 
 **Backend:**
