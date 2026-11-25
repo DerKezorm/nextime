@@ -30,6 +30,13 @@ _ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"
 _TOUCH_SECONDS = 60
 
 
+def dav_name_of(account: Account) -> str:
+    """The account's fixed name in every CalDAV address (``accounts.dav_name``): the username it had when it was made
+    (0.4.0: its name at the first start of the version with the shared account module), never changed by a rename.
+    While it is empty (a database the migration has not seen yet), the name counts, as in 0.4.0."""
+    return account.dav_name or account.name
+
+
 def new_password() -> str:
     return "-".join("".join(secrets.choice(_ALPHABET) for _ in range(4)) for _ in range(4))
 
@@ -153,8 +160,10 @@ def platform_of(user_agent: str, name: str = "") -> str:
 
 
 def authenticate(db: Session, header: str, user_agent: str) -> tuple[Account, Device] | None:
-    """The account and device behind ``Authorization: Basic``, or ``None``. The name may be the account's name or
-    its address; a blocked or deleted account gets nothing (EC-18)."""
+    """The account and device behind ``Authorization: Basic``, or ``None``. The device password decides; the user
+    must name the same account: its current username, a former one, or its address (the shared account module,
+    ``login.background_account``; any case). So a program set up before a rename goes on with the old name. A
+    blocked or deleted account gets nothing (EC-18)."""
     if header[:6].lower() != "basic ":
         return None
     try:
@@ -170,7 +179,11 @@ def authenticate(db: Session, header: str, user_agent: str) -> tuple[Account, De
     account = db.get(Account, device.account_id)
     if account is None or account_out(account):
         return None
-    if user.strip().casefold() not in {account.name.casefold(), (account.email or "").casefold()} - {""}:
+    from ..vendor.nexkonten import login
+    from .konten_store import KontenStore
+
+    named = login.background_account(KontenStore(db), user)
+    if named is None or int(named.id) != account.id:
         return None
     now = utcnow()
     if device.last_used_at is None:
@@ -208,7 +221,7 @@ def mobileconfig(*, host: str, port: int, https: bool, base: str, account: Accou
         "ssl": "<true/>" if https else "<false/>",
         "user": escape(account.name),
         "password": escape(password),
-        "principal": escape(f"{base}/dav/principals/{account.name}/"),
+        "principal": escape(f"{base}/dav/principals/{dav_name_of(account)}/"),
         "description": escape(description),
         "device": escape(device.name),
         "inner": str(uuid.uuid4()).upper(),

@@ -1,6 +1,9 @@
-"""Setting up the first account, signing in and out, and the own account.
+"""Setting up the first account, signing in and out, a forgotten password, and the own account.
 
-The operator's list of accounts is in ``routers/accounts.py``, invitations in ``routers/invites.py``.
+Setup, sign-in, the profile and a forgotten password run through the shared account module (``vendor/nexkonten``,
+store ``services/konten_store.py``), the same in every nex app; the routes and their field names stay as 0.4.0 had
+them (``name`` is the username, at sign-in "Username or email"). The operator's list of accounts is in
+``routers/accounts.py``, invitations and links in ``routers/invites.py``.
 """
 
 from __future__ import annotations
@@ -10,6 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel, Field, StrictBool, StrictInt
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import __version__
@@ -31,18 +35,27 @@ from ..security import (
     DEVICE_DAYS,
     MIN_PASSWORD,
     SESSION_COOKIE,
-    Brake,
     brake,
     device_of,
-    device_token,
     end_all_sessions,
     end_session,
+    server_key,
     session_account,
+    session_cookie_age,
+    session_uid,
+    sessions_ended,
     start_session,
 )
-from ..services import accounts, display, locales, mailer, mounts, settings_service, storage, totp
+from ..services import accounts, display, kontenpost, locales, mailer, mounts, settings_service, storage, totp
 from ..services.accounts import AccountError
+from ..services.konten_store import KontenStore
 from ..services.oidc_store import SqlStore, offered_address
+from ..vendor import nexkonten
+from ..vendor.nexkonten import login as konten_login
+from ..vendor.nexkonten import profiles, resets
+from ..vendor.nexkonten import sessions as konten_sessions
+from ..vendor.nexkonten import setup as konten_setup
+from ..vendor.nexkonten.brake import BRAKE, DOOR_FORGOT, door_key
 from ..vendor.nexoidc import providers
 
 logger = logging.getLogger("nextime.auth")
@@ -64,12 +77,21 @@ class SetupIn(BaseModel):
     language: str = Field(default="", max_length=16)
     #: The setup code from the server's log (or NEXTIME_SETUP_TOKEN).
     code: str = Field(default="", max_length=200)
+    #: The username (since the shared account module); left out, a suggestion from the display name.
+    name: str | None = Field(default=None, max_length=64)
 
 
 class LoginIn(BaseModel):
-    #: The address, or the account name.
+    #: "Username or email" (the field kept its name): an address is looked up by its @.
     name: str = Field(max_length=255)
     password: str = Field(max_length=200)
+    #: "Stay signed in" (on from the start): 30 days from the last use; without it the browser's session only.
+    remember: bool = True
+
+
+class ForgotIn(BaseModel):
+    #: "Username or email".
+    name: str = Field(max_length=255)
 
 
 class PasswordChangeIn(BaseModel):
@@ -86,6 +108,14 @@ class LanguageIn(BaseModel):
 class ProfileIn(BaseModel):
     display_name: str | None = Field(default=None, max_length=200)
     email: str | None = Field(default=None, max_length=255)
+    #: A new username (since the shared account module).
+    name: str | None = Field(default=None, max_length=64)
+    #: The own password, for a new username or address of an account that has one.
+    password: str = Field(default="", max_length=200)
+
+
+class SwitchIn(BaseModel):
+    on: bool
 
 
 def secure_cookie(request: Request) -> bool:
@@ -99,11 +129,11 @@ def secure_cookie(request: Request) -> bool:
     return request.url.scheme == "https"
 
 
-def _set_cookie(response: Response, request: Request, token: str) -> None:
+def _set_cookie(response: Response, request: Request, token: str, remember: bool = True) -> None:
     response.set_cookie(
         SESSION_COOKIE,
         token,
-        max_age=get_settings().session_days * 86400,
+        max_age=session_cookie_age(remember),
         httponly=True,
         samesite="lax",
         secure=secure_cookie(request),
@@ -111,8 +141,26 @@ def _set_cookie(response: Response, request: Request, token: str) -> None:
     )
 
 
-def fail(exc: AccountError) -> HTTPException:
-    return error(exc.code, exc.message, exc.status, **exc.extra)
+def fail(exc: AccountError | nexkonten.AccountError) -> HTTPException:
+    """A refusal of nextime's own account code or of the shared module, in nextime's form: the module's codes
+    answer under the names 0.4.0 used where it had others (``public_code``); a brake answers 429 with
+    ``Retry-After``."""
+    code = getattr(exc, "public_code", exc.code)
+    values = dict(exc.extra)
+    if exc.code == "too_many_attempts":
+        wait = int(values.get("retry_after") or 1)
+        return HTTPException(status_code=429, detail=detail(code, exc.message, **values),
+                             headers={"Retry-After": str(wait)})
+    return error(code, exc.message, exc.status, **values)
+
+
+def too_many(wait: float) -> HTTPException:
+    seconds = max(1, int(wait + 0.999))
+    return HTTPException(
+        status_code=429,
+        detail=detail("too_many_attempts", "Too many attempts. Try again later.", retry_after=seconds),
+        headers={"Retry-After": str(seconds)},
+    )
 
 
 def check_password(password: str) -> None:
@@ -136,6 +184,24 @@ def check_language(language: str) -> str:
     return language
 
 
+def former_name(db: Session | None, account: AccountRow) -> str:
+    """The username the account had before its last change ("formerly …" under the field), "" for none."""
+    if db is None:
+        return ""
+    from ..models_accounts import FormerName
+
+    return db.scalar(select(FormerName.name).where(FormerName.account_id == account.id)
+                     .order_by(FormerName.id.desc()).limit(1)) or ""
+
+
+def pending_email(db: Session | None, account: AccountRow) -> str:
+    if db is None:
+        return ""
+    from ..models_accounts import EmailChange
+
+    return db.scalar(select(EmailChange.address).where(EmailChange.account_id == account.id)) or ""
+
+
 def account_view(account: AccountRow, db: Session | None = None) -> dict[str, Any]:
     return {
         "id": account.id,
@@ -151,10 +217,27 @@ def account_view(account: AccountRow, db: Session | None = None) -> dict[str, An
         "role": account.role,
         "sign_in": account.sign_in,
         "email": account.email,
+        # The address counts (signing in, a forgotten password); proven by a link; one waiting for its link.
+        "email_confirmed": bool(account.email_confirmed) if account.email else True,
+        "email_proven": bool(account.email_proven),
+        "email_source": account.email_source or "",
+        "pending_email": pending_email(db, account),
+        "former_name": former_name(db, account),
         # The address a sign-in provider knows the account by, offered on the account page.
         "provider_email": offered_address(db, account) if db is not None else "",
+        # Whose address it is, as on the provider's button ("Use the address from <provider>?", konten 0.3.4).
+        "provider_email_from": (account.provider_email_from or "") if db is not None else "",
+        "new_sign_in_mail": bool(account.new_sign_in_mail),
+        # A password set through a link: the account page lists the ways in that stayed, until put away.
+        "new_password_origin": account.new_password_origin or "",
         "language": account.language,
         "two_factor": bool(account.totp_secret_enc),
+        # "On" or "Off" beside the heading of the second factor (``SECOND_FACTOR_STATE``, konten 0.3.6).
+        "factor_state": nexkonten.factor.state(KontenStore(db), account.id) if db is not None else (
+            nexkonten.SECOND_FACTOR_ACTIVE if account.totp_secret_enc else nexkonten.SECOND_FACTOR_NONE),
+        # NEXTIME_SECOND_FACTOR_OFF: the emergency hammer holds, no second factor is asked of anybody (the page says
+        # so plainly, ``account.secondFactorOff``).
+        "second_factor_off": nexkonten.factor.switched_off(),
         "two_factor_recovery_left": len(totp.load_recovery(account.totp_recovery)) if account.totp_secret_enc else 0,
         "password_changed_at": account.password_changed_at.isoformat() if account.password_changed_at else None,
         # The password was set through the operator's reset link; the page says so until it is put away.
@@ -165,23 +248,57 @@ def account_view(account: AccountRow, db: Session | None = None) -> dict[str, An
 
 
 def known_device(db: DbSession, request: Request, response: Response, account: AccountRow) -> None:
-    """Marks this browser as one the account signed in with (the device cookie)."""
-    response.set_cookie(DEVICE_COOKIE, device_token(db, account), max_age=DEVICE_DAYS * 86400, httponly=True,
+    """Marks this browser as one the account signed in with (the cookie of known browsers, the shared module's
+    marks: random per account, signed, no account id in it; up to five accounts per browser)."""
+    store = KontenStore(db)
+    mark = konten_sessions.mark(server_key(), store.device_key(account.id))
+    db.commit()
+    value = konten_sessions.add_mark(request.cookies.get(DEVICE_COOKIE, ""), mark)
+    response.set_cookie(DEVICE_COOKIE, value, max_age=DEVICE_DAYS * 86400, httponly=True,
                         samesite="lax", secure=secure_cookie(request), path="/api/auth")
 
 
+def browser_mark(db: Session, request: Request, account_id: int) -> str:
+    """The mark of a browser that signed in as this account before, "" for none: a mark of the shared module, or a
+    cookie of 0.4.0 (``<id>.<nonce>.<mark>``, read for one version so that owners stay known)."""
+    cookie = request.cookies.get(DEVICE_COOKIE, "")
+    if not cookie:
+        return ""
+    store = KontenStore(db)
+    try:
+        key = store.device_key(account_id)
+    except LookupError:
+        return ""
+    return konten_sessions.known_mark(cookie, server_key(), key, older=lambda entry: device_of(db, entry) == account_id)
+
+
+def browser_known(db: Session, request: Request, account_id: int) -> bool:
+    return bool(browser_mark(db, request, account_id))
+
+
 def sign_in(db: DbSession, request: Request, response: Response, account: AccountRow, *,
-            provider_checked: bool = False) -> dict[str, Any]:
+            provider_checked: bool = False, remember: bool = True, tell: bool = False) -> dict[str, Any]:
+    """The session starts. ``tell``: a sign-in by its owner (password, provider, passkey), not right after a setup
+    or an invitation; from a browser that never signed in as the account, a confirmed address hears of it ("A new
+    sign-in", unless the person turned that off)."""
     mailer.note_browser_language(account, request.headers.get("accept-language", ""))
+    known = browser_known(db, request, account.id)
     token = start_session(db, account, client_ip(request), request.headers.get("user-agent", ""),
-                          provider_checked=provider_checked)
-    _set_cookie(response, request, token)
+                          provider_checked=provider_checked, remember=remember)
+    _set_cookie(response, request, token, remember)
     # This browser is known from now on: a lock that strangers cause by guessing does not keep it out, and the brake
     # per sender lets it pass.
-    if device_of(db, request.cookies.get(DEVICE_COOKIE)) != account.id:
+    if not known:
         known_device(db, request, response, account)
+        if tell:
+            store = KontenStore(db)
+            konto = store.get_account(account.id)
+            wanted = bool(account.new_sign_in_mail)
+            mail = konten_sessions.new_sign_in(konto, known=False, wanted=wanted) if konto else None
+            if kontenpost.queue(db, mail, where=request.headers.get("user-agent", "")):
+                logger.info("Mail about a new sign-in queued name=%s", account.name)
     logger.info("Signed in name=%s", account.name)
-    return account_view(account)
+    return account_view(account, db)
 
 
 @router.get("/setup", summary="Does nextime still need its first account, and is this browser signed in?")
@@ -212,33 +329,37 @@ def setup(payload: SetupIn, request: Request, response: Response, db: DbSession)
     key = "setup:" + client_ip(request)
     wait = brake.wait_seconds(key)
     if wait:
-        raise HTTPException(
-            status_code=429,
-            detail=detail("too_many_attempts", "Too many attempts. Try again later.", retry_after=wait),
-            headers={"Retry-After": str(wait)},
-        )
+        raise too_many(wait)
     language = check_language(payload.language)
     check_confirm(payload.password, payload.password_confirm)
+    store = KontenStore(db)
+    username = payload.name if payload.name is not None else nexkonten.names.suggest_username(payload.display_name)
     try:
-        account = accounts.create_operator(
-            db, display_name=payload.display_name, email=payload.email, password=payload.password, code=payload.code
+        done = konten_setup.setup(
+            store, code=payload.code, display_name=payload.display_name, username=username, email=payload.email,
+            password=payload.password, language=language,
         )
-    except AccountError as exc:
+    except nexkonten.AccountError as exc:
         if exc.code == "setup_code_wrong":
             brake.failed(key)
             logger.warning("Setup refused: wrong setup code")
         raise fail(exc) from exc
-    account.language = language
-    db.commit()
+    account = db.get(AccountRow, int(done.account.id))
+    assert account is not None
     return sign_in(db, request, response, account)
 
 
 @router.get("/auth/methods", summary="How one can sign in here (no sign-in needed)")
 def methods(db: DbSession) -> dict[str, Any]:
     # The buttons of the sign-in page: slug and label of each active provider, nothing else (vendor/nexoidc).
+    password = bool(settings_service.get(db, "password_login"))
     return {
-        "password": bool(settings_service.get(db, "password_login")),
+        "password": password,
         "providers": providers.public_list(SqlStore(db)),
+        # "Sign in with a passkey" (the operator's switch, on from the start).
+        "passkeys": bool(settings_service.get(db, "passkeys_allowed")),
+        # "Forgot your password?" by mail: a mail server, the public address and signing in by password.
+        "forgot_mail": password and kontenpost.can_mail(db),
     }
 
 
@@ -246,46 +367,42 @@ def methods(db: DbSession) -> dict[str, Any]:
 LOGIN_FREE_PER_SENDER = 30
 
 
-@router.post("/auth/login", summary="Sign in with address (or name) and password")
+@router.post("/auth/login", summary="Sign in with username or email and password")
 def login(payload: LoginIn, request: Request, response: Response, db: DbSession) -> dict[str, Any]:
-    # The brake first, then the password, then the rules: an unknown address costs the time of a wrong password, so
-    # neither the answer nor its timing tells which accounts exist.
-    #
-    # Two counts: per sender and name, and per sender alone with more room. The second is not reset by a sign-in that
-    # works. A browser that signed in as this very account before (its device cookie, signed by the server) is
-    # counted on its own, so that a stranger guessing cannot keep the owner out.
+    """The shared account module checks (``login.authenticate``): one answer for everything wrong, as long for an
+    unknown name as for a wrong password, failures counted at the account and its lock after ten (a browser that
+    signed in as the account before passes the lock). The brake counts in two pots, the sender and the account (or
+    what was typed when it names none), and a known browser only at the sender."""
     ip = client_ip(request)
     behind_unknown_proxy(request)
-    name = payload.name.strip().lower()[:255]
-    cookie = request.cookies.get(DEVICE_COOKIE)
-    device = device_of(db, cookie)
-    known = accounts.by_login(db, payload.name) if device is not None else None
-    if known is not None and known.id == device and cookie:
-        keys = [("login-dev:" + cookie.split(".")[1] + "|" + name, Brake.FREE)]
-    else:
-        keys = [("login:" + ip + "|" + name, Brake.FREE), ("login-ip:" + ip, LOGIN_FREE_PER_SENDER)]
-    wait = max(brake.wait_seconds(key, free) for key, free in keys)
+    store = KontenStore(db)
+    meant = konten_login.resolve_login(store, payload.name)
+    # A browser that signed in as this account before counts in a pot of its own (the module's brake, five free):
+    # neither a stranger guessing its name nor one spraying from the same address (a household behind one router)
+    # holds it, and its own wrong passwords still wait.
+    mark = browser_mark(db, request, int(meant.id)) if meant is not None else ""
+    known = meant.id if mark and meant is not None else None
+    keys = konten_login.attempt_key(store, payload.name, ip)
+    wait = BRAKE.claim(keys, browser=mark)
     if wait:
-        raise HTTPException(
-            status_code=429,
-            detail=detail("too_many_attempts", "Too many attempts. Try again later.", retry_after=wait),
-            headers={"Retry-After": str(wait)},
-        )
+        raise too_many(wait)
     try:
-        account = accounts.authenticate(db, payload.name, payload.password, device)
-    except AccountError as exc:
-        for key, _free in keys:
-            brake.failed(key)
+        konto = konten_login.authenticate(store, payload.name, payload.password, known_browser=known)
+    except nexkonten.AccountError as exc:
         raise fail(exc) from exc
-    brake.succeeded(keys[0][0])
+    BRAKE.succeeded(keys, browser=mark)
+    account = db.get(AccountRow, int(konto.id))
+    assert account is not None
     if not settings_service.get(db, "password_login") and account.role != OPERATOR:
         # The operator keeps the password as the way in when the provider is down.
         raise error("password_login_off", "Sign-in with a password is turned off.", 403)
-    if account.totp_secret_enc:
+    step = nexkonten.common.next_step(store, konto)
+    if step in (nexkonten.NEXT_SECOND_FACTOR, nexkonten.NEXT_PASSKEY):
         # Nothing opens yet: the browser gets a short-lived cookie that names the waiting sign-in and nothing else.
+        # Where the operator asks a second factor of everybody, a passkey is one: then it is the only second step.
         response.set_cookie(
             PENDING_COOKIE,
-            totp.start_pending(account.id),
+            totp.start_pending(account.id, remember=payload.remember),
             max_age=totp.PENDING_SECONDS,
             httponly=True,
             samesite="lax",
@@ -293,8 +410,64 @@ def login(payload: LoginIn, request: Request, response: Response, db: DbSession)
             path="/api/auth",
         )
         logger.info("Password accepted, second factor waiting name=%s", account.name)
-        return {"second_factor": True}
-    return sign_in(db, request, response, account)
+        # The answer of 0.4.0 stays as it was; ``code: false`` is the module's ``next`` = ``passkey`` (the dialog
+        # "Session expired" reads it the same way, ``sessionExpiredParts``).
+        answer: dict[str, Any] = {"second_factor": True}
+        if store.passkeys_of(account.id):
+            # The code step offers "Use a passkey" (only then: the answer of 0.4.0 stays as it was).
+            answer["passkey"] = True
+        if step == nexkonten.NEXT_PASSKEY:
+            # No authenticator: the passkey is the second step, there is no code to ask.
+            answer["code"] = False
+        return answer
+    konten_login.succeeded(store, account.id)
+    return sign_in(db, request, response, account, remember=payload.remember, tell=True)
+
+
+#: Answered at once, the same whatever was typed: the search, the link and the mail run after the answer.
+@router.post("/auth/forgot", status_code=202, summary="Forgot your password? A link by mail (with a mail server)")
+def forgot(payload: ForgotIn, request: Request, db: DbSession) -> dict[str, Any]:
+    # The requests of one sender count at the module's brake (``forgot:<sender>``, ten free, konten 0.3.4), the same
+    # for every input and also without a mail server; the account counts in the worker (``mail:<id>``).
+    sender = client_ip(request)
+    typed = payload.name
+
+    def send(mail: nexkonten.Mail) -> None:
+        from ..db import SessionLocal
+
+        with SessionLocal() as own:
+            if not kontenpost.queue(own, mail):
+                raise RuntimeError("the mail did not reach the outbox")
+
+    try:
+        if settings_service.get(db, "password_login") and kontenpost.can_mail(db):
+            resets.forgot_in_background(typed, open_store=_own_store, send=send, later=_later, sender=sender)
+        else:
+            nexkonten.common.counted((door_key(DOOR_FORGOT, sender),))
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    return {"sent": True}
+
+
+def _own_store():
+    from ..services.konten_store import own_store
+
+    return own_store()
+
+
+def _later(job) -> None:
+    """The rest of "Forgot your password?" after the answer, in a thread of its own (the time of the answer must
+    tell nobody whether there was an account). Tests run it at once (``FORGOT_AT_ONCE``)."""
+    if FORGOT_AT_ONCE:
+        job()
+        return
+    import threading
+
+    threading.Thread(target=job, name="nextime-forgot", daemon=True).start()
+
+
+#: Tests run the work of "Forgot your password?" before the answer, to see its mail.
+FORGOT_AT_ONCE = False
 
 
 @router.post("/auth/logout", status_code=204, summary="Sign out in this browser")
@@ -368,24 +541,158 @@ def change_password(payload: PasswordChangeIn, request: Request, response: Respo
     known_device(db, request, response, row)
 
 
-@router.put("/me/profile", summary="The own name and address")
-def set_profile(payload: ProfileIn, account: Account, db: DbSession) -> dict[str, Any]:
+def _confirmed_without_password(request: Request, db: Session, row: AccountRow) -> bool:
+    """An account without a password of its own here proves it is still them by a fresh sign-in at its provider
+    (``deps._fresh_from_provider``, the same as for an operator act); then the module asks for nothing more."""
+    from ..deps import _fresh_from_provider
+
+    if row.sign_in == SIGN_IN_PASSWORD and row.password_hash:
+        return False
+    _fresh_from_provider(request, db, row)
+    return True
+
+
+@router.put("/me/profile", summary="The own display name, username and address")
+def set_profile(payload: ProfileIn, request: Request, account: Account, db: DbSession) -> dict[str, Any]:
+    """Field by field through the shared module: the display name without a password (it may be empty: then the
+    username shows), a new username and a new address with the own password (an account without one: a fresh
+    sign-in at its provider). With a mail server a new address waits for the link sent there; without one it counts
+    at once. A paired device (Bearer) changes the display name only, never the username or the address."""
     row = db.get(AccountRow, account.id)
     assert row is not None
+    changes_email = payload.email is not None and payload.email.strip().lower() != (row.email or "").lower()
+    changes_name = payload.name is not None and payload.name.strip().lower() != row.name.lower()
+    store = KontenStore(db)
     try:
-        if payload.display_name is not None:
-            shown = accounts.clean_display_name(payload.display_name)
-            if not shown:
-                raise AccountError("display_name_empty", "Enter a name.", 422)
-            row.display_name = shown
-        if payload.email is not None:
-            address = accounts.clean_email(db, payload.email, own_id=row.id)
-            if address.lower() != (row.email or "").lower():
-                row.email_source = ""
-            row.email = address
-    except AccountError as exc:
+        if payload.display_name is not None and payload.display_name != row.display_name:
+            profiles.change_display_name(store, row.id, payload.display_name, actor_id=row.id)
+        fresh = _confirmed_without_password(request, db, row) if (changes_email or changes_name) else False
+        if changes_name:
+            notice = profiles.change_username(store, row.id, payload.name or "", actor_id=row.id,
+                                              password=payload.password, actor_confirmed=fresh)
+            kontenpost.queue(db, notice)
+            logger.info("Username changed by its owner account_id=%s", row.id)
+        if changes_email:
+            changed = profiles.change_email(store, row.id, payload.email or "", password=payload.password,
+                                            actor_confirmed=fresh, mail=kontenpost.can_mail(db))
+            kontenpost.queue(db, changed.mail)
+            kontenpost.queue(db, changed.notice)
+    except nexkonten.AccountError as exc:
         db.rollback()
         raise fail(exc) from exc
+    db.refresh(row)
+    return account_view(row, db)
+
+
+@router.post("/me/email/resend", summary="Send the link for the address that waits once more")
+def resend_email_link(account: Account, db: DbSession) -> dict[str, Any]:
+    try:
+        mail = profiles.resend_email_link(KontenStore(db), account.id)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    kontenpost.queue(db, mail)
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    return account_view(row, db)
+
+
+@router.delete("/me/email/pending", summary="Withdraw the address that waits for its link")
+def withdraw_email(account: Account, db: DbSession) -> dict[str, Any]:
+    profiles.withdraw_email_change(KontenStore(db), account.id)
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    return account_view(row, db)
+
+
+@router.get("/email/{token}", summary="Which address a confirmation link confirms (no sign-in needed)")
+def email_link_state(token: str, db: DbSession) -> dict[str, Any]:
+    try:
+        change = profiles.email_change_state(KontenStore(db), token[:200])
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    return {"email": change.address}
+
+
+@router.post("/email/{token}", summary="Confirm a new address with the link sent there (no sign-in needed)")
+def confirm_email(token: str, request: Request, db: DbSession) -> dict[str, Any]:
+    key = "email-link:" + client_ip(request)
+    wait = brake.wait_seconds(key)
+    if wait:
+        raise too_many(wait)
+    try:
+        changed = profiles.confirm_email(KontenStore(db), token[:200])
+    except nexkonten.AccountError as exc:
+        if exc.code in ("email_link_invalid", "email_link_expired"):
+            brake.failed(key)
+        raise fail(exc) from exc
+    kontenpost.queue(db, changed.notice)
+    return {"email": changed.account.email}
+
+
+@router.put("/me/new-sign-in-mail", summary="A mail when a browser signs in for the first time: on or off")
+def set_new_sign_in_mail(payload: SwitchIn, account: Account, db: DbSession) -> dict[str, Any]:
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    row.new_sign_in_mail = payload.on
+    db.commit()
+    return account_view(row, db)
+
+
+# --- Where am I signed in, and what still has access ---------------------------------------------------------------
+
+
+@router.get("/auth/sessions", summary="Where the own account is signed in: browsers and paired devices")
+def my_sessions(request: Request, account: Account, db: DbSession) -> list[dict[str, Any]]:
+    current = session_uid(db, request.cookies.get(SESSION_COOKIE))
+    # Browsers by name ("Firefox on Linux") in the account's language, never the stored User-Agent.
+    language = (account.language or account.browser_language or "en")[:2].lower()
+    return konten_sessions.listing(KontenStore(db), account.id, current, language=language)
+
+
+@router.delete("/auth/sessions/{uid}", status_code=204, summary="Sign one browser or device of the own account out")
+def end_one_session(uid: str, request: Request, account: Account, db: DbSession) -> None:
+    if uid == session_uid(db, request.cookies.get(SESSION_COOKIE)):
+        raise error("use_logout", "Sign out of this browser with Sign out.", 409)
+    if not konten_sessions.sign_out(KontenStore(db), account.id, uid[:40]):
+        raise error("not_found", "Not found.", 404)
+    db.commit()
+    sessions_ended()
+    logger.info("Session ended by its owner name=%s", account.name)
+
+
+@router.get("/auth/access", summary="What still has access after a password set through a link")
+def remaining_access(account: Account, db: DbSession) -> dict[str, Any]:
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    return {
+        "origin": row.new_password_origin or "",
+        "access": [
+            {"id": str(item.id), "kind": item.kind, "label": item.label,
+             "last_used_at": item.last_used_at.isoformat() if item.last_used_at else None}
+            for item in KontenStore(db).list_access(account.id)
+        ],
+    }
+
+
+@router.post("/auth/access/disconnect", summary="Disconnect all: every device, API token and passkey of the account")
+def disconnect_all(request: Request, account: Account, db: DbSession) -> dict[str, Any]:
+    from ..deps import confirm_fresh_session
+
+    confirm_fresh_session(request, db, account)
+    count = resets.disconnect_all(KontenStore(db), account.id)
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    row.new_password_origin = ""
+    db.commit()
+    sessions_ended()
+    return {"disconnected": count}
+
+
+@router.post("/auth/access/seen", summary="The list of what still has access is put away")
+def remaining_access_seen(account: Account, db: DbSession) -> dict[str, Any]:
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    row.new_password_origin = ""
     db.commit()
     return account_view(row, db)
 

@@ -26,3 +26,6 @@ lxml==6.1.3
 caldav==3.7.0
 # Public and school holidays of Germany, Austria and Switzerland, shipped with the image, nothing fetched (TIME-17).
 holidays==0.109
+# Passkeys (konten 0.3.x, WebAuthn): the version the shared account module is tested with (its manifest test asks).
+webauthn==3.0.1
+cbor2==6.3.0

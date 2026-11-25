@@ -87,7 +87,7 @@ def test_time2_ac10_a_password_has_twelve_characters_and_is_typed_twice_the_same
     def attempt(password: str, confirm: str) -> object:
         if place == "setup":
             return client.post("/api/setup", json={"display_name": "Robin", "password": password,
-                                                   "password_confirm": confirm, "code": "test-setup-code"})
+                                                   "password_confirm": confirm, "code": "test-setup-code-of-the-tests"})
         if place == "invite":
             return _stranger().post(f"/api/invite/{token}", json={"display_name": "Lena", "password": password,
                                                                    "password_confirm": confirm})
@@ -137,7 +137,8 @@ def test_time2_ec7_names_keep_umlauts_and_emoji_lose_the_blanks_and_stay_text(cl
 def test_time2_ec8_an_address_another_account_has_is_refused_in_any_case(client: TestClient,
                                                                           operator: Account) -> None:
     make_account("anna", email="anna@example.com")
-    refused = client.put("/api/me/profile", json={"email": "ANNA@Example.com"})
+    # A new address asks for the own password (the shared account module).
+    refused = client.put("/api/me/profile", json={"email": "ANNA@Example.com", "password": PASSWORD})
     assert refused.status_code == 409 and _code(refused) == "email_taken"
     invite = client.post("/api/invites", json={"email": "Anna@EXAMPLE.com"})
     assert invite.status_code == 409 and _code(invite) == "email_taken"
@@ -260,8 +261,10 @@ def test_time2_ac8_the_profile_changes_the_name_and_tells_the_way_in_and_the_sec
     assert me["sign_in"] == "password" and me["two_factor"] is False
     assert client.put("/api/me/profile", json={"display_name": "Robin"}).json()["display_name"] == "Robin"
     assert client.get("/api/auth/me").json()["display_name"] == "Robin"
+    # An empty display name is allowed in the profile since the shared account module (the username shows, the
+    # draft "Konten, Einrichtung und Anmeldung"): blanks only become empty.
     empty = client.put("/api/me/profile", json={"display_name": "   "})
-    assert empty.status_code == 422 and _code(empty) == "display_name_empty"
+    assert empty.status_code == 200 and empty.json()["display_name"] == ""
 
 
 def test_time2_ac9_signing_out_ends_this_browsers_session_only(client: TestClient, operator: Account) -> None:

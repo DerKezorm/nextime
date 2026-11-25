@@ -66,6 +66,14 @@ DEFAULTS: dict[str, Any] = {
     "smtp_user": "",
     "smtp_password_enc": "",
     "smtp_from": "",
+    #: The name the system mail goes out under; empty: "nextime" (the shared post module).
+    "smtp_sender_name": "",
+    #: The last mail that went out, the last error and when (the operator's mail card; the shared post module).
+    "mail_last_ok_at": "",
+    "mail_last_error": "",
+    "mail_last_error_at": "",
+    #: Passkeys may be added and used to sign in (the shared account module, part 2): on from the start.
+    "passkeys_allowed": True,
 }
 
 

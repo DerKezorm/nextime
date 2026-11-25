@@ -13,6 +13,8 @@ from app.db import SessionLocal
 from app.models import Account, Invite, utcnow
 from app.services import logs
 
+#: Invitations need the public address (konten 0.3.2).
+
 GOOD = "a long enough password"
 
 

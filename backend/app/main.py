@@ -44,6 +44,7 @@ from .routers import nexpaper as nexpaper_router
 from .routers import nextasks as nextasks_router
 from .routers import notify as notify_router
 from .routers import offline as offline_router
+from .routers import passkeys as passkeys_router
 from .routers import places as places_router
 from .routers import reminders as reminders_router
 from .routers import search as search_router
@@ -55,7 +56,6 @@ from .routers import transfer as transfer_router
 from .routers import trash as trash_router
 from .security import HashingBusy, purge_sessions
 from .services import (
-    accounts,
     apppush,
     backups,
     cleanup,
@@ -64,17 +64,22 @@ from .services import (
     mounts,
     nextasks,
     oidc_store,
+    post_store,
     settings_service,
     sync,
     totp,
 )
+from .services.konten_store import KontenStore
 from .vendor import nexoidc
+from .vendor.nexkonten import factor as konten_factor
+from .vendor.nexkonten import setup as konten_setup
 
 logger = logging.getLogger("nextime")
 
 #: The frame's routers. The calendar features add theirs here (``FEATURE_ROUTERS``), each a module with ``router``.
 ROUTERS = [
-    health, about, locales_router, logs_router, auth, totp_router, oidc, accounts_router, invites, settings_router,
+    health, about, locales_router, logs_router, auth, totp_router, passkeys_router, oidc,
+    accounts_router, invites, settings_router,
     backups_router, avatars_router, server,
 ]
 #: Routers of the calendar features (calendars, events, sharing ...), registered after the frame's.
@@ -104,6 +109,11 @@ async def _sweep_forever(stop: asyncio.Event) -> None:
     rounds = 0
     while not stop.is_set():
         totp.sweep()
+        # System mail waiting in the outbox goes out (the shared post module), in a thread: SMTP blocks.
+        try:
+            await asyncio.to_thread(post_store.run_due)
+        except Exception:
+            logger.exception("Outbox round failed")
         if rounds % 60 == 0:
             with SessionLocal() as db:
                 purge_sessions(db)
@@ -175,7 +185,9 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(nextasks.run_forever(stop)))
     logger.info("nextime %s started sqlite=%s", __version__, sqlite3.sqlite_version)
     with SessionLocal() as db:
-        accounts.announce_setup_code(db)
+        konten_setup.announce_setup(KontenStore(db))
+    # NEXTIME_SECOND_FACTOR_OFF: a warning in the log while the emergency hammer holds.
+    konten_factor.announce_switched_off()
     try:
         yield
     finally:

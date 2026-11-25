@@ -77,7 +77,7 @@ def test_an_account_through_the_provider_only_follows_its_address_never_one_of_a
     assert _row("neo").email == "neo2@example.com"
 
 
-def test_an_account_with_a_password_is_offered_the_address_and_takes_it_only_when_it_says_so(
+def test_an_account_with_a_password_is_offered_the_address_and_takes_it_with_its_password(
     client: TestClient, operator: Account, provider: FakeProvider
 ) -> None:
     configure(client, provider, auto_create=False)
@@ -89,13 +89,15 @@ def test_an_account_with_a_password_is_offered_the_address_and_takes_it_only_whe
     assert _row("alex").email == ""
     me = member.get("/api/auth/me").json()
     assert me["provider_email"] == "alex@example.com"
-    assert member.post("/api/oidc/me/address").json() == {"email": "alex@example.com"}
+    # Taking it is a change of address (the shared module): it needs the own password.
+    assert member.post("/api/oidc/me/address", json={"password": "wrong-password-1"}).status_code == 401
+    assert member.post("/api/oidc/me/address", json={"password": PASSWORD}).json()["email"] == "alex@example.com"
     row = _row("alex")
-    assert (row.email, row.email_source, row.provider_email) == ("alex@example.com", "provider", "")
+    assert (row.email, row.provider_email) == ("alex@example.com", "")
     assert member.get("/api/auth/me").json()["provider_email"] == ""
-    # Unlinking the last link: the address that came from the provider goes too.
+    # The person took it: it is the account's own now and stays when the link goes.
     assert member.delete("/api/oidc/sso/link").status_code == 204
-    assert _row("alex").email == ""
+    assert _row("alex").email == "alex@example.com"
 
 
 def test_dont_ask_again_keeps_the_offer_away_and_an_own_address_stays_when_the_link_goes(

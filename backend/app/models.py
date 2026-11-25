@@ -80,8 +80,16 @@ class Account(Base):
     __tablename__ = "accounts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    #: Lower case, unique; made from the address or the name. People sign in with their address or this name.
+    #: The username (the shared account module): lower case, unique without regard to case, chosen at setup or
+    #: invitation and changeable in the profile; a former one stays reserved for good (``former_names``). People sign
+    #: in with it or with their address. The field keeps its name ``name`` in every route.
     name: Mapped[str] = mapped_column(String(64), unique=True)
+    #: The calendar account's fixed name in every CalDAV address (``/dav/principals/<dav_name>/`` ...): the username
+    #: when the account was made and never changed after, also not by a rename, so that no calendar program loses its
+    #: calendars. Accounts of 0.4.0 get their name of then at the first start (``services/konten_wanderung``); while
+    #: it is empty the name counts (``devices.dav_name_of``).
+    dav_name: Mapped[str] = mapped_column(String(64), default=lambda context: _first_name(context),
+                                          server_default="")
     #: What people see: the name as typed (umlauts and emoji kept, blanks at the edges gone).
     display_name: Mapped[str] = mapped_column(String(80), default="")
     #: The version whose "What's new" the account has read or put away.
@@ -96,10 +104,17 @@ class Account(Base):
     #: Where ``email`` came from: "" (typed or an invitation) or ``provider`` (a sign-in provider's address). An
     #: address from a provider goes with the account's last link (the shared sign-in module).
     email_source: Mapped[str] = mapped_column(String(16), default="", server_default="")
+    #: The address **counts** (signing in, a forgotten password, notices; the shared account module). Every address
+    #: of 0.4.0 counts, also one taken over from a provider: whoever signed in with it keeps doing so.
+    email_confirmed: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    #: Somebody opened a link mailed to the address (a confirmation link). 0.4.0 mailed none: false for the Bestand.
+    email_proven: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     #: The address a provider knows the account by, offered on the account page to an account with a password (it
     #: takes it only when it says so); ``provider_email_off``: the address the account said "don't ask again" to.
     provider_email: Mapped[str] = mapped_column(String(255), default="", server_default="")
     provider_email_off: Mapped[str] = mapped_column(String(255), default="", server_default="")
+    #: The name of the provider whose address is offered, as on its button (konten 0.3.4, ``offered_email_provider``).
+    provider_email_from: Mapped[str] = mapped_column(String(80), default="", server_default="")
     #: The interface language chosen under "My account"; empty: the browser's. Travels to every device.
     language: Mapped[str] = mapped_column(String(16), default="")
     #: The browser's language at the last sign-in: what a mail to the account is written in while ``language`` is
@@ -124,12 +139,27 @@ class Account(Base):
     totp_secret_enc: Mapped[str] = mapped_column(Text, default="")
     totp_recovery: Mapped[str] = mapped_column(Text, default="")
     totp_last_step: Mapped[int] = mapped_column(Integer, default=0)
+    #: An authenticator being set up (the shared account module, since 0.3.3): its seed sealed in a context of its
+    #: own, waiting ten minutes for its first code; it survives a restart between the QR code and that code. Never a
+    #: factor while it waits.
+    totp_pending: Mapped[str] = mapped_column(Text, default="", server_default="")
+    totp_pending_until: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     #: The profile picture (``services/avatars.py``): a square WebP drawn anew, loaded only when asked for.
     avatar: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True, deferred=True)
     avatar_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
     #: The color of the initial's circle, an index into the eleven calendar colors (TIME-2 EC-11): given once, the
     #: one fewest others have, so that up to eleven people never share one. ``None`` until first shown.
     color: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: "" for a picture the person set (and every picture of 0.4.0), ``provider`` for one taken from a sign-in
+    #: provider: a provider's picture never replaces an own one.
+    avatar_source: Mapped[str] = mapped_column(String(16), default="", server_default="")
+    #: The random user handle of the account's passkeys (WebAuthn), made with the first passkey and kept.
+    passkey_handle: Mapped[str] = mapped_column(String(64), default="", server_default="")
+    #: "A mail at a new sign-in" (on from the start): a browser that never signed in as the account before.
+    new_sign_in_mail: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    #: The password was set through a link: where it came from (``self``, ``operator``, ``server``), "" for none.
+    #: The account page then lists the ways in that stayed ("These devices still have access"), until put away.
+    new_password_origin: Mapped[str] = mapped_column(String(16), default="", server_default="")
     #: The account's own preferences; only what it chose.
     preferences: Mapped[Any] = mapped_column(JSON, nullable=True)
     #: What the device cookies of this account are signed with (``security.device_token``): drawn anew on a new
@@ -142,6 +172,12 @@ class Account(Base):
     @property
     def shown_name(self) -> str:
         return self.display_name or self.name
+
+
+def _first_name(context: Any) -> str:
+    """``accounts.dav_name`` of a new row: its username, whichever way the account is made (setup, invitation,
+    provider, tests)."""
+    return str(context.get_current_parameters().get("name") or "")
 
 
 def new_device_key() -> str:
@@ -180,6 +216,18 @@ class AuthSession(Base):
     #: This sign-in came through a provider that checks the second factor itself (the entry's switch was on): the
     #: operator's "second factor required" does not force a setup for this session, whatever the account is.
     provider_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    #: The id the list "Where you are signed in" names the session by (the token's hash never leaves the server).
+    #: Sessions of 0.4.0 get one at the first start (``services/konten_wanderung``).
+    uid: Mapped[str | None] = mapped_column(String(32), nullable=True, unique=True, index=True)
+    #: "Stay signed in": 30 days from the last use, sliding; without it the session ends with the browser and lives
+    #: at most 12 hours. Sessions of 0.4.0 were all remembered (30 days).
+    remember: Mapped[bool] = mapped_column(Boolean, default=True, server_default=true())
+    #: ``full``, or ``setup``: the session may only set up the second factor the operator requires (15 minutes).
+    stage: Mapped[str] = mapped_column(String(8), default="full", server_default="full")
+    #: ``browser``; ``waiting`` a sign-in that waits for its second factor, ``device`` a paired device's session
+    #: (the shared account module's kinds; nextime's paired apps hold their own rows, ``app_devices``). 0.4.0:
+    #: browsers only.
+    kind: Mapped[str] = mapped_column(String(8), default="browser", server_default="browser")
 
 
 class OidcProvider(Base):
@@ -246,6 +294,10 @@ class Invite(Base):
     #: The role the new account gets.
     role: Mapped[str] = mapped_column(String(16), default=MEMBER)
     email: Mapped[str] = mapped_column(String(255), default="")
+    #: What the operator gave as the display name (the form shows it); invitations of 0.4.0 have none.
+    display_name: Mapped[str] = mapped_column(String(80), default="", server_default="")
+    #: The link went by mail to ``email``: whoever comes through it proved the address.
+    mailed: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
     created_by: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
@@ -263,6 +315,9 @@ class PasswordReset(Base):
     created_by: Mapped[int | None] = mapped_column(ForeignKey("accounts.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    #: ``self`` ("Forgot your password?"), ``operator`` (under Accounts) or ``server`` (the emergency command). Every
+    #: link of 0.4.0 was the operator's.
+    origin: Mapped[str] = mapped_column(String(16), default="operator", server_default="operator")
 
 
 # --- Calendars and events (TIME-4, TIME-5, TIME-6, TIME-20) -----------------------------------------------------------

@@ -2,9 +2,10 @@
 
 * The seed is stored encrypted with the server secret (``security.encrypt_secret``), the recovery codes as SHA-256
   hashes. Seed and codes are shown once, at enrolment, and never logged.
-* Enrolment takes two steps. ``begin_enrolment`` draws a seed and keeps it in memory for ten minutes; confirming
-  needs a code from the app (proves the app holds the seed) and the account's password (proves the person at the
-  keyboard is the owner). Only then is the seed stored.
+* Enrolment takes two steps, through the shared account module (``factor.begin_totp``/``confirm_totp``): the seed
+  waits sealed in the database for ten minutes (``accounts.totp_pending``, survives a restart); confirming needs a
+  code from the app (proves the app holds the seed) and the account's password (proves the person at the keyboard is
+  the owner). Only then does the seed count.
 * A sign-in with a second factor takes two steps as well. The password step opens nothing: it parks the sign-in in
   memory under a random token and hands the browser that token in a cookie. The code step turns it into the
   session. Five wrong codes end the pending sign-in; every wrong code counts against the account like a wrong
@@ -31,6 +32,7 @@ from dataclasses import dataclass, field
 from urllib.parse import quote
 
 import segno
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import SIGN_IN_PASSWORD, Account
@@ -43,7 +45,6 @@ DIGITS = 6
 #: Steps before and after the current one that are still accepted: clocks drift, people are slow.
 WINDOW = 1
 SEED_BYTES = 20
-ENROLMENT_SECONDS = 600
 PENDING_SECONDS = 300
 #: Wrong codes before a pending sign-in is thrown away and the password has to be given again.
 MAX_ATTEMPTS = 5
@@ -157,14 +158,22 @@ def use_recovery(stored: str, code: str) -> str | None:
 
 
 def factor_missing(db: Session, account: Account) -> bool:
-    """The operator requires a second factor, and this password account has none of its own yet, whatever session it
-    is in. A session sheltered by a provider (``setup_required``) does not need it; an API token never has a session,
-    so it waits until the account has one."""
-    return (
+    """The operator requires a second factor, and this password account has none of its own yet (no authenticator,
+    no passkey), whatever session it is in. A session sheltered by a provider (``setup_required``) does not need it;
+    an API token never has a session, so it waits until the account has one."""
+    if not (
         bool(settings_service.get(db, "two_factor_required"))
         and account.sign_in == SIGN_IN_PASSWORD
         and not account.totp_secret_enc
-    )
+    ):
+        return False
+    from ..models_accounts import Passkey
+    from ..vendor.nexkonten import factor
+
+    # The emergency hammer (``NEXTIME_SECOND_FACTOR_OFF``) asks nothing; a passkey is a second factor (since 0.3.2).
+    if factor.switched_off():
+        return False
+    return db.scalar(select(Passkey.id).where(Passkey.account_id == account.id).limit(1)) is None
 
 
 def setup_required(db: Session, account: Account) -> bool:
@@ -198,17 +207,12 @@ class PendingSignIn:
     account_id: int
     expires: float
     attempts: int = 0
-
-
-@dataclass
-class _Enrolment:
-    seed: str
-    expires: float
+    #: "Stay signed in" as the password step asked it.
+    remember: bool = True
 
 
 @dataclass
 class _Store:
-    enrolments: dict[int, _Enrolment] = field(default_factory=dict)
     pending: dict[str, PendingSignIn] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -216,34 +220,11 @@ class _Store:
 _store = _Store()
 
 
-def begin_enrolment(account_id: int) -> str:
-    seed = generate_seed()
-    with _store.lock:
-        _store.enrolments[account_id] = _Enrolment(seed=seed, expires=time.monotonic() + ENROLMENT_SECONDS)
-    return seed
-
-
-def pending_seed(account_id: int) -> str | None:
-    with _store.lock:
-        entry = _store.enrolments.get(account_id)
-        if entry is None:
-            return None
-        if entry.expires <= time.monotonic():
-            del _store.enrolments[account_id]
-            return None
-        return entry.seed
-
-
-def drop_enrolment(account_id: int) -> None:
-    with _store.lock:
-        _store.enrolments.pop(account_id, None)
-
-
 def _hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def start_pending(account_id: int) -> str:
+def start_pending(account_id: int, *, remember: bool = True) -> str:
     """Parks the password step and returns the token for the cookie."""
     token = secrets.token_urlsafe(32)
     with _store.lock:
@@ -251,7 +232,8 @@ def start_pending(account_id: int) -> str:
         for key, entry in list(_store.pending.items()):
             if entry.account_id == account_id:
                 del _store.pending[key]
-        _store.pending[_hash(token)] = PendingSignIn(account_id=account_id, expires=time.monotonic() + PENDING_SECONDS)
+        _store.pending[_hash(token)] = PendingSignIn(account_id=account_id, expires=time.monotonic() + PENDING_SECONDS,
+                                                     remember=remember)
     return token
 
 
@@ -290,7 +272,6 @@ def finish_pending(token: str) -> PendingSignIn | None:
 def forget_account(account_id: int) -> None:
     """Nothing waits for an account whose second factor was just reset or that was deleted."""
     with _store.lock:
-        _store.enrolments.pop(account_id, None)
         for key, entry in list(_store.pending.items()):
             if entry.account_id == account_id:
                 del _store.pending[key]
@@ -299,17 +280,13 @@ def forget_account(account_id: int) -> None:
 def sweep() -> int:
     now = time.monotonic()
     with _store.lock:
-        stale_enrolments = [key for key, entry in _store.enrolments.items() if entry.expires <= now]
         stale_pending = [key for key, entry in _store.pending.items() if entry.expires <= now]
-        for key in stale_enrolments:
-            del _store.enrolments[key]
         for key in stale_pending:
             del _store.pending[key]
-    return len(stale_enrolments) + len(stale_pending)
+    return len(stale_pending)
 
 
 def forget() -> None:
     """For the tests: nothing waits."""
     with _store.lock:
-        _store.enrolments.clear()
         _store.pending.clear()

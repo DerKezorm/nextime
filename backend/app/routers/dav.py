@@ -193,7 +193,9 @@ class Caller:
 
     @property
     def name(self) -> str:
-        return self.account.name
+        """The account's fixed name in every CalDAV address (``accounts.dav_name``), never its username: a renamed
+        account keeps every address its calendar programs know."""
+        return devices.dav_name_of(self.account)
 
     @property
     def german(self) -> bool:
@@ -312,7 +314,7 @@ def calendar_props(db: Session, caller: Caller, access: calendars.Access, order:
                                                                             "version": "2.0"})],
         q(C, "max-resource-size"): str(ical.MAX_OBJECT_BYTES),
         q(D, "current-user-privilege-set"): privileges(access.writable),
-        q(D, "owner"): href(principal_path(owner.name if owner else caller.name)),
+        q(D, "owner"): href(principal_path(devices.dav_name_of(owner) if owner else caller.name)),
         q(D, "current-user-principal"): href(principal_path(caller.name)),
         q(D, "supported-report-set"): report_set([(C, "calendar-multiget"), (C, "calendar-query"),
                                                   (D, "sync-collection")]),

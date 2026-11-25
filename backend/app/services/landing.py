@@ -1,5 +1,5 @@
 """The page a sign-in lands on: a direct link opened without a session survives the way through the
-sign-in page and the provider. Only a page of nextime' own is ever taken (no open redirect).
+sign-in page and the provider. Only a page of nextime's own is ever taken (no open redirect).
 """
 
 from __future__ import annotations
@@ -8,13 +8,13 @@ import posixpath
 import re
 from urllib.parse import unquote
 
-#: A page of nextime' own to land on after the provider: a path on this server with its query. Never another host
+#: A page of nextime's own to land on after the provider: a path on this server with its query. Never another host
 #: (``//host``, ``/\host``, a scheme), never the API, nothing but printable characters without spaces.
 _NEXT = re.compile(r"/(?![/\\])[A-Za-z0-9\-._~!$&'()*+,;=:@%/?]{0,499}")
 
 
 def safe_next(value: object) -> str | None:
-    """The page to land on after signing in, or None if ``value`` is not one of nextime' own (no open redirect).
+    """The page to land on after signing in, or None if ``value`` is not one of nextime's own (no open redirect).
     The API is no page: checked on the path as the server reads it, decoded and in small letters (``/%61pi/``,
     ``/API/``)."""
     if not isinstance(value, str) or not _NEXT.fullmatch(value) or value == "/":

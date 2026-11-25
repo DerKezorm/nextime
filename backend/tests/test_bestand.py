@@ -10,7 +10,7 @@ and the locked stay out as before.
 
 ⚠️ **Nothing here may be adapted to make a new version pass.** A red test means: an installation that runs 0.4.0
 today loses a way in after the update. Change the code, not the test. The only thing that is allowed to change is
-the list at the end (``NACH_DEM_UMBAU``): what the account module changes on purpose (draft
+the list at the end (strict xfail until the module came): what the account module changes on purpose (draft
 "Konten, Einrichtung und Anmeldung", rules 3 and 6 and "Passwort vergessen").
 
 ⚠️ **The fixture ages.** Sessions run out after 30 days, invitations and links after their days, a deleted account
@@ -43,7 +43,7 @@ from app.db import SessionLocal, engine
 from app.main import app
 from app.models import Account
 from app.security import MAX_FAILURES, SESSION_COOKIE, brake
-from app.services import mailer, settings_service, totp
+from app.services import settings_service, totp
 from app.vendor import nexoidc
 from app.vendor.nexoidc import attempt, protocol
 
@@ -151,19 +151,57 @@ def anbieter():
     attempt.forget_used_states()
 
 
+class Postfach:
+    """The system mail that went into the outbox during the test (the shared post module sends it from there), as a
+    list of ``{"an", "text"}``."""
+
+    def __init__(self) -> None:
+        self.start = self._last()
+
+    @staticmethod
+    def _last() -> int:
+        from sqlalchemy import func, select
+
+        from app.models_accounts import MailOutbox
+
+        with SessionLocal() as db:
+            return int(db.scalar(select(func.max(MailOutbox.id))) or 0)
+
+    def _mails(self) -> list[dict]:
+        from sqlalchemy import select
+
+        from app.models_accounts import MailOutbox
+
+        with SessionLocal() as db:
+            rows = db.scalars(select(MailOutbox).where(MailOutbox.id > self.start).order_by(MailOutbox.id))
+            return [{"an": json.loads(row.letter)["to"], "text": json.loads(row.letter)["text"]} for row in rows]
+
+    def __iter__(self):
+        return iter(self._mails())
+
+    def __getitem__(self, index: int) -> dict:
+        return self._mails()[index]
+
+    def __len__(self) -> int:
+        return len(self._mails())
+
+    def __eq__(self, other: object) -> bool:
+        return self._mails() == other
+
+    def clear(self) -> None:
+        self.start = self._last()
+
+
 @pytest.fixture
 def post(monkeypatch):
-    """Mail goes into a list instead of out; a mail server counts as set up."""
-    gesendet: list[dict] = []
+    """A mail server counts as set up; what is mailed is read from the outbox (the shared post module sends it from
+    there). "Forgot your password?" does its work before the answer here (it runs after the answer otherwise)."""
+    from app.routers import auth as auth_router
 
-    def senden(db, message):
-        body = message.get_body(("plain",))
-        gesendet.append({"an": str(message["To"]), "text": body.get_content() if body else str(message)})
-
-    monkeypatch.setattr(mailer, "_send", senden)
+    monkeypatch.setattr(auth_router, "FORGOT_AT_ONCE", True)
     with SessionLocal() as db:
         settings_service.save(db, {"smtp_host": "smtp.example.com", "smtp_from": "kalender@example.com"})
-    return gesendet
+    return Postfach()
 
 
 def browser() -> TestClient:
@@ -501,13 +539,10 @@ def test_the_open_reset_link_of_the_operator_still_sets_a_password(bestand):
 
 # --- After the change (account module): what the draft changes on purpose ------------------------------------------
 #
-# ⚠️ **Strict xfail.** They fail today. The day the module is wired in they pass, strict turns that into a red test,
-# and whoever wired it removes the marker. Until then they say what the plan promises (rule 3, "Passwort vergessen").
-
-NACH_DEM_UMBAU = pytest.mark.xfail(strict=True, reason="comes with the account module (docs/konten-anbindung.md)")
+# These were strict xfail until the shared account module was wired in (rule 3, "Passwort vergessen", rule 6); since
+# then they hold.
 
 
-@NACH_DEM_UMBAU
 def test_after_the_change_a_shared_address_signs_in_neither(bestand):
     """Rule 3. Today 0.4.0 looks the address up with ``limit(1)`` and lets the first of the two in (``kim``); after
     the change neither signs in by it, both still by name."""
@@ -517,7 +552,6 @@ def test_after_the_change_a_shared_address_signs_in_neither(bestand):
         assert antwort.status_code == 401, (_name(konto), antwort.text)
 
 
-@NACH_DEM_UMBAU
 @pytest.mark.parametrize("konto", EINDEUTIGE_ADRESSE, ids=_name)
 def test_after_the_change_forgot_password_mails_a_link(bestand, post, konto):
     """"Passwort vergessen" by mail, with name or unique address; the link holds one hour. Route of the plan:
@@ -541,7 +575,6 @@ def test_forgot_password_never_mails_a_shared_address_or_none(bestand, post):
     assert post == []
 
 
-@NACH_DEM_UMBAU
 def test_after_the_change_a_renamed_account_keeps_its_calendar_program(bestand):
     """Rule 6: the name changes (profile, route of the plan ``PUT /api/me/profile`` with ``name`` and ``password``);
     the phone set up before keeps its user and every address it got, and they still answer."""

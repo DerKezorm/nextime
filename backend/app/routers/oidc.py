@@ -7,7 +7,7 @@ asked for (``next``), and the error answers.
 
 The return leg is a browser redirect, not an API answer: the provider sends the browser back with GET, and a human
 sees whatever comes out. So every outcome of a callback ends in a redirect: to ``/`` (or the page asked for) with the
-session cookie, to the sign-in page with ``?error=<code>``, to ``/login?step=code`` when the code of nextime' own
+session cookie, to the sign-in page with ``?error=<code>``, to ``/login?step=code`` when the code of nextime's own
 second factor is still due, or to the account page after linking.
 
 Paths (all below ``/api/oidc``):
@@ -48,6 +48,7 @@ from ..config import get_settings
 from ..db import SessionLocal
 from ..deps import (
     Account,
+    DbSession,
     OperatorAccount,
     client_ip,
     confirm_operator,
@@ -59,19 +60,22 @@ from ..errors import error
 from ..models import SIGN_IN_PASSWORD
 from ..models import Account as AccountRow
 from ..security import SESSION_COOKIE, brake, session_account
-from ..services import accounts, logs, totp
+from ..services import accounts, kontenpost, logs, totp
+from ..services.konten_store import KontenStore
 from ..services.landing import safe_next
-from ..services.oidc_store import SqlStore, offered_address, take_address
+from ..services.oidc_store import SqlStore, offered_address
+from ..vendor import nexkonten
+from ..vendor.nexkonten import profiles
 from ..vendor.nexoidc import OidcError, ProviderInvalid, authentik, flow, providers
 from ..vendor.nexoidc import accounts as oidc_accounts
 from ..vendor.nexoidc.config import current
 from .accounts import OperatorConfirmIn
-from .auth import PENDING_COOKIE, secure_cookie, sign_in
+from .auth import PENDING_COOKIE, _confirmed_without_password, account_view, fail, secure_cookie, sign_in
 
 router = APIRouter(prefix="/api/oidc", tags=["oidc"])
 logger = logging.getLogger("nextime.oidc")
 
-#: Where the sign-in page asks for the code of nextime' own second factor after a provider that is not trusted.
+#: Where the sign-in page asks for the code of nextime's own second factor after a provider that is not trusted.
 CODE_STEP = "/login?step=code"
 #: Codes that cost nothing to produce (a forged return, a braked sender): they do not count against the sender.
 FREE_REFUSALS = ("oidc_state_mismatch", "too_many_attempts", "oidc_not_configured")
@@ -263,7 +267,7 @@ async def start(
     fresh: bool = False,
 ) -> RedirectResponse:
     # Public: this is the sign-in button. Failures land on the sign-in page with a code. ``next`` is the page the
-    # button was pressed for (a direct link); only a page of nextime' own goes along.
+    # button was pressed for (a direct link); only a page of nextime's own goes along.
     landing = safe_next(next_path)
     with store() as s:
         try:
@@ -321,10 +325,10 @@ async def _returned(slug: str, request: Request) -> RedirectResponse:
             logger.info("Provider accepted, second factor waiting name=%s", row.name)
             return response
         response = _redirect(flow.arrived(arrival, landing), request)
-        # The module logged the sign-in with its provider already; ``sign_in`` adds nextime' own line, the session
+        # The module logged the sign-in with its provider already; ``sign_in`` adds nextime's own line, the session
         # and the browser's language for mails.
         # A provider that checks the second factor itself has checked it: this sign-in is not sent to set one up.
-        sign_in(s.db, request, response, row, provider_checked=arrival.provider.trusts_second_factor)
+        sign_in(s.db, request, response, row, provider_checked=arrival.provider.trusts_second_factor, tell=True)
         return response
 
 
@@ -394,28 +398,39 @@ def unlink(slug: Annotated[str, Path(max_length=40)], account: Account) -> None:
             raise error(exc.code, exc.message, 409) from exc
 
 
+class TakeAddressIn(BaseModel):
+    #: The own password (an account without one: a fresh sign-in at its provider).
+    password: str = Field(default="", max_length=200)
+
+
 @router.post("/me/address", summary="Take the address a provider knows the own account by")
-def take_offered_address(account: Account) -> dict[str, str]:
-    with store() as s:
-        row = s.db.get(AccountRow, account.id)
-        assert row is not None
-        offer = offered_address(s.db, row)
-        if not offer:
-            raise error("no_offer", "There is no address to take.", 409)
-        if not take_address(s.db, row, offer):
-            raise error("email_taken", "Another account has this address.", 409)
-        s.db.commit()
-        logger.info("Account took its provider's address name=%s", row.name)
-        return {"email": row.email}
+def take_offered_address(
+    request: Request, account: Account, db: DbSession, payload: TakeAddressIn | None = None
+) -> dict[str, Any]:
+    """A change of address through the shared module (``profiles.take_offered_email``): with the own password, and
+    with a mail server the address waits for its link."""
+    row = db.get(AccountRow, account.id)
+    assert row is not None
+    store = KontenStore(db)
+    if not offered_address(db, row):
+        raise error("no_offer", "There is no address to take.", 409)
+    try:
+        fresh = _confirmed_without_password(request, db, row)
+        changed = profiles.take_offered_email(store, row.id, password=payload.password if payload else "",
+                                              actor_confirmed=fresh, mail=kontenpost.can_mail(db))
+    except nexkonten.AccountError as exc:
+        db.rollback()
+        raise fail(exc) from exc
+    kontenpost.queue(db, changed.mail)
+    kontenpost.queue(db, changed.notice)
+    logger.info("Account took its provider's address name=%s", row.name)
+    db.refresh(row)
+    return account_view(row, db)
 
 
 @router.delete("/me/address", status_code=204, summary="Do not offer the provider's address any more")
-def decline_offered_address(account: Account) -> None:
-    with store() as s:
-        row = s.db.get(AccountRow, account.id)
-        assert row is not None
-        row.provider_email_off = row.provider_email
-        s.db.commit()
+def decline_offered_address(account: Account, db: DbSession) -> None:
+    profiles.dismiss_offered_email(KontenStore(db), account.id)
 
 
 @router.delete("/admin/accounts/{account_id}/links/{provider_id}", status_code=204,

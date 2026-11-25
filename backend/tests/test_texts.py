@@ -36,11 +36,18 @@ RAISED = re.compile(
 )
 
 
+#: The shared account and post modules bring their own sentences for their codes (``account.error.*``,
+#: ``mail.error.*``, checked in ``frontend/src/nexkonten.test.ts`` and ``nexpost.test.ts``) and name other apps in their
+#: comments; they are not nextime's to word.
+SHARED = {"nexkonten", "nexpost"}
+
+
 def _sources(folder: Path, suffixes: tuple[str, ...]) -> str:
     return "\n".join(
         path.read_text(encoding="utf-8")
         for path in sorted(folder.rglob("*"))
         if path.suffix in suffixes and ".test." not in path.name and "i18n" not in path.parts
+        and not SHARED & set(path.parts)
     )
 
 
@@ -77,8 +84,14 @@ def test_every_sentence_belongs_to_a_code_still_used() -> None:
     # Sent: a code the scan finds, a quoted code passed to a helper (a default argument, a code a function hands back
     # for a redirect), or one the page asks for itself (``'network'``, ``errorText('name_missing')``).
     backend, frontend = _sources(APP, (".py",)), _sources(FRONTEND, (".ts", ".tsx"))
+    # The shared account module raises its codes itself (``vendor/nexkonten``); nextime answers some of them under
+    # its older names (``konten_store.OLD_CODES``) and keeps their sentences for pages and scripts of before.
+    from app.services.konten_store import OLD_CODES
+    from app.vendor.nexkonten import CODES
+
+    shared = set(CODES) | set(OLD_CODES.values())
     unused = [code for code in texts("de") if code not in server_codes() and f'"{code}"' not in backend
-              and f"'{code}'" not in frontend and f"errors.{code}" not in frontend]
+              and f"'{code}'" not in frontend and f"errors.{code}" not in frontend and code not in shared]
     assert unused == []
     # Of nexlore's leftovers, one hid behind a dictionary key of the same name ("locked" of an account).
     assert "locked" not in texts("de")
@@ -146,4 +159,9 @@ def test_no_word_of_another_app_is_left_in_the_frame() -> None:
         for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1) if foreign.search(line)
     ]
     assert found == []
-    assert all("space" not in text for words in mailer.INVITE_MAIL.values() for text in words.values())
+    # The mails come from the shared post module: its invitation names no space either.
+    from app.vendor import nexpost
+
+    for language in mailer.MAIL_LANGUAGES:
+        invite = nexpost.letters.texts(language)["invite"]
+        assert isinstance(invite, dict) and all("space" not in str(text).lower() for text in invite.values())

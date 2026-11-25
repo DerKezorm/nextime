@@ -23,7 +23,6 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 from .. import __version__
-from ..config import get_settings
 from ..models import (
     DELETE_GRACE_DAYS,
     MEMBER,
@@ -167,40 +166,20 @@ def create_with_password(
     return account
 
 
-#: One setup at a time: two at once each counted no account yet and made two operators.
-_setup_lock = threading.Lock()
-_generated_code: str | None = None
-
-
 def setup_code() -> str:
-    """What the first account must bring: ``NEXTIME_SETUP_TOKEN``, else a code made at start and written to the log.
-    Whoever reaches a fresh instance first would otherwise become its operator."""
-    global _generated_code
-    given = get_settings().setup_token.strip()
-    if given:
-        return given
-    if _generated_code is None:
-        _generated_code = "-".join(secrets.token_hex(2).upper() for _ in range(3))
-    return _generated_code
+    """What the first account must bring: ``NEXTIME_SETUP_TOKEN`` (16 characters at least), else a code made at
+    start and written to the log (the shared account module, ``setup.setup_code``)."""
+    from ..vendor.nexkonten import setup
+
+    return setup.setup_code()
 
 
 def announce_setup_code(db: Session) -> None:
-    """At start, while nobody has set nextime up: the code in the log, where only whoever runs the server reads it."""
-    if count(db) == 0:
-        if get_settings().setup_token.strip():
-            logger.warning("nextime is not set up yet. Open it and give NEXTIME_SETUP_TOKEN as the setup code.")
-        else:
-            logger.warning("nextime is not set up yet. The setup code is %s (new at every start until set up).",
-                           setup_code())
+    """At start, while nobody has set nextime up: the code in the log (the shared account module)."""
+    from ..vendor.nexkonten import setup
+    from .konten_store import KontenStore
 
-
-def create_operator(db: Session, *, display_name: str, email: str, password: str, code: str) -> Account:
-    with _setup_lock:
-        if count(db) > 0:
-            raise AccountError("already_set_up", "nextime is already set up.", 409)
-        if not secrets.compare_digest(code.strip().upper().encode(), setup_code().upper().encode()):
-            raise AccountError("setup_code_wrong", "The setup code is wrong. It is in the server's log.", 403)
-        return create_with_password(db, password, display_name=display_name, email=email, role=OPERATOR)
+    setup.announce_setup(KontenStore(db))
 
 
 @lru_cache(maxsize=1)

@@ -43,7 +43,8 @@ def _row(name: str) -> Account:
 # --- the brake per sender always counts ---------------------------------------------------------------------------
 
 
-def _spray(count: int = 31) -> list[int]:
+def _spray(count: int = 32) -> list[int]:
+    # The shared account module's brake: 30 free at the sender, the 31st counted starts the wait.
     """A stranger behind the same proxy tries one password against many names, with made-up X-Forwarded-For."""
     stranger = _browser()
     return [stranger.post("/api/auth/login", json={"name": f"guess{n}", "password": "summer2026"},
@@ -300,7 +301,8 @@ def test_a13_the_mail_pattern_ends_at_the_end(address: str) -> None:
                                      "anna\x85@example.com", "anna@exa\x9bmple.com"])
 def test_a13_a_mail_address_with_a_control_character_is_refused(client: TestClient, operator: Account,
                                                                  address: str) -> None:
-    answer = client.put("/api/me/profile", json={"email": address})
+    # A new address asks for the password (the shared account module); the form of the address is checked then.
+    answer = client.put("/api/me/profile", json={"email": address, "password": PASSWORD})
     assert answer.status_code == 422 and _code(answer) == "invalid_email"
     answer = client.post("/api/invites", json={"email": address})
     assert answer.status_code == 422 and _code(answer) == "invalid_email"
@@ -349,7 +351,7 @@ def test_a16_a_blocked_account_hears_so_only_after_its_right_password(client: Te
     assert _row("anna").failed_logins == 1, "a wrong password counts towards the lock"
     right = _browser("192.0.2.31").post("/api/auth/login", json={"name": "anna", "password": PASSWORD})
     assert right.status_code == 403 and _code(right) == "account_blocked"
-    assert right.json()["detail"]["message"] == "This account is blocked. Ask the operator to unblock it."
+    assert right.json()["detail"]["message"] == "This account is blocked. Ask the operator."
     assert not right.cookies.get("nextime_session")
     # Locked after guessing, it says nothing more, blocked or not.
     with SessionLocal() as db:

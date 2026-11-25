@@ -32,6 +32,14 @@ class FakeSmtp:
 
     def __init__(self, host: str, port: int, timeout: float = 0, context: Any = None) -> None:
         self.host, self.port = host, port
+        if FakeSmtp.fail:
+            raise smtplib.SMTPConnectError(421, b"mail.example.com says no to secret@example.com")
+
+    def quit(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
 
     def __enter__(self) -> Self:
         if FakeSmtp.fail:
@@ -115,8 +123,9 @@ def test_an_invitation_goes_out_by_mail(client: TestClient, operator: Account, s
     made = client.post("/api/invites", json={"email": "dora@example.com", "send": True}).json()
     assert made["sent"] is True
     [message] = smtp.sent
-    assert message["To"] == "dora@example.com" and message["From"] == "notes@example.com"
-    assert made["link"] in message.get_content()
+    # The shared post module names the sender: the app's name when the operator gave none.
+    assert message["To"] == "dora@example.com" and message["From"] == "nextime <notes@example.com>"
+    assert made["link"] in message.get_body(("plain",)).get_content()
     assert smtp.logins == [("time", "mail password")] and smtp.tls == [True]
 
 
@@ -127,7 +136,10 @@ def test_mail_carries_a_date_header(client: TestClient, operator: Account, smtp:
     assert client.post("/api/settings/mail-test", json={"to": "dora@example.com"}).status_code == 204
     headers = smtp.sent[0].get_all("Date")
     assert headers is not None and len(headers) == 1
-    assert before <= parsedate_to_datetime(headers[0]) <= datetime.now(UTC) + timedelta(seconds=5)
+    # In UTC ("-0000", which Python reads without a zone).
+    sent_at = parsedate_to_datetime(headers[0])
+    sent_at = sent_at if sent_at.tzinfo else sent_at.replace(tzinfo=UTC)
+    assert before <= sent_at <= datetime.now(UTC) + timedelta(seconds=5)
 
 
 def test_a_failing_mail_server_says_so_without_its_answer(
@@ -138,7 +150,7 @@ def test_a_failing_mail_server_says_so_without_its_answer(
     failed = client.post("/api/settings/mail-test", json={"to": "dora@example.com"})
     assert failed.status_code == 502 and failed.json()["detail"]["code"] == "mail_failed"
     # The server's answer can quote addresses; only its kind goes to the log.
-    assert "secret@example.com" not in caplog.text and "SMTPConnectError" in caplog.text
+    assert "secret@example.com" not in caplog.text and "code=mail_refused" in caplog.text
     smtp.fail = False
     assert client.post("/api/settings/mail-test", json={"to": "dora@example.com"}).status_code == 204
     assert client.post("/api/settings/mail-test", json={"to": "not an address"}).status_code == 422

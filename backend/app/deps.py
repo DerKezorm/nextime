@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import ipaddress
 import logging
-from datetime import timedelta
 from functools import lru_cache
 from typing import Annotated
 
@@ -22,8 +21,10 @@ from .db import SessionLocal, get_db
 from .errors import detail, error
 from .models import OPERATOR, SIGN_IN_PASSWORD, AuthSession, OidcLink, OidcProvider, utcnow
 from .models import Account as AccountRow
-from .security import SESSION_COOKIE, account_out, brake, hash_token, session_account, session_owner
+from .security import SESSION_COOKIE, account_out, hash_token, session_account, session_owner
 from .services import accounts, logs, totp
+from .vendor.nexkonten.brake import BRAKE, DOOR_CONFIRM, door_key
+from .vendor.nexkonten.common import FRESH_SIGN_IN_MINUTES, fresh_sign_in
 
 DbSession = Annotated[Session, Depends(get_db)]
 
@@ -124,7 +125,9 @@ def client_ip(request: Request) -> str:
 
 
 #: What an account that must set up its second factor may still reach: itself, the way out, and the setup.
-SETUP_ONLY_PATHS = {"/api/auth/me", "/api/auth/logout", "/api/auth/totp/begin", "/api/auth/totp/confirm"}
+SETUP_ONLY_PATHS = {
+    "/api/auth/me", "/api/auth/logout", "/api/auth/totp/begin", "/api/auth/totp/setup", "/api/auth/totp/confirm",
+}
 
 
 def _bearer(request: Request) -> str:
@@ -176,38 +179,43 @@ OperatorAccount = Annotated[AccountRow, Depends(require_operator)]
 # --- The password once more, while signed in ------------------------------------------------------------------------
 #
 # Changing the password or linking the account to a provider asks for the password again, and a wrong answer counts
-# the way it does at sign-in: otherwise a stolen cookie would be a place to guess without limit.
+# the way it does at sign-in: otherwise a stolen cookie would be a place to guess without limit. Since konten 0.3.4
+# the count is the shared module's (``confirm:<account>``, five free), the same the module's own doors use: a route
+# of nextime's own and one of the module never count apart.
 
 
-def _reauth_key(request: Request) -> str:
-    return "reauth:" + client_ip(request)
+def _reauth_keys(account: AccountRow) -> tuple[str, ...]:
+    return (door_key(DOOR_CONFIRM, account.id),)
 
 
 def reauth_guard(request: Request, account: AccountRow) -> None:
+    """One password typed to confirm: refused while the account is locked or its count waits; counted as a failure
+    until ``reauth_succeeded`` takes it back."""
     if accounts.is_locked(account):
         raise error("account_locked", "Too many failed attempts. Try again later.", 429)
-    wait = brake.wait_seconds(_reauth_key(request))
-    if wait:
+    wait = BRAKE.claim(_reauth_keys(account))
+    if wait > 0:
+        seconds = max(1, int(wait + 0.999))
         raise HTTPException(
             status_code=429,
-            detail=detail("too_many_attempts", "Too many attempts. Try again later.", retry_after=wait),
-            headers={"Retry-After": str(wait)},
+            detail=detail("too_many_attempts", "Too many attempts. Try again later.", retry_after=seconds),
+            headers={"Retry-After": str(seconds)},
         )
 
 
 def reauth_failed(request: Request, db: Session, account: AccountRow) -> None:
-    brake.failed(_reauth_key(request))
     accounts.note_failure(db, account)
 
 
 def reauth_succeeded(request: Request, db: Session, account: AccountRow) -> None:
-    brake.succeeded(_reauth_key(request))
+    BRAKE.succeeded(_reauth_keys(account))
     accounts.note_success(db, account)
 
 
 #: How old the session of an account that signs in through a provider may be for an operator act or another act a
 #: stolen session must not be enough for.
-OPERATOR_FRESH_MINUTES = 10
+#: The shared module's window (``nexkonten.common.FRESH_SIGN_IN_MINUTES``, five minutes since 0.3.2).
+OPERATOR_FRESH_MINUTES = FRESH_SIGN_IN_MINUTES
 
 
 def _fresh_from_provider(request: Request, db: Session, row: AccountRow) -> None:
@@ -219,8 +227,7 @@ def _fresh_from_provider(request: Request, db: Session, row: AccountRow) -> None
     session = None
     if cookie and not _bearer(request):
         session = db.scalar(select(AuthSession).where(AuthSession.token_hash == hash_token(cookie)))
-    if (session is not None and session.account_id == row.id
-            and utcnow() - session.created_at <= timedelta(minutes=OPERATOR_FRESH_MINUTES)):
+    if session is not None and session.account_id == row.id and fresh_sign_in(session.created_at, utcnow()):
         return
     providers = [
         {"slug": entry.slug, "label": entry.label}
@@ -233,6 +240,19 @@ def _fresh_from_provider(request: Request, db: Session, row: AccountRow) -> None
     ]
     raise error("fresh_sign_in_required", "Sign in at your provider again first: this needs a sign-in from the "
                 f"last {OPERATOR_FRESH_MINUTES} minutes.", 403, minutes=OPERATOR_FRESH_MINUTES, providers=providers)
+
+
+def confirm_fresh_session(request: Request, db: Session, account: AccountRow) -> None:
+    """The browser session is younger than ``OPERATOR_FRESH_MINUTES``: the person signed in just now (after a new
+    password through a link, "Disconnect all" asks no password again, but a stolen older session is not enough)."""
+    cookie = request.cookies.get(SESSION_COOKIE)
+    session = None
+    if cookie and not _bearer(request):
+        session = db.scalar(select(AuthSession).where(AuthSession.token_hash == hash_token(cookie)))
+    if session is not None and session.account_id == account.id and fresh_sign_in(session.created_at, utcnow()):
+        return
+    raise error("fresh_sign_in_required", "Sign in again first: this needs a sign-in from the last "
+                f"{OPERATOR_FRESH_MINUTES} minutes.", 403, minutes=OPERATOR_FRESH_MINUTES, providers=[])
 
 
 def confirm_operator(request: Request, db: Session, operator: AccountRow, password: str) -> None:

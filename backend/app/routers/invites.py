@@ -3,7 +3,9 @@ links: the operator makes one for an account that forgot its password, and the p
 
 Both links are shown once (an invitation is also mailed, when a mail server is set up). Only the hash of a token is
 stored; used once, then gone. An expired link says so; a used or withdrawn one says it is not valid any more, and
-nothing is made.
+nothing is made. Accepting and the link for a new password run through the shared account module
+(``vendor/nexkonten``): the invited person picks the username (a suggestion from the display name), the address of
+the invitation counts, another one with a mail server only after its link.
 """
 
 from __future__ import annotations
@@ -20,9 +22,12 @@ from ..deps import DbSession, OperatorAccount, client_ip
 from ..errors import detail, error
 from ..models import MEMBER, Invite
 from ..models import Account as AccountRow
-from ..security import MIN_PASSWORD, SESSION_COOKIE, brake, session_account
-from ..services import accounts, mailer, settings_service
+from ..security import MIN_PASSWORD, SESSION_COOKIE, brake, hash_token, session_account, sessions_ended
+from ..services import accounts, kontenpost, mailer, settings_service
 from ..services.accounts import AccountError
+from ..services.konten_store import KontenStore
+from ..vendor import nexkonten
+from ..vendor.nexkonten import invites, resets
 from .auth import check_confirm, check_password, fail, sign_in
 
 logger = logging.getLogger("nextime.auth")
@@ -40,6 +45,8 @@ NAME_TRIES = 8
 class InviteIn(BaseModel):
     days: int = 7
     email: str = Field(default="", max_length=255)
+    #: What the operator gives as the display name (optional; the form shows it).
+    display_name: str = Field(default="", max_length=200)
     role: str = Field(default=MEMBER, max_length=16)
     send: bool = False
     #: The language the operator's page shows: the mail's, when neither the receiver nor the operator has one.
@@ -56,6 +63,8 @@ class AcceptIn(BaseModel):
     email: str = Field(default="", max_length=255)
     password: str = Field(max_length=200)
     password_confirm: str | None = Field(default=None, max_length=200)
+    #: The username (since the shared account module); left out, the suggestion of the form.
+    name: str | None = Field(default=None, max_length=64)
 
 
 def _view(invite: Invite, db: DbSession) -> dict[str, Any]:
@@ -64,6 +73,7 @@ def _view(invite: Invite, db: DbSession) -> dict[str, Any]:
         "id": invite.id,
         "role": invite.role,
         "email": invite.email,
+        "display_name": invite.display_name or "",
         "by": by.shown_name if by else None,
         "created_at": invite.created_at.isoformat(),
         "expires_at": invite.expires_at.isoformat(),
@@ -71,8 +81,8 @@ def _view(invite: Invite, db: DbSession) -> dict[str, Any]:
 
 
 def _link(db: DbSession, request: Request, token: str) -> str:
-    base = settings_service.public_url(db) or str(request.base_url).rstrip("/")
-    return f"{base}/invite/{token}"
+    """The public address, else the one the operator opened nextime under (konten 0.3.5, ``invites.invite_link``)."""
+    return invites.invite_link(settings_service.public_url(db), "/invite/", token, request_base=str(request.base_url))
 
 
 @router.get("/invites", summary="Open invitations (operator)")
@@ -95,6 +105,13 @@ def invite(payload: InviteIn, request: Request, operator: OperatorAccount, db: D
         if brake.wait_seconds(key, MAILS_PER_HOUR):
             raise error("too_many_attempts", "Too many invitation mails. Try again later.", 429)
         brake.failed(key)
+    try:
+        email, shown = invites.invite_values(
+            KontenStore(db), email=email, display_name=payload.display_name,
+            public_url=settings_service.public_url(db), request_base=str(request.base_url),
+        )
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
     if email:
         # One open invitation per address: a second one replaces the first, so no old link stays valid beside it.
         for old in db.scalars(select(Invite).where(func.lower(Invite.email) == email.lower())):
@@ -104,14 +121,19 @@ def invite(payload: InviteIn, request: Request, operator: OperatorAccount, db: D
     except AccountError as exc:
         db.rollback()
         raise fail(exc) from exc
+    row.display_name = shown
+    db.commit()
     link = _link(db, request, token)
     sent = False
     if payload.send:
         try:
             language = mailer.language_for(db, None, *mailer.languages(operator, payload.language))
             mailer.send_invite(db, email, link, by=operator.shown_name, until=row.expires_at.date(),
-                               language=language)
+                               language=language, days=payload.days)
             sent = True
+            # Whoever comes through this link proved the address.
+            row.mailed = True
+            db.commit()
         except mailer.MailError as exc:
             db.delete(row)
             db.commit()
@@ -141,11 +163,18 @@ def _valid(db: DbSession, token: str) -> Invite:
 @router.get("/invite/{token}", summary="What an invitation offers (no sign-in needed)")
 def invite_state(token: Token, request: Request, db: DbSession) -> dict[str, Any]:
     row = _valid(db, token)
+    try:
+        form = invites.invite_form(KontenStore(db), token)
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
     signed_in = session_account(db, request.cookies.get(SESSION_COOKIE))
     by = db.get(AccountRow, row.created_by) if row.created_by else None
     return {
         "by": by.shown_name if by else None,
-        "email": row.email,
+        "email": form.email,
+        # The fields as the page fills them: the display name of the invitation, a username suggested from it.
+        "display_name": form.display_name,
+        "name": form.username,
         "role": row.role,
         "min_password": MIN_PASSWORD,
         "password": bool(settings_service.get(db, "password_login")),
@@ -167,14 +196,30 @@ def accept(token: Token, payload: AcceptIn, request: Request, response: Response
     check_confirm(payload.password, payload.password_confirm)
     if not settings_service.get(db, "password_login"):
         raise error("password_login_off", "Sign-in with a password is turned off.", 403)
+    store = KontenStore(db)
+    invitation = db.scalar(select(Invite).where(Invite.token_hash == hash_token(token)))
+    mailed_to = invitation.email if invitation is not None and invitation.mailed else ""
     try:
-        account = accounts.accept_invite(
-            db, token, display_name=payload.display_name, email=payload.email, password=payload.password
+        name = payload.name
+        if name is None:
+            # The page of 0.4.0 sends no username: the suggestion from the display name typed now, numbered when
+            # taken (else the one of the form, from the invitation).
+            base = nexkonten.names.suggest_username(payload.display_name)
+            name = nexkonten.names.free_username(store, base) if base else invites.invite_form(store, token).username
+        email = payload.email.strip() or (invitation.email if invitation is not None else "")
+        accepted = invites.accept_invite(
+            store, token, display_name=payload.display_name, username=name, email=email, password=payload.password,
+            language="", mail=kontenpost.can_mail(db),
+            proven=bool(mailed_to and email.lower() == mailed_to.lower()),
         )
-    except AccountError as exc:
-        if exc.code in ("email_taken", "invite_invalid"):
+    except nexkonten.AccountError as exc:
+        if exc.code in ("email_taken", "invite_invalid", "username_taken", "display_name_taken"):
             brake.failed(key)
         raise fail(exc) from exc
+    kontenpost.queue(db, accepted.mail)
+    account = db.get(AccountRow, int(accepted.account.id))
+    assert account is not None
+    logger.info("Invite used name=%s", account.name)
     return sign_in(db, request, response, account)
 
 
@@ -183,13 +228,18 @@ def accept(token: Token, payload: AcceptIn, request: Request, response: Response
 
 @router.get("/reset/{token}", summary="Whom a reset link is for (no sign-in needed)")
 def reset_state(token: Token, db: DbSession) -> dict[str, Any]:
-    found = accounts.find_reset(db, token)
-    if found is None:
-        if accounts.reset_expired(db, token):
-            raise error("reset_expired", "This link has expired.", 404)
-        raise error("reset_invalid", "This link has been used already or is not valid any more.", 404)
-    reset, account = found
-    return {"name": account.shown_name, "min_password": MIN_PASSWORD, "expires_at": reset.expires_at.isoformat()}
+    store = KontenStore(db)
+    try:
+        account = resets.reset_state(store, token, password_login=bool(settings_service.get(db, "password_login")))
+    except nexkonten.AccountError as exc:
+        raise fail(exc) from exc
+    found = store.find_reset(token)
+    return {
+        "name": account.display_name or account.username,
+        "username": account.username,
+        "min_password": MIN_PASSWORD,
+        "expires_at": found.expires_at.isoformat() if found else None,
+    }
 
 
 @router.post("/reset/{token}", status_code=204, summary="Set a new password with a reset link; signs in nowhere")
@@ -205,8 +255,11 @@ def reset_password(token: Token, payload: ResetIn, request: Request, db: DbSessi
     check_password(payload.password)
     check_confirm(payload.password, payload.password_confirm)
     try:
-        accounts.use_reset(db, token, payload.password)
-    except AccountError as exc:
+        resets.use_reset(KontenStore(db), token, payload.password,
+                         password_login=bool(settings_service.get(db, "password_login")))
+    except nexkonten.AccountError as exc:
         if exc.code in ("reset_invalid", "reset_expired"):
             brake.failed(key)
         raise fail(exc) from exc
+    # Every browser session ended: open windows hear it at once. Paired devices stay; the next sign-in lists them.
+    sessions_ended()

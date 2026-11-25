@@ -51,7 +51,9 @@ def test_time1_ac1_without_a_given_code_nextime_writes_one_to_the_log_at_every_s
     client: TestClient, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     monkeypatch.setattr(get_settings(), "setup_token", "")
-    monkeypatch.setattr(accounts, "_generated_code", None)
+    from app.vendor.nexkonten import setup as konten_setup
+
+    konten_setup.forget_generated_code()
     code = accounts.setup_code()
     with caplog.at_level(logging.WARNING, logger="nextime.auth"):
         with new_client():

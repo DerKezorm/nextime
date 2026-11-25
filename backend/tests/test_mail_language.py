@@ -1,11 +1,13 @@
 """Mails in the language of whoever receives them: the receiver's account language,
 else their browser's at the last sign-in; else whoever sends the mail off (their account, their page, their browser);
 else the instance's (the first operator's has no language of its own); else English. ``de-AT`` counts as
-``de``. An invitation goes to an address no account has yet, so it speaks the inviter's language. The texts are
-compared word for word where a word is the proof."""
+``de``. An invitation goes to an address no account has yet, so it speaks the inviter's language. Since the shared post
+module the letters are its (``vendor/nexpost``, the same in every nex app); the texts are compared word for word where a
+word is the proof."""
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from email.message import EmailMessage
 
 import pytest
@@ -22,15 +24,38 @@ from .oidc_helpers import provider as oidc_provider
 provider = oidc_provider
 
 
+class _FakeSmtp:
+    """Stands in for the mail server of the shared post module (``nexpost.use_smtp``)."""
+
+    def __init__(self, mails: list[EmailMessage]) -> None:
+        self.mails = mails
+
+    def send_message(self, message: EmailMessage) -> None:
+        self.mails.append(message)
+
+    def login(self, *_: object) -> None:
+        pass
+
+    def quit(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+
 @pytest.fixture
-def sent(monkeypatch: pytest.MonkeyPatch) -> list[EmailMessage]:
+def sent() -> Iterator[list[EmailMessage]]:
+    from app.vendor import nexpost
+
     mails: list[EmailMessage] = []
-    monkeypatch.setattr(mailer, "_send", lambda _db, message: mails.append(message))
+    nexpost.use_smtp(lambda _settings, _timeout, _context: _FakeSmtp(mails))
     with SessionLocal() as db:
         settings_service.save(db, {"smtp_host": "smtp.example.com", "smtp_from": "notes@example.com",
                                    "public_url": "https://notes.example.com"})
         db.commit()
-    return mails
+    yield mails
+    nexpost.use_smtp(None)
 
 
 def _set(name: str, **values: str) -> None:
@@ -49,7 +74,8 @@ def _get(name: str) -> Account:
 
 
 def _body(message: EmailMessage) -> str:
-    return str(message.get_content())
+    plain = message.get_body(("plain",))
+    return str(plain.get_content() if plain is not None else message.get_content())
 
 
 def test_mail_language_takes_the_first_it_has_and_a_region_counts_as_its_language() -> None:
@@ -67,28 +93,22 @@ def test_an_invitation_to_an_address_without_an_account_speaks_the_inviters_lang
     message = sent[-1]
     assert message["Subject"] == "Robin Keller lädt dich zu nextime ein"
     body = _body(message)
-    assert body.startswith("Robin Keller lädt dich zu nextime ein. Mit nextime liegen deine Kalender auf "
-                           "deinem eigenen Server.")
+    assert "Robin Keller lädt dich zu nextime ein. Mit dem Knopf legst du dein Konto an." in body
     assert answer.json()["link"] in body
-    # The date in German order, as a German reader writes it.
-    assert "Der Link gilt einmal, bis " in body
-    day = body.split("bis ", 1)[1].split(".")[0:3]
-    assert len(day[0]) == 2 and len(day[1]) == 2 and day[2].startswith("20")
-    assert "Wenn du diese Mail nicht erwartet hast, ignoriere sie." in body
+    # How long it holds, in the receiver's words.
+    assert "Die Einladung gilt 7 Tage." in body
     assert "nexsuite" not in body
 
 
-def test_an_english_invitation_keeps_its_wording_and_writes_the_date_the_international_way(
+def test_an_english_invitation_keeps_its_wording_and_says_how_long_it_holds(
         client: TestClient, operator: Account, sent: list[EmailMessage]) -> None:
     answer = client.post("/api/invites", json={"email": "new@example.com", "send": True})
     assert answer.status_code == 201, answer.text
     message = sent[-1]
     assert message["Subject"] == "Tester invites you to nextime"
     body = _body(message)
-    assert body.startswith("Tester invites you to nextime, to keep your calendars on your own server.")
-    until = body.split("The link works once, until ", 1)[1].split(".")[0]
-    year, month, day = until.split("-")
-    assert len(year) == 4 and len(month) == 2 and len(day) == 2
+    assert "Tester invites you to nextime. The button below makes your account." in body
+    assert "The invitation holds for 7 days." in body
 
 
 def test_names_stay_on_one_line(client: TestClient, operator: Account, sent: list[EmailMessage]) -> None:
@@ -122,7 +142,7 @@ def test_names_lose_every_control_character(client: TestClient, operator: Accoun
     assert answer.status_code == 201, answer.text
     message = sent[-1]
     assert message["Subject"] == "Robin Keller aus Team Nord ! 2J invites you to nextime"
-    assert _body(message).startswith("Robin Keller aus Team Nord ! 2J invites you to nextime,")
+    assert "Robin Keller aus Team Nord ! 2J invites you to nextime." in _body(message)
 
 
 def test_the_test_mail_finds_the_account_whatever_the_case_of_the_address(
@@ -131,15 +151,15 @@ def test_the_test_mail_finds_the_account_whatever_the_case_of_the_address(
     _set("zoe", email="zoe@example.com", language="de")
     answer = client.post("/api/settings/mail-test", json={"to": "Zoe@Example.COM", "language": "en"})
     assert answer.status_code == 204, answer.text
-    assert sent[-1]["Subject"] == "nextime: Testmail"
+    assert sent[-1]["Subject"] == "Testmail von nextime"
 
 
 @pytest.mark.parametrize(("owner", "operator_language", "page", "expect"), [
-    ("de", "en", "en", "nextime: Testmail"),
-    ("", "de", "en", "nextime: Testmail"),
-    ("", "", "de", "nextime: Testmail"),
-    ("en", "de", "de", "nextime test mail"),
-    ("", "", "", "nextime test mail"),
+    ("de", "en", "en", "Testmail von nextime"),
+    ("", "de", "en", "Testmail von nextime"),
+    ("", "", "de", "Testmail von nextime"),
+    ("en", "de", "de", "Test mail from nextime"),
+    ("", "", "", "Test mail from nextime"),
 ])
 def test_time3_ec10_a_mail_speaks_the_language_of_whoever_receives_it(
         client: TestClient, operator: Account, sent: list[EmailMessage], owner: str, operator_language: str,
@@ -150,9 +170,10 @@ def test_time3_ec10_a_mail_speaks_the_language_of_whoever_receives_it(
     answer = client.post("/api/settings/mail-test", json={"to": "zoe@example.com", "language": page})
     assert answer.status_code == 204, answer.text
     assert sent[-1]["Subject"] == expect
-    assert _body(sent[-1]).strip() == (
-        "Der Mailserver in nextime funktioniert." if "Testmail" in expect else "The mail server in nextime works."
-    )
+    assert (
+        "Wenn du das liest, kann nextime Mails verschicken." if "Testmail" in expect
+        else "If you read this, nextime can send mail."
+    ) in _body(sent[-1])
 
 
 def test_a_sign_in_notes_the_browsers_language(client: TestClient, operator: Account) -> None:
