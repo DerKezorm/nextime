@@ -579,4 +579,6 @@ def accept_invite(db: Session, token: str, *, display_name: str, email: str, pas
 
 
 def open_invites(db: Session) -> list[Invite]:
-    return list(db.scalars(select(Invite).where(Invite.expires_at > utcnow()).order_by(Invite.created_at)))
+    """Every invitation not yet used or withdrawn, the expired ones too: the operator's list shows them as "Expired"
+    until withdrawn (konten 0.3.9, ``OPEN_INVITES``)."""
+    return list(db.scalars(select(Invite).order_by(Invite.created_at)))
