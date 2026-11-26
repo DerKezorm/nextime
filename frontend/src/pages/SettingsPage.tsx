@@ -22,6 +22,7 @@ import {
   SettingsLayout,
   SettingsNav,
   SettingsPage as Area,
+  type GeneralPart,
   type SettingsGroup,
 } from '../vendor/nexui'
 import { ABOUT_AREA, areaPath, areasFor, findArea, formerPath, GROUPS, resolveArea, type Area as AreaInfo } from './settings/areas'
@@ -29,6 +30,9 @@ import { SignOut } from './settings/AccountTab'
 import { AreaContent } from './settings/SettingsAreas'
 
 const APP = 'nextime'
+
+/** The cards of Server › General in nextime, in their order (`GeneralArea`). */
+const GENERAL_PARTS: readonly GeneralPart[] = ['limits', 'features', 'interfaces', 'nexApps', 'languages']
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation()
@@ -94,7 +98,8 @@ export function SettingsPage() {
           />
         }
       >
-        <Area slug={area.slug} app={APP} things={things} thingsDative={thingsDative} title={own?.title} subtitle={own?.text}>
+        {/* U-3 (ui 1.1.3): the line of Server › General names the cards nextime has there, in their order. */}
+        <Area slug={area.slug} app={APP} things={things} thingsDative={thingsDative} title={own?.title} subtitle={own?.text} parts={area.slug === 'general' ? GENERAL_PARTS : undefined}>
           {offline && (
             <div role="status" data-testid="settings-offline">
               <Notice tone="warn">{t('offline.settingsOff')}</Notice>
