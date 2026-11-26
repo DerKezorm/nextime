@@ -58,7 +58,7 @@ Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege 
 | nexmail | Gastgeber (drei Zwecke) | `/api/v1` mit Verbindungs-Token (Stufe 1), Vertragstests |
 | nexdiary | Gastgeber (`calendars.read`) | `/api/v1` lesend, Schreiben 403, Test `test_verbinden_host.py` |
 
-Runde 3: ein 401 über eine Klick-Verbindung fragt einmal mit erneuertem Zugang neu (`access(force=True)`), erst dann „refused“ (nextasks, nexpaper, Abo nexfolk). MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
+Runde 3: V30 Feld „Teilnehmer“ in Terminen von iCloud- und Google-Kalendern (Spec TIME-18 AC-9, EC-13): nextime schreibt ORGANIZER und ATTENDEE in die Quelle, Vorschläge aus nexfolk über `GET /api/people` (`/api/v1/people`), freie Mailadresse; eigene Kalender ohne Feld (`attendees_not_here`). Ein 401 über eine Klick-Verbindung fragt einmal mit erneuertem Zugang neu (`access(force=True)`), erst dann „refused“ (nextasks, nexpaper, Abo nexfolk). MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
 keinen Verlauf, nichts gebaut. Fragen 10 bis 15 in `einst-fragen/nextime-module.md`.
 
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
