@@ -6,8 +6,8 @@ its setup route ``POST /api/setup`` with the box "Nach neuen Versionen sehen". T
 (``tests/conftest.py`` empties it before every test). Nothing reaches GitHub: the conftest of the contract tests puts a
 stand-in on 127.0.0.1 in its place.
 
-nextime has no bell (U19): ``bell`` and ``bell_notices`` answer what nextime tells, nothing. The contract tests that
-expect a bell are skipped in nextime by ``tests/conftest.py`` (TODO updates 0.1.1, questions file).
+nextime has no bell (U19, ``has_bell = False``): ``bell`` and ``bell_notices`` answer nothing; the contract checks
+instead that nothing looks in the background.
 """
 
 from __future__ import annotations
@@ -21,6 +21,8 @@ class Adapter(StandardAdapter):
     package = "app.vendor.nexupdates"
     prefix = "/api/about"
     also: tuple[str, ...] = ()
+    #: nextime has no bell (U19): the module's contract checks that the background never asks (updates 0.1.2).
+    has_bell = False
 
     def start(self) -> None:
         """nextime started as in production on the emptied test database. The operator and the member are made when
