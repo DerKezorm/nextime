@@ -44,6 +44,23 @@ Verbindungen schon.
 **Test „Bestand“:** zwei Tests im Block „After the change (modules pass)“ (MCP bleibt an, alter Weg setzt den Haken;
 Update-Schalter bleibt an, `/api/server/state` in alter Form).
 
+#### Runde 2 (26.11.2026 abends, `AUFTRAG-RUNDE2.md`)
+
+verbinden 0.1.2 (`c852886`): `in_use` = nextasks, nexpaper, nexfolk, nexnotes (Gast), nexmail, nexdiary (Gastgeber);
+Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege `TODO verbinden 0.1.x` aufgelöst.
+
+| Paar | Seite | gebaut |
+|---|---|---|
+| nextasks | Gast (`tasks.read`, `tasks.complete`) | V18: Klick-Verbindung bekommt die Zeile in `nextasks_connections` ohne Schlüssel, Zugang aus `nexverbinden.access`; Abgleich, Listenwahl (offen in der Karte, V23), Abhaken wie über den Schlüssel; Test `test_v18_guest.py` je Weg |
+| nexpaper | Gast (`deadlines.read`) | V18 ebenso (`nexpaper_connections`), Test je Weg |
+| nexfolk | Gast (`birthdays.read`, `contacts.read`) | Geburtstage in „Heute“ (`GET /api/birthdays`, Entwurf); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
+| nexnotes | Gast (`notes.add`) | „Notiz in nexnotes“ im Seitenteil (`POST /api/events/{id}/nexnotes`, Entwurf) |
+| nexmail | Gastgeber (drei Zwecke) | `/api/v1` mit Verbindungs-Token (Stufe 1), Vertragstests |
+| nexdiary | Gastgeber (`calendars.read`) | `/api/v1` lesend, Schreiben 403, Test `test_verbinden_host.py` |
+
+MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
+keinen Verlauf, nichts gebaut. Fragen 10 bis 15 in `einst-fragen/nextime-module.md`.
+
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 
 Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus
