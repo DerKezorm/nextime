@@ -53,7 +53,7 @@ export function NexpaperSection({ bare = false }: { bare?: boolean } = {}) {
               {status.host} · {t('nexpaper.section.shows')}
             </span>
           </p>
-          {status.problem && (
+          {!bare && status.problem && (
             <div role="alert" data-testid="nexpaper-problem">
               <Notice tone="warn">{errorText(status.problem, {})}</Notice>
             </div>
@@ -123,8 +123,8 @@ export function NexpaperSection({ bare = false }: { bare?: boolean } = {}) {
   )
 }
 
-/** What nextime knows of a connection made by a click with nexpaper, open in the module's card (plan V23): what went
- * wrong last. Nothing while not connected or all is well. */
+/** What nextime knows of its connection with nexpaper, open in the module's card (plan V23), by click or by hand: what
+ * went wrong last. Nothing while not connected or all is well. */
 export function NexpaperChoices() {
   const status = useNexpaper()
   if (!status?.connected || !status.problem) return null

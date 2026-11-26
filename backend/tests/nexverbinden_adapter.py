@@ -86,6 +86,9 @@ class Adapter(StandardAdapter):
         self._clients.append(client)
         return client
 
+    def account_id(self, role: str) -> Any:
+        return self._accounts[role].id
+
     def config(self) -> Any:
         from app.services.verbinden_store import CONFIG
 

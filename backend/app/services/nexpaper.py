@@ -405,6 +405,11 @@ def _note_problem(db: Session, account_id: int, code: str) -> None:
     db.execute(update(NexpaperConnection).where(NexpaperConnection.account_id == account_id)
                .values(problem=remembered))
     db.commit()
+    row = db.get(NexpaperConnection, account_id)
+    if row is not None and by_connection(row):
+        # The module's card says the same for a connection made by a click (``nexverbinden.reached``, V18).
+        told = {"nexpaper_unreachable": "unreachable", "nexpaper_token_invalid": "token_invalid"}.get(code)
+        verbinden_store.reached(db, account_id, "nexpaper", told)
 
 
 # --- The deadlines --------------------------------------------------------------------------------------------------

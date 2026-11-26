@@ -497,6 +497,11 @@ def _note_problem(db: Session, account_id: int, code: str) -> None:
     db.execute(update(NextasksConnection).where(NextasksConnection.account_id == account_id)
                .values(problem=remembered))
     db.commit()
+    row = db.get(NextasksConnection, account_id)
+    if row is not None and by_connection(row):
+        # The module's card says the same for a connection made by a click (``nexverbinden.reached``, V18).
+        told = {"nextasks_unreachable": "unreachable", "nextasks_token_invalid": "token_invalid"}.get(code)
+        verbinden_store.reached(db, account_id, "nextasks", told)
 
 
 # --- The tasks (AC-2, AC-4, AC-6, EC-1, EC-2, EC-8, EC-9, EC-11) ----------------------------------------------------

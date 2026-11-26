@@ -59,17 +59,18 @@ export function NextasksSection({ bare = false }: { bare?: boolean } = {}) {
               {status.host} · {t('nextasks.section.shows')}
             </span>
           </p>
-          {status.problem && (
+          {/* In the card of the shared module verbinden (``bare``) these stand open in the card (NextasksChoices, V23). */}
+          {!bare && status.problem && (
             <div role="alert" data-testid="nextasks-problem">
               <Notice tone="warn">{errorText(status.problem, {})}</Notice>
             </div>
           )}
-          {!status.problem && status.level === 'read' && (
+          {!bare && !status.problem && status.level === 'read' && (
             <p className="m-0 text-sm text-[var(--nexui-text-muted)]" data-testid="nextasks-read-only">
               {t('nextasks.section.readOnly')}
             </p>
           )}
-          <AreaChoice disabled={offline} />
+          {!bare && <AreaChoice disabled={offline} />}
           <Buttons>
             <Button kind="secondary" icon="KeyRound" disabled={offline} onClick={() => setEditing(true)} testId="nextasks-change">
               {t('nextasks.section.changeKey')}
@@ -135,9 +136,8 @@ export function NextasksSection({ bare = false }: { bare?: boolean } = {}) {
   )
 }
 
-/** What nextime keeps of a connection made by a click with nextasks, open in the module's card (plan V23): what went
- * wrong last, whether the key only reads, and the choice of areas and lists, as for a key typed in by hand. Nothing
- * while not connected. */
+/** What nextime keeps of its connection with nextasks, open in the module's card (plan V23), by click or by hand: what
+ * went wrong last, whether the access only reads, and the choice of areas and lists. Nothing while not connected. */
 export function NextasksChoices() {
   const { t } = useTranslation()
   const status = useNextasks()

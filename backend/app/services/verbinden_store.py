@@ -42,6 +42,9 @@ CONFIG = nexverbinden.AppConfig(
     access_prefix="ntv_",
     refresh_prefix="ntvr_",
     code_prefix="ntvc_",
+    # V20: the partners nextime has a use for. As guest: tasks (nextasks), deadlines (nexpaper), birthdays (nexfolk),
+    # a note to an event (nexnotes); as host: nexmail and nexdiary read its calendars.
+    in_use=("nextasks", "nexpaper", "nexfolk", "nexnotes", "nexmail", "nexdiary"),
 )
 
 #: The module's settings under nextime's names (``settings_service.DEFAULTS``).
@@ -338,23 +341,20 @@ class NotConnected(Exception):
 
 
 def access(db: Session, account_id: int, partner: str) -> tuple[str, str]:
-    """The partner's address and a valid access token of the account's connection with it, renewed when it runs out,
-    so that nextime's services (``services/nextasks.py``, ``services/nexpaper.py``) talk to the partner as they did
-    with a key typed in by hand: the same routes, the same rules for the address.
-
-    TODO verbinden 0.1.2: the module has no public way to hand out the connection's access yet (MODULFEHLER V-8); this
-    uses its renewal ``connect._fresh_access`` until ``nexverbinden.access`` comes."""
-    from ..vendor.nexverbinden import connect as verbinden_connect
-
-    store = Store(db)
-    connection = store.connection(account_id, partner)
-    if connection is None:
-        raise NotConnected("not_connected")
+    """The partner's address and a valid access token of the account's connection with it, renewed when it runs out
+    (``nexverbinden.access``, V18), so that nextime's services (``services/nextasks.py``, ``services/nexpaper.py``)
+    talk to the partner as they did with a key typed in by hand: the same routes, the same rules for the address."""
     try:
-        token = verbinden_connect._fresh_access(store, CONFIG, connection, datetime.now(UTC))
+        found = nexverbinden.access(Store(db), CONFIG, account_id, partner, datetime.now(UTC))
     except nexverbinden.Refused as refusal:
         raise NotConnected(refusal.code) from None
-    return connection.partner_base, token
+    return found.base, found.token
+
+
+def reached(db: Session, account_id: int, partner: str, problem: str | None) -> None:
+    """How a request of nextime's own service went, for the card (``nexverbinden.reached``): ``None`` it answered,
+    ``unreachable``, or the partner's refusal (``token_invalid``)."""
+    nexverbinden.reached(Store(db), account_id, partner, datetime.now(UTC), problem=problem)
 
 
 def has_connection(db: Session, account_id: int, partner: str) -> bool:

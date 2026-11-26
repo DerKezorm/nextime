@@ -1,8 +1,8 @@
 /**
  * Settings › My account › Connections (plan "Einstellungen", Verbindungen; TIME-25, TIME-26, TIME-29), the cards in
  * their order: "Geräte" (the iPhone and iPad app), "Auf diesem Gerät installieren" (the web app), the other nex apps as
- * cards to fold (the shared module verbinden: "Mit <App> verbinden", one card per partner; nextime's connections
- * typed in by hand with nextasks and nexpaper keep their form under "Von Hand verbinden"), "API-Schlüssel" and
+ * cards to fold (the shared module verbinden 0.1.2: one card per partner nextime has a use for, `in_use`; nextime's
+ * choices open in the card, its form for a key typed in by hand under "Von Hand verbinden"), "API-Schlüssel" and
  * "KI-Werkzeuge (MCP)" of the shared key module. The card of AI
  * tools carries the parts of the shared module mcp: "Rechte je Werkzeug" per key or program, "Wartende Rückfragen".
  */
@@ -38,26 +38,6 @@ export function useKeyWords() {
   }
 }
 
-/** The partners nextime has a use for (plan V20: no card without effect): nextasks, nexpaper and nexfolk (birthdays
- * in "Heute") as their guest, nexmail and nexdiary as their host. The others of the catalog come with their use. */
-// eslint-disable-next-line react-refresh/only-export-components
-export const PARTNERS_IN_USE = ['nextasks', 'nexpaper', 'nexfolk', 'nexnotes', 'nexmail', 'nexdiary']
-
-/** The module's calls for the cards, with the list of partners cut to those in use.
- * TODO verbinden 0.1.2: the module's `ConnectionsArea` takes no list of partners yet (V20). */
-const connectionsRequest: typeof keyRequest = async <T,>(path: string, init: Parameters<typeof keyRequest>[1] = {}) => {
-  const found = await keyRequest<T>(path, init)
-  if (path.endsWith('/api/connect/partners') && Array.isArray(found)) {
-    return found.filter((view: { partner?: string }) => PARTNERS_IN_USE.includes(String(view.partner))) as T
-  }
-  return found
-}
-
-/** The marks of the other nex apps (`public/apps/`), on their cards. */
-const PARTNER_LOGOS = Object.fromEntries(
-  ['nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes'].map((app) => [app, `/apps/${app}.svg`]),
-)
-
 export function ConnectionsArea() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
@@ -71,10 +51,9 @@ export function ConnectionsArea() {
       <InstallCard />
       <AppConnections
         app="nextime"
-        request={connectionsRequest}
-        logos={PARTNER_LOGOS}
+        request={keyRequest}
         manual={{ nextasks: <NextasksSection bare />, nexpaper: <NexpaperSection bare /> }}
-        // nextime's choices of a connection made by a click stand open in the card (V23).
+        // nextime's choices stand open in the card, for a connection by click and by hand alike (V23).
         extra={(view) => (view.partner === 'nextasks' ? <NextasksChoices /> : view.partner === 'nexpaper' ? <NexpaperChoices /> : null)}
         areaWord={t('keys.dialog.calendars')}
         language={i18n.language}
