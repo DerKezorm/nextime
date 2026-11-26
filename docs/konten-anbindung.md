@@ -62,6 +62,9 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**sicherung `155621a` (26.11.2026):** die alten Sicherungswege prüfen `{name}` wieder mit Muster und Länge von
+konten (über `former_names`), Adapter `name_pattern`. Lauf: pytest 1836 grün, 11 übersprungen; `-m timing` 8; vitest 1316 grün; ruff, lint, build sauber.
+
 **sicherung `130e4e9` (26.11.2026, `c5fd63f`):** Frage 15 im Modul behoben. Lauf `reihe.sh nextime ende`: ruff
 sauber; pytest 1831 grün, 11 übersprungen; `-m timing` 8 grün; lint sauber; vitest 1316 grün; build grün.
 
