@@ -62,6 +62,13 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**Gemeinsame Runde `86a0cce` (E45 bis E49, 26.11.2026, `664a919`):** Module neu gezogen; neue Konten mit Theme
+`system`, das Frontend schickt nur den wirklich gespeicherten Browserwert; Ortsangaben „Gruppe › Bereich“ mit Wächter
+in `i18n/places.test.ts`; „Kalender und Konten“ und „Auf iPhone und Co“ nur aus Karten und Bausatz-Knöpfen; Galerie-
+Punkte und E48 (Fragen-Datei, Frage 12). Mutationsproben rc=1 (Theme, Orte, Knöpfe, Karten, Symbol, Satz der Karte).
+Lauf `reihe.sh nextime ende`: ruff sauber; pytest 1752 grün, 11 übersprungen; `-m timing` 8 grün; lint sauber; vitest
+1295 grün, keins übersprungen, 74 Dateien; build grün.
+
 **Runde `a374e3c` und E39 (26.11.2026, `ccd49cd`, `51697bc`):** post, log, konten neu gezogen, Vorlage
 `nexkonten.cards.test.tsx` von Hand („Gespeichert.“ erst nach echtem Speichern); log hält `Bearer nt_api_…` fest.
 Verweise auf andere Apps und alte Orte auf den Stand des Bauplans (Liste in der Fragen-Datei, Frage 11), Test
