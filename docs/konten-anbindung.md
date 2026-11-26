@@ -62,6 +62,9 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**`c0b07ab` (26.11.2026, `c0adb91`):** `passkeys.can_add` mit der gesetzten Adresse allein (leer ohne). Lauf: pytest
+1754 grün, 11 übersprungen; `-m timing` 8; vitest 1300 grün, keins übersprungen; ruff, lint, build sauber.
+
 **E49 Passkeys (`1ce1a8f`, 26.11.2026, `a7aa4a2`):** `passkeys_can_add` in der Antwort des Kontos, im Kasten
 „Passkeys“ `PasskeyAddition` des Moduls. Lauf `reihe.sh nextime ende`: ruff sauber; pytest 1754 grün, 11
 übersprungen; `-m timing` 8 grün; lint sauber; vitest 1300 grün, keins übersprungen, 74 Dateien; build grün.
