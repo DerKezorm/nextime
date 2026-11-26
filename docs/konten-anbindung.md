@@ -62,6 +62,12 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**Runde `a374e3c` und E39 (26.11.2026, `ccd49cd`, `51697bc`):** post, log, konten neu gezogen, Vorlage
+`nexkonten.cards.test.tsx` von Hand („Gespeichert.“ erst nach echtem Speichern); log hält `Bearer nt_api_…` fest.
+Verweise auf andere Apps und alte Orte auf den Stand des Bauplans (Liste in der Fragen-Datei, Frage 11), Test
+`i18n/places.test.ts` (Mutationsprobe rc=1). Lauf `reihe.sh nextime ende`: ruff sauber; pytest 1750 grün, 11
+übersprungen; `-m timing` 8 grün; lint sauber; vitest 1289 grün, keins übersprungen, 74 Dateien; build grün.
+
 **Nachziehen auf `bauplaene-stand` `7685875`/`b0d3618` (26.11.2026, `580b446`, `31e4120`):** zwei Wortformen
 „Kalender“/„Kalendern“, Sicherungskarte mit nextimes Uhr und Zone, Tooltip in der Navigation, Vorlagen mit neuer
 Kopfzeile und den Änderungen seit `bef0132`. konten `on_shut_out`/`on_back` (E38): einem Konto, das draußen ist, geht
