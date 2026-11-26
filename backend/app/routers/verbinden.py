@@ -10,6 +10,7 @@ from fastapi import Request
 
 from ..db import SessionLocal
 from ..deps import require_account, require_operator
+from ..services import verbinden_store
 from ..services.verbinden_store import CONFIG, Store, connected, old_key
 from ..vendor.nexverbinden import api as verbinden_api
 from . import devices
@@ -25,6 +26,11 @@ def _address(request: Request) -> str:
         return devices.base_url(request, db)
 
 
+def _disconnected(store: Store, account_id: object, partner: str) -> None:
+    # Looked up on each call, so the contract's adapter can listen in (``disconnected()``, verbinden 0.1.4).
+    verbinden_store.disconnected(store, account_id, partner)
+
+
 router = verbinden_api.router(
     config=CONFIG,
     store=_store,
@@ -33,4 +39,5 @@ router = verbinden_api.router(
     address=_address,
     old_key=old_key,
     on_connected=connected,
+    on_disconnected=_disconnected,
 )

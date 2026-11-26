@@ -33,6 +33,17 @@ class Adapter(StandardAdapter):
         from tests.conftest import TAB, make_account
 
         self._app = app
+        from app.services import verbinden_store
+
+        # Every call of nextime's ``on_disconnected``, heard before nextime clears up (``disconnected()``).
+        self._ended: list[tuple[Any, str]] = []
+        self._clear_up = verbinden_store.disconnected
+
+        def heard(store: Any, account_id: Any, partner: str) -> None:
+            self._ended.append((account_id, partner))
+            self._clear_up(store, account_id, partner)
+
+        verbinden_store.disconnected = heard  # type: ignore[assignment]
         self._main = TestClient(app, base_url=self.base, headers=TAB)
         self._main.__enter__()
         self._clients: list[TestClient] = []
@@ -68,6 +79,9 @@ class Adapter(StandardAdapter):
         return token
 
     def stop(self) -> None:
+        from app.services import verbinden_store
+
+        verbinden_store.disconnected = self._clear_up  # type: ignore[assignment]
         for client in self._clients:
             client.close()
         self._db.close()
@@ -93,6 +107,9 @@ class Adapter(StandardAdapter):
         from app.services.verbinden_store import CONFIG
 
         return CONFIG
+
+    def disconnected(self) -> list[tuple[Any, str]]:
+        return list(self._ended)
 
     def block(self, role: str, blocked: bool = True) -> None:
         from app.db import SessionLocal

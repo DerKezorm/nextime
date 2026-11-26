@@ -256,6 +256,11 @@ class Store:
     def local_allowed(self) -> bool:
         return bool(settings_service.get(self.db, "connections_local_network"))
 
+    def set_local_allowed(self, on: bool) -> None:
+        """The hook "Verbindungen ins eigene Netz" of the card (verbinden 0.1.4): the same setting as nextime's own
+        switch under Server, both show one value."""
+        settings_service.save(self.db, {"connections_local_network": bool(on)}, commit=False)
+
     def seal(self, text: str) -> str:
         return vault.seal({"text": text}, PLACE)
 
@@ -296,6 +301,24 @@ def connected(store: Store, account_id: Any, partner: str) -> None:
     elif partner in subscriptions.BY_CONNECTION:
         # "Mit nexfolk verbinden" makes the birthday calendar itself (V1 8a).
         subscriptions.subscribe_by_connection(store.db, int(account_id), partner)
+
+
+def disconnected(store: Store, account_id: Any, partner: str) -> None:
+    """``on_disconnected`` of the module (verbinden 0.1.4, V-13): the connection ended by "Trennen" here or by the
+    partner. What nextime kept of it goes at once instead of on its next use: the row and the ticks of nextasks, the
+    row of nexpaper, the birthday calendar of nexfolk. A key typed in by hand stays."""
+    from . import nexpaper, nextasks, sources, subscriptions
+
+    owner = int(account_id)
+    if partner == "nextasks":
+        nextasks.connection_of(store.db, owner)
+    elif partner == "nexpaper":
+        nexpaper.connection_of(store.db, owner)
+    elif partner in subscriptions.BY_CONNECTION:
+        source = subscriptions.by_connection(store.db, owner, partner)
+        account = store.db.get(Account, owner)
+        if source is not None and account is not None:
+            sources.disconnect(store.db, account, source.id, drop_waiting=True)
 
 
 def calendars_due(db: Session) -> int:
