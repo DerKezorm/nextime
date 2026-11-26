@@ -62,3 +62,35 @@ def test_a_refused_connection_is_a_quiet_problem(client: TestClient, account: Ac
     found = client.get("/api/birthdays")
     assert found.status_code == 200 and found.json()["birthdays"] == []
     assert found.json()["problem"] == "nexfolk_refused"
+
+
+PEOPLE = {"people": [{"id": "c1", "name": "Kim Muster", "emails": ["Kim@Example.com", "kim.privat@example.com"]},
+                     {"id": "c2", "name": "Kimberly", "emails": ["kimberly@example.com"]}], "more": False}
+
+
+@pytest.fixture
+def people(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    seen: dict[str, Any] = {"calls": []}
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        seen["calls"].append((request.url.path, dict(request.url.params)))
+        if request.headers.get("authorization") != f"Bearer {ACCESS}":
+            return httpx.Response(401, json={"detail": {"code": "token_invalid", "message": "No."}})
+        return httpx.Response(200, json=PEOPLE)
+
+    monkeypatch.setattr(reach, "TRANSPORT", httpx.MockTransport(handle))
+    monkeypatch.setattr(reach, "RESOLVER", lambda host, port: ["93.184.216.34"])
+    return seen
+
+
+def test_attendees_get_their_names_from_the_people_of_nexfolk(client: TestClient, account: Account,
+                                                               people: dict) -> None:
+    """V29: one search per address in ``/api/v1/people`` (id, name, addresses only); a name only where an address of
+    the person is exactly the attendee's; nothing without a connection."""
+    asked = client.get("/api/people/names", params={"addresses": "kim@example.com,someone@example.com,nonsense"})
+    assert asked.json() == {"connected": False, "names": {}} and people["calls"] == []
+    click_connection(account.id, "nexfolk", "https://folk.example.com")
+    found = client.get("/api/people/names", params={"addresses": "kim@example.com,someone@example.com,nonsense"})
+    assert found.json() == {"connected": True, "names": {"kim@example.com": "Kim Muster"}}
+    assert people["calls"] == [("/api/v1/people", {"q": "kim@example.com", "limit": "5"}),
+                               ("/api/v1/people", {"q": "someone@example.com", "limit": "5"})]

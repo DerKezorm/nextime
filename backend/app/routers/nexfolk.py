@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 
 from ..deps import Account, DbSession
 from ..services import nexfolk
@@ -15,3 +15,9 @@ router = APIRouter(tags=["nexfolk"])
 @router.get("/api/birthdays", summary="Birthdays and anniversaries of the next days from nexfolk (a connection)")
 def birthdays(account: Account, db: DbSession) -> dict[str, Any]:
     return nexfolk.birthdays(db, account.id)
+
+
+@router.get("/api/people/names", summary="Names nexfolk knows for attendees' addresses (a connection, people only)")
+def names(account: Account, db: DbSession,
+          addresses: str = Query(default="", max_length=7000)) -> dict[str, Any]:
+    return nexfolk.names_for(db, account.id, [one.strip() for one in addresses.split(",") if one.strip()])

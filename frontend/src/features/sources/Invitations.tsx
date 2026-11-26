@@ -4,9 +4,10 @@
  * the invitation with its three answers (AC-4, AC-5, EC-1, EC-2, EC-5, EC-6), and the attendees of any event with them
  * (AC-3, EC-8). Names, titles and notes from outside are always text (EC-7).
  */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { api } from '../../api/client'
 import { Dialog } from '../../components/Dialog'
 import { useDisplay } from '../../lib/useDisplay'
 import type { Answer, Attendee, EventDetail } from '../calendars/api'
@@ -75,11 +76,27 @@ function InvitationList({ list, onClose }: { list: Invitation[]; onClose: () => 
 /** How many attendees show before "+n weitere" (EC-8). */
 const FIRST = 8
 
-/** "Teilnehmende · n" with initial, name and state; the inviting one "(lädt ein)", the member "Du" (AC-3, EC-8). */
+/** "Teilnehmende · n" with initial, name and state; the inviting one "(lädt ein)", the member "Du" (AC-3, EC-8). An
+ * attendee shown only by its address gets the name nexfolk knows for it, where nextime is connected with nexfolk
+ * (plan "Apps verbinden" V19/V29: only id, name and addresses; draft). */
 export function Attendees({ detail }: { detail: EventDetail }) {
   const { t } = useTranslation()
   const [all, setAll] = useState(false)
+  const [known, setKnown] = useState<Record<string, string>>({})
   const people = detail.attendees ?? []
+  const unnamed = people.filter((person) => !person.name && !person.self && person.address).map((person) => person.address.toLowerCase())
+  const asked = unnamed.slice(0, 20).join(',')
+  useEffect(() => {
+    if (!asked) return
+    let live = true
+    api<{ names?: Record<string, string> }>(`/api/people/names?addresses=${encodeURIComponent(asked)}`).then(
+      (answer) => live && setKnown(answer && !Array.isArray(answer) && answer.names ? answer.names : {}),
+      () => undefined,
+    )
+    return () => {
+      live = false
+    }
+  }, [asked])
   if (!people.length) return null
   const shown = all ? people : people.slice(0, FIRST)
   const count = detail.attendees_count ?? people.length
@@ -94,8 +111,8 @@ export function Attendees({ detail }: { detail: EventDetail }) {
             <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-ink-700 text-[11px] font-semibold text-mist-200">
               {initial(person)}
             </span>
-            <span className="min-w-0 flex-1 truncate text-mist-100" title={nameOf(person, t)} data-testid="attendee-name">
-              {nameOf(person, t)}
+            <span className="min-w-0 flex-1 truncate text-mist-100" title={nameOf(named(person, known), t)} data-testid="attendee-name">
+              {nameOf(named(person, known), t)}
             </span>
             <span className={'shrink-0 text-xs ' + stateLook(person.state)} data-testid="attendee-state">
               {t(`invitations.states.${person.state}`)}
@@ -110,6 +127,12 @@ export function Attendees({ detail }: { detail: EventDetail }) {
       )}
     </section>
   )
+}
+
+/** The attendee with the name nexfolk knows for its address, where it has none of its own. */
+function named(person: Attendee, known: Record<string, string>): Attendee {
+  const found = !person.name && person.address ? known[person.address.toLowerCase()] : undefined
+  return found ? { ...person, name: found } : person
 }
 
 function initial(person: Attendee): string {
