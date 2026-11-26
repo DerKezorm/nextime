@@ -168,7 +168,8 @@ describe('TIME-29 connecting an iPhone or iPad', () => {
       '„Server hinzufügen“ tippen und den Code scannen.',
       'Fertig. Deine Kalender laden, und die Anmeldung wandert über deine Apple-ID auf deine anderen Geräte.',
     ])
-    expect(dialog.textContent).toContain('Gilt 10 Minuten · neu erzeugen')
+    expect(dialog.textContent).toContain('Gilt 10 Minuten')
+    expect(document.body.querySelector<HTMLElement>('[data-testid="app-renew"]')!.textContent).toBe('neu erzeugen')
     expect($('app-address')?.textContent).toBe('Ohne Kamera: In der App die Adresse kalender.example.com eingeben und anmelden.')
   })
 
