@@ -62,6 +62,10 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**Galerie, letzte Reparatur (26.11.2026):** Die Karte „Sprachen“ fragt über nextimes Weg (`sprachenFetch` mit
+`X-Nextime-Client`); vorher scheiterten Hochladen und Entfernen mit `client_required`. Test in `time1.test.tsx`
+(ohne `fetcher` rot).
+
 **schluessel 1.0.2 (`35ed594`, E58, 26.11.2026):** `AllKeysCard` mit Platz `children` (nextime setzt nichts), Vorlage
 von Hand.
 
