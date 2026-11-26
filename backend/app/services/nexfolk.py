@@ -64,3 +64,30 @@ def names_for(db: Session, account_id: int, addresses: list[str]) -> dict[str, A
                 names[address] = name
                 break
     return {"connected": True, "names": names}
+
+
+def people(db: Session, account_id: int, query: str) -> dict[str, Any]:
+    """``{"connected", "people"}``: suggestions for the field "Teilnehmer" (TIME-18 AC-12, V30), from nexfolk's
+    ``/api/v1/people`` (only id, name and mail addresses, only the address books given). Nothing stored."""
+    store = verbinden_store.Store(db)
+    if store.connection(account_id, "nexfolk") is None:
+        return {"connected": False, "people": []}
+    words = _text(query, 200)
+    if not words:
+        return {"connected": True, "people": []}
+    try:
+        answer = nexverbinden.call(store, verbinden_store.CONFIG, account_id, "nexfolk", "GET", "/api/v1/people",
+                                   datetime.now(UTC), params={"q": words, "limit": "10"})
+    except nexverbinden.Refused as refusal:
+        logger.info("nexfolk did not answer the people account_id=%s reason=%s", account_id, refusal.code)
+        return {"connected": True, "people": []}
+    found = answer.data.get("people") if answer.status == 200 and isinstance(answer.data, dict) else None
+    shown = []
+    for person in found or []:
+        if not isinstance(person, dict):
+            continue
+        emails = [email for email in (_text(item, 320) for item in person.get("emails") or []) if "@" in email]
+        name = _text(person.get("name"), MAX_NAME)
+        if emails:
+            shown.append({"id": _text(person.get("id"), 64), "name": name, "emails": emails[:10]})
+    return {"connected": True, "people": shown}

@@ -16,3 +16,8 @@ router = APIRouter(tags=["nexfolk"])
 def names(account: Account, db: DbSession,
           addresses: str = Query(default="", max_length=7000)) -> dict[str, Any]:
     return nexfolk.names_for(db, account.id, [one.strip() for one in addresses.split(",") if one.strip()])
+
+
+@router.get("/api/people", summary="People of nexfolk for the field Teilnehmer (a connection, people only)")
+def people(account: Account, db: DbSession, q: str = Query(default="", max_length=200)) -> dict[str, Any]:
+    return nexfolk.people(db, account.id, q)

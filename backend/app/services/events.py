@@ -23,7 +23,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from ..errors import error
-from ..models import RIGHT_BUSY, Account, Calendar, Event, EventChange, EventConflict, utcnow
+from ..models import RIGHT_BUSY, Account, Calendar, Event, EventChange, EventConflict, Source, utcnow
 from . import calendars, display, ical, live, rules
 
 TITLE_MAX = 200
@@ -131,6 +131,11 @@ class Change:
     location: str | None = None
     geo_set: bool = False
     geo: tuple[float, float] | None = None
+    #: The people invited (TIME-18 AC-12, plan "Apps verbinden" V30): ``None`` unchanged; a list of (address, name)
+    #: the whole list, empty for none. Only in a calendar of iCloud or Google, which send the invitations themselves;
+    #: ``organizer`` is the source's account (address, name), set by ``create``/``update``.
+    attendees: list[tuple[str, str]] | None = None
+    organizer: tuple[str, str] | None = None
 
 
 def clean_title(raw: str) -> str:
@@ -317,6 +322,65 @@ def _apply_fields(component: icalendar.cal.Component, change: Change) -> None:
             component.pop("X-APPLE-STRUCTURED-LOCATION", None)
     if change.geo_set and change.geo is not None and change.location:
         component.add("GEO", change.geo)
+    if change.attendees is not None and change.organizer is not None:
+        _apply_attendees(component, change.attendees, change.organizer)
+
+
+#: The sources that take attendees and send the invitations themselves (TIME-18 AC-12, V30).
+ATTENDEE_SOURCES = ("icloud", "google")
+
+
+def _address_of(value: Any) -> str:
+    text = str(value or "").strip()
+    return (text[7:] if text.lower().startswith("mailto:") else text).casefold()
+
+
+def _apply_attendees(component: icalendar.cal.Component, wanted: list[tuple[str, str]],
+                     organizer: tuple[str, str]) -> None:
+    """The attendees of an event the member organizes: the organizer (the source's account) and the people wanted.
+    Answers of people who stay are kept; someone else's invitation is not changed."""
+    current = component.get("ORGANIZER")
+    if current is not None and _address_of(current) != organizer[0].casefold():
+        raise error("attendees_not_yours", "Only the one who invites changes who is invited.", 409, field="attendees")
+    found = component.get("ATTENDEE")
+    before = {_address_of(item): item for item in (found if isinstance(found, list) else [found] if found else [])}
+    component.pop("ATTENDEE", None)
+    component.pop("ORGANIZER", None)
+    if not wanted:
+        return
+    boss = icalendar.vCalAddress(f"mailto:{organizer[0]}")
+    if organizer[1]:
+        boss.params["CN"] = icalendar.vText(organizer[1])
+    component.add("ORGANIZER", boss)
+    me = before.get(organizer[0].casefold())
+    if me is None:
+        me = icalendar.vCalAddress(f"mailto:{organizer[0]}")
+        me.params.update({"PARTSTAT": "ACCEPTED", "ROLE": "CHAIR", "CUTYPE": "INDIVIDUAL"})
+        if organizer[1]:
+            me.params["CN"] = icalendar.vText(organizer[1])
+    component.add("ATTENDEE", me)
+    for address, name in wanted:
+        if address.casefold() == organizer[0].casefold():
+            continue
+        kept = before.get(address.casefold())
+        if kept is None:
+            kept = icalendar.vCalAddress(f"mailto:{address}")
+            kept.params.update({"PARTSTAT": "NEEDS-ACTION", "RSVP": "TRUE", "ROLE": "REQ-PARTICIPANT",
+                                "CUTYPE": "INDIVIDUAL"})
+            if name:
+                kept.params["CN"] = icalendar.vText(name)
+        component.add("ATTENDEE", kept)
+
+
+def organizer_for(db: Session, account: Account, calendar_id: int) -> tuple[str, str]:
+    """Who invites in ``calendar_id``: the account of its source, where the source takes attendees (iCloud, Google);
+    anywhere else 422 ``attendees_not_here`` (nextime's own calendars send no invitations, V30)."""
+    calendar = db.get(Calendar, calendar_id)
+    source = db.get(Source, calendar.source_id) if calendar is not None and calendar.source_id else None
+    if source is None or source.kind not in ATTENDEE_SOURCES or not source.username:
+        raise error("attendees_not_here", "Only events of iCloud and Google calendars invite people.", 422,
+                    field="attendees")
+    return source.username, account.shown_name
 
 
 def create(db: Session, account: Account, change: Change, client_ref: str | None) -> tuple[Event, bool]:
@@ -340,8 +404,12 @@ def create(db: Session, account: Account, change: Change, client_ref: str | None
     component.add("UID", uid)
     ical.set_times(component, change.times.start, change.times.end)
     busy = change.busy if change.busy is not None else not change.times.all_day
+    if change.attendees:
+        change.organizer = organizer_for(db, account, target.calendar.id)
     _apply_fields(component, Change(title=change.title, notes=change.notes or "", busy=busy,
-                                    location=change.location, geo_set=change.geo_set, geo=change.geo))
+                                    location=change.location, geo_set=change.geo_set, geo=change.geo,
+                                    attendees=change.attendees if change.attendees else None,
+                                    organizer=change.organizer))
     rule = checked_rule(change.rule, change.times.start)
     if rule is not None:
         component.add("RRULE", rules.to_rrule(rule, change.times.start))
@@ -540,6 +608,9 @@ def update(db: Session, account: Account, event_id: int, change: Change, *, scop
         if occurrence and scope == SCOPE_THIS:
             raise error("scope_calendar", "A single occurrence cannot move to another calendar.", 422)
         _writable_calendar(db, account, change.calendar_id)
+    if change.attendees is not None:
+        # Who invites: the account of the source the event stays in or moves to (TIME-18 AC-12, V30).
+        change.organizer = organizer_for(db, account, change.calendar_id or row.calendar_id)
     parsed = ical.parse(row.ical)
     master = ical.master_of(parsed)
     series = master.get("RRULE") is not None or master.get("RDATE") is not None

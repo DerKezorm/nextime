@@ -56,6 +56,13 @@ class GeoIn(BaseModel):
     lon: float = Field(ge=-180, le=180)
 
 
+class AttendeeIn(BaseModel):
+    """One person invited (TIME-18 AC-12): a mail address, and a name where one is known (from nexfolk, V30)."""
+
+    email: str = Field(max_length=320)
+    name: str = Field(default="", max_length=200)
+
+
 class EventIn(BaseModel):
     calendar_id: int | None = None
     title: str = Field(max_length=100_000)
@@ -72,6 +79,8 @@ class EventIn(BaseModel):
     client_ref: str | None = Field(default=None, max_length=64)
     #: The member's own reminders (TIME-7); left out: as the calendar's default.
     reminders: list[int] | None = Field(default=None, max_length=50)
+    #: People to invite, only in a calendar of iCloud or Google (TIME-18 AC-12); left out: none.
+    attendees: list[AttendeeIn] | None = Field(default=None, max_length=100)
 
 
 class RemindersIn(BaseModel):
@@ -100,6 +109,8 @@ class EventChangeIn(BaseModel):
     occurrence: str | None = Field(default=None, max_length=20)
     #: The version the member started from (its ETag): saving over a newer one is a conflict (EC-2).
     etag: str | None = Field(default=None, max_length=64)
+    #: The whole list of people invited (TIME-18 AC-12), only in a calendar of iCloud or Google; left out: unchanged.
+    attendees: list[AttendeeIn] | None = Field(default=None, max_length=100)
 
 
 class ConflictIn(BaseModel):
@@ -136,9 +147,28 @@ def _change(payload: EventIn | EventChangeIn, *, creating: bool) -> events.Chang
         change.rule_set = True
         change.rule = payload.rule.model() if payload.rule is not None else None
     change.calendar_id = payload.calendar_id
+    if payload.attendees is not None:
+        change.attendees = _attendees(payload.attendees)
     if creating and isinstance(payload, EventIn):
         change.reminders = payload.reminders
     return change
+
+
+def _attendees(given: list[AttendeeIn]) -> list[tuple[str, str]]:
+    """Each address once, as a mail address; the name in one line."""
+    from ..services.accounts import EMAIL_PATTERN
+
+    found: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for person in given:
+        address = person.email.strip()
+        if len(address) > 255 or not EMAIL_PATTERN.match(address):
+            raise error("attendee_invalid", "This is not a mail address.", 422, field="attendees", value=address[:80])
+        if address.casefold() in seen:
+            continue
+        seen.add(address.casefold())
+        found.append((address, " ".join(person.name.split())[:200]))
+    return found
 
 
 def _moment(text: str, name: str) -> datetime:
