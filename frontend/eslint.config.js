@@ -38,10 +38,4 @@ export default tseslint.config(
       'react-hooks/preserve-manual-memoization': 'off',
     },
   },
-  {
-    // TODO sicherung 1.0.1: StorageArea.tsx of the module (7685875) exports a helper beside its components; fast
-    // refresh of the module's file is no matter of nextime (einst-fragen, question 9).
-    files: ['src/vendor/nexsicherung/StorageArea.tsx'],
-    rules: { 'react-refresh/only-export-components': 'off' },
-  },
 )
