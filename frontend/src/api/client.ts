@@ -197,6 +197,8 @@ export type Me = {
   mail_server?: boolean
   /** Light, dark or as the system, at the account on every device; "" chose nothing yet (konten 1.1.0). */
   theme?: string
+  /** konten 1.1.0 (E49): whether "Passkey hinzufügen" is offered here (a public https address, or localhost). */
+  passkeys_can_add?: boolean
 }
 
 /** How the account sees its times (TIME-3). `week_start`: 0 Sunday … 6 Saturday. `clock`: `auto` follows the

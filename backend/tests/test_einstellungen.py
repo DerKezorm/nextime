@@ -224,3 +224,19 @@ def test_a_tick_for_nextasks_of_an_account_that_is_out_waits_until_it_is_back(cl
     assert client.post(f"/api/accounts/{anna.id}/unblock", json=confirm).status_code == 204
     with SessionLocal() as db:
         assert nextasks.run_waiting(db) == 1 and sent == [tick_id]
+
+
+def test_the_box_passkeys_offers_to_add_one_only_with_a_public_https_address_or_on_localhost(
+        client: TestClient, operator: Account) -> None:
+    """konten 1.1.0 (E49): ``passkeys_can_add`` in the account's answer, with the inputs of the passkeys' party."""
+    from app.services import settings_service
+
+    with SessionLocal() as db:
+        settings_service.save(db, {"public_url": ""})
+    assert client.get("/api/auth/me", headers={"origin": "http://nextime.example.com"}).json()["passkeys_can_add"] \
+        is False
+    assert client.get("/api/auth/me", headers={"origin": "http://localhost:5173"}).json()["passkeys_can_add"] is True
+    with SessionLocal() as db:
+        settings_service.save(db, {"public_url": "https://time.example.com"})
+    assert client.get("/api/auth/me", headers={"origin": "https://time.example.com"}).json()["passkeys_can_add"] \
+        is True

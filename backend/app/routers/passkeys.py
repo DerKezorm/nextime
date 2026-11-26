@@ -51,6 +51,13 @@ def _party(request: Request, db: DbSession) -> passkeys.Party:
         raise fail(exc) from exc
 
 
+def can_add(request: Request, db: DbSession) -> bool:
+    """konten 1.1.0 (E49): whether the box "Passkeys" offers "Passkey hinzufügen": with a public https address, or on a
+    page on ``localhost``; the same inputs as ``_party``."""
+    base = settings_service.public_url(db) or str(request.base_url).rstrip("/")
+    return passkeys.can_add(base, origin=request.headers.get("origin", ""), request_url=str(request.url))
+
+
 @router.get("/auth/passkeys", summary="The own passkeys")
 def my_passkeys(account: Account, db: DbSession) -> list[dict[str, Any]]:
     return [passkeys.view(key) for key in KontenStore(db).passkeys_of(account.id)]

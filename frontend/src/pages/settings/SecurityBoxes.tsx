@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next'
 
 import { authApi, passkeysApi, type AccessEntry, type PasskeyEntry, type SessionEntry } from '../../api/client'
 import { AccountButton } from '../../components/AccountButton'
+import { PasskeyAddition } from '../../vendor/nexkonten/AccountCards'
 import { confirmOf } from '../../lib/accountButton'
 import { problemText } from '../../lib/errors'
 import { dayTime } from '../../lib/format'
@@ -20,8 +21,10 @@ import { Badge, Box, ConfirmDialog, Field, Notice as Message, Row, Rows } from '
 // eslint-disable-next-line react-refresh/only-export-components
 export class Notice extends Error {}
 
-/** The own passkeys: list, add (password first), remove. */
-export function PasskeysBox({ signedInByPassword }: { signedInByPassword: boolean }) {
+/** The own passkeys: list, add (password first), remove. "Passkey hinzufügen" only with a public https address or on a
+ * page on localhost (konten 1.1.0, E49, `passkeys_can_add` of the account's answer); without, the module's
+ * `PasskeyAddition` says what is missing. Passkeys there are stay listed and removable. */
+export function PasskeysBox({ signedInByPassword, canAdd, operator }: { signedInByPassword: boolean; canAdd: boolean; operator: boolean }) {
   const { t, i18n } = useTranslation()
   const [keys, setKeys] = useState<PasskeyEntry[] | null>(null)
   const [asking, setAsking] = useState<{ kind: 'add' } | { kind: 'remove'; uid: string } | null>(null)
@@ -57,7 +60,7 @@ export function PasskeysBox({ signedInByPassword }: { signedInByPassword: boolea
       title={t('account.passkeys')}
       hint={t('account.passkeysHint')}
       testId="passkeys"
-      actions={passkeysSupported() && <AccountButton name="account.passkeyAdd" onClick={() => setAsking({ kind: 'add' })} />}
+      actions={passkeysSupported() && <PasskeyAddition t={t} canAdd={canAdd} operator={operator} onAdd={() => setAsking({ kind: 'add' })} signInHref="/settings/sign-in" />}
     >
       {keys.length > 0 && (
         <Rows label={t('account.passkeys')}>

@@ -32,17 +32,17 @@ async def set_avatar(request: Request, account: Account, db: DbSession) -> dict[
     row.avatar_at = utcnow()
     db.commit()
     logger.info("Profile picture set name=%s", row.name)
-    return me_view(row, db, session_of=account)
+    return me_view(row, db, session_of=account, request=request)
 
 
 @router.delete("/auth/avatar", summary="Remove the own profile picture")
-def remove_avatar(account: Account, db: DbSession) -> dict[str, Any]:
+def remove_avatar(request: Request, account: Account, db: DbSession) -> dict[str, Any]:
     row = db.get(AccountRow, account.id)
     assert row is not None
     row.avatar = None
     row.avatar_at = None
     db.commit()
-    return me_view(row, db, session_of=account)
+    return me_view(row, db, session_of=account, request=request)
 
 
 @router.get("/avatars/{account_id}", summary="A profile picture, for those who may see it")

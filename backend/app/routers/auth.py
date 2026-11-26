@@ -510,12 +510,16 @@ def me(request: Request, account: Account, db: DbSession) -> dict[str, Any]:
     # The first device that asks names the home time zone (TIME-3 AC-11); it reaches here after every sign-in, also
     # after a provider's redirect, which carries no header of the page.
     display.learn_home_zone(db, row, request.headers.get(ZONE_HEADER, "").strip())
-    return me_view(row, db, session_of=account)
+    return me_view(row, db, session_of=account, request=request)
 
 
-def me_view(account: AccountRow, db: DbSession, *, session_of: AccountRow | None = None) -> dict[str, Any]:
+def me_view(account: AccountRow, db: DbSession, *, session_of: AccountRow | None = None,
+            request: Request | None = None) -> dict[str, Any]:
     """``session_of``: the account as the session found it, which knows whether the sign-in came through a provider
-    that checks the second factor itself."""
+    that checks the second factor itself. ``request``: for ``passkeys_can_add`` (konten 1.1.0, E49), whether the box
+    "Passkeys" under My account › Security offers to add one."""
+    from .passkeys import can_add
+
     return {
         **account_view(account, db),
         "mail": mailer.configured(db),
@@ -523,6 +527,7 @@ def me_view(account: AccountRow, db: DbSession, *, session_of: AccountRow | None
         "min_password": MIN_PASSWORD,
         # First day of the week, week numbers, clock, time zone and home zone (TIME-3), on every device.
         "display": display.view(account),
+        **({"passkeys_can_add": can_add(request, db)} if request is not None else {}),
     }
 
 
@@ -753,7 +758,7 @@ class DisplayIn(BaseModel):
 
 
 @router.put("/me/display", summary="First day of the week, week numbers, clock and time zone of the own account")
-def set_display(payload: DisplayIn, account: Account, db: DbSession) -> dict[str, Any]:
+def set_display(payload: DisplayIn, request: Request, account: Account, db: DbSession) -> dict[str, Any]:
     row = db.get(AccountRow, account.id)
     assert row is not None
     try:
@@ -761,7 +766,7 @@ def set_display(payload: DisplayIn, account: Account, db: DbSession) -> dict[str
     except display.DisplayError as exc:
         db.rollback()
         raise error("invalid_display", exc.message, 422, field=exc.field) from exc
-    return me_view(row, db, session_of=account)
+    return me_view(row, db, session_of=account, request=request)
 
 
 @router.put("/me/theme", summary="Light, dark or as the system, for the own account on every device")

@@ -64,6 +64,30 @@ describe('TIME-2 My account', () => {
     expect(box.querySelector('[data-testid="settings-nav-about"]')!.textContent).toBe('About nextime')
   })
 
+  it('E49 the box Passkeys offers to add one only where the server can: otherwise it says what is missing', async () => {
+    vi.stubGlobal('PublicKeyCredential', function PublicKeyCredential() {})
+    const had = Object.getOwnPropertyDescriptor(navigator, 'credentials')
+    Object.defineProperty(navigator, 'credentials', { value: {}, configurable: true })
+    try {
+      const passkeys = (account: ReturnType<typeof me>) => signedIn(account, (_method, path) => (path === '/api/auth/passkeys' ? ok([]) : undefined))
+      serve(passkeys(me({ passkeys_can_add: true })))
+      await render(<AuthProvider><App /></AuthProvider>, '/settings/security')
+      expect(box.querySelector('[data-testid="passkey-add"]')).not.toBeNull()
+      serve(passkeys(me({ passkeys_can_add: false })))
+      await render(<AuthProvider><App /></AuthProvider>, '/settings/security')
+      expect(box.querySelector('[data-testid="passkey-add"]')).toBeNull()
+      expect(box.querySelector('[data-testid="passkey-needs-address"]')!.textContent).toBe('Passkeys brauchen die öffentliche Adresse mit https. Der Betreiber muss sie zuerst eintragen.')
+      serve(passkeys(me({ passkeys_can_add: false, role: 'operator' })))
+      await render(<AuthProvider><App /></AuthProvider>, '/settings/security')
+      expect(box.querySelector('[data-testid="passkey-needs-address"]')!.textContent).toContain('Passkeys brauchen die öffentliche Adresse mit https. Trag sie zuerst ein:')
+      expect(box.querySelector('[data-testid="passkey-needs-address-place"]')!.getAttribute('href')).toBe('/settings/sign-in')
+    } finally {
+      vi.unstubAllGlobals()
+      if (had) Object.defineProperty(navigator, 'credentials', had)
+      else delete (navigator as { credentials?: unknown }).credentials
+    }
+  })
+
   it('TIME-2 AC-8 the profile changes the name; Security shows the second factor (the line on the way in is gone)', async () => {
     let saved: unknown = null
     serve(signedIn(me({ two_factor: true }), (method, path, body) => {
