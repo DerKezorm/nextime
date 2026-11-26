@@ -14,9 +14,11 @@ import secrets
 import zipfile
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from sicherung_contract import StandardAdapter
+
+from app.vendor.nexsicherung import routes
 
 
 class Adapter(StandardAdapter):
@@ -24,6 +26,19 @@ class Adapter(StandardAdapter):
     prefix = "/api/server/storage"
     legacy_prefix = "/api/backups"
     legacy_header = "x-nextime-password"
+    # E53: the names nextime's own backup routes had, exactly as ``routers/backups.py`` gives them to the routers.
+    _former = routes.former_names(legacy_prefix)
+    operation_ids: ClassVar[dict[str, str]] = _former["operation_ids"]
+    summaries: ClassVar[dict[str, str]] = _former["summaries"]
+    schema_names: ClassVar[dict[str, str]] = _former["schema_names"]
+    # nextime publishes its description only with ``NEXTIME_API_DOCS`` (off in the tests): ``description`` hands
+    # over its own.
+    openapi_path = "/api/openapi.json"
+
+    def description(self) -> dict[str, Any]:
+        from app.main import app
+
+        return app.openapi()
 
     def start(self) -> None:
         from fastapi.testclient import TestClient

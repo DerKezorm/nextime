@@ -64,10 +64,11 @@ def summary(_operator: OperatorAccount) -> dict[str, Any]:
 
 
 router = APIRouter()
+# E53: the description keeps the names nextime's own backup routes had (operationIds, summaries, schemas).
 router.include_router(routes.router(operator=OperatorAccount, confirm=_confirm, error=_error,
-                                    prefix="/api/server/storage"))
+                                    prefix="/api/server/storage", schema_names=routes.FORMER_SCHEMAS))
 # Before the module's old ways, so that ``/summary`` is not taken for the name of a backup.
 router.include_router(summary_router)
 router.include_router(routes.legacy_router(prefix="/api/backups", password_header="x-nextime-password",
                                            operator=OperatorAccount, confirm=_confirm, error=_former_error,
-                                           check_raises_too_new=True))
+                                           check_raises_too_new=True, **routes.former_names("/api/backups")))
