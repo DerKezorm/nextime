@@ -62,6 +62,11 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**sprachen `a335909`/`e18169e` und E52 (26.11.2026, `360a287`, `311776e`, `1a331c9`):** `/api/locales` behalten
+nextimes OpenAPI-Namen; die Profilsprache nimmt, was sie vorher nahm (`known` nur für die Auswahl); beim Start
+`locales.at_start()` (configure, `tidy_at_start`). Lauf `reihe.sh nextime ende`: ruff sauber; pytest 1825 grün, 11
+übersprungen; `-m timing` 8 grün; lint sauber; vitest 1316 grün, keins übersprungen; build grün.
+
 **Modul sprachen 1.0.0 (`4a5bb15`, E51) und schluessel `4f3e75e` (26.11.2026, `5b3ace0`, `830f01a`, `ba1c93c`):**
 eigene Sprachen aus dem Modul (`services/locales.py` mit dem Ordner von vorher, `/api/locales` die Wege des Moduls,
 Profilsprache über `known`, Karte „Sprachen“ und i18n über `ownLanguages`); alte Aufrufer der Liste lesen sie wie
