@@ -1,6 +1,6 @@
 /**
  * Server › Storage and backups (TIME-1 AC-2, AC-8): the cards "Speicher" and "Sicherung" of the shared module
- * sicherung (`vendor/nexsicherung`, bauplaene/sicherung 1.0.1) over its routes (`/api/server/storage`). nextime hands
+ * sicherung (`vendor/nexsicherung`, bauplaene/sicherung 1.0.2) over its routes (`/api/server/storage`). nextime hands
  * it its sentence of what a backup holds, the names of its parts and what a restore changes: attachments, events and
  * accounts, by number only (the operator never sees calendars or events of others, TIME-2 AC-3), and its way of writing
  * a moment (the account's clock and zone, TIME-3 AC-6).
@@ -8,6 +8,7 @@
 import { useTranslation } from 'react-i18next'
 
 import { tabId } from '../../api/client'
+import { addDays } from '../../features/calendars/time'
 import { todayAt } from '../../features/views/state'
 import { clock, moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
@@ -30,11 +31,15 @@ export function StorageArea() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
   const { zone, timeOptions } = useDisplay()
-  // Every moment of the cards in the account's clock and zone (TIME-3 AC-6), "heute 3:00 AM" for today, as before.
-  const when = (iso: string, language: string) =>
-    todayAt(new Date(iso).getTime(), zone) === todayAt(Date.now(), zone)
-      ? t('server.todayAt', { time: clock(iso, language, timeOptions) })
-      : moment(iso, language, false, timeOptions)
+  // Every moment of the cards in the account's clock and zone (TIME-3 AC-6), in the three forms the module's sentences
+  // take (plan E62, sicherung 1.0.2): "heute, 3:00 AM", "gestern, 3:00 AM", "21.11.2026, 11:30 PM".
+  const when = (iso: string, language: string) => {
+    const day = todayAt(new Date(iso).getTime(), zone)
+    const today = todayAt(Date.now(), zone)
+    if (day === today) return t('server.todayAt', { time: clock(iso, language, timeOptions) })
+    if (day === addDays(today, -1)) return t('server.yesterdayAt', { time: clock(iso, language, timeOptions) })
+    return moment(iso, language, false, timeOptions)
+  }
   const details = (brief: Brief) => {
     const found = brief.details ?? {}
     return (

@@ -238,7 +238,9 @@ describe('TIME-3 the account\'s clock and zone count on "Server" and in the log 
   const LAST = { name: 'nextime-backup-20261122-080000.zip', created: '2026-11-22T08:00:00+00:00', size: 14 * 1024 * 1024, kind: 'auto' }
   // 04:30 UTC on the 22nd is 11:30 PM on the 21st in New York.
   const EARLIER = { name: 'nextime-backup-20261122-043000.zip', created: '2026-11-22T04:30:00+00:00', size: 13 * 1024 * 1024, kind: 'auto' }
-  const BACKUPS = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: LAST, count: 2, kept: 2, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [LAST, EARLIER] }
+  // 04:30 UTC on the 21st is 11:30 PM on the 20th in New York: two days ago, so a date.
+  const OLDER = { name: 'nextime-backup-20261121-043000.zip', created: '2026-11-21T04:30:00+00:00', size: 12 * 1024 * 1024, kind: 'auto' }
+  const BACKUPS = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: LAST, count: 3, kept: 3, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [LAST, EARLIER, OLDER] }
   const LINE = { time: '2026-11-22 09:00:00', level: 'INFO', logger: 'nextime', message: 'probe line', request_id: null, user: null, at: '2026-11-22T08:00:00+00:00' }
 
   beforeEach(() => {
@@ -260,16 +262,22 @@ describe('TIME-3 the account\'s clock and zone count on "Server" and in the log 
     })
   }
 
-  it('TIME-3 AC-6 AC-8 12 hours fixed in German and a fixed zone: the last backup reads "heute 3:00 AM" in New York', async () => {
+  it('TIME-3 AC-6 AC-8 12 hours fixed in German and a fixed zone: the last backup reads "heute, 3:00 AM" in New York', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
     await vi.waitFor(() => expect(box.querySelector('[data-testid="backup-last"]')?.textContent).toContain('Zuletzt'))
     // 08:00 UTC is 03:00 in New York; the rhythm keeps the server's own time and zone.
-    expect(box.querySelector('[data-testid="backup-last"]')!.textContent).toMatch(/^Zuletzt: heute 3:00\sAM, 14,0 MB$/)
+    expect(box.querySelector('[data-testid="backup-last"]')!.textContent).toMatch(/^Zuletzt: heute, 3:00\sAM, 14,0 MB$/)
     expect(box.querySelector<HTMLInputElement>('[data-card="backups"] input[type="time"]')!.value).toBe('03:00')
     expect(box.querySelector('[data-card="backups"]')!.textContent).toContain('In der Zeitzone des Servers (Europe/Berlin).')
-    // A backup of another day keeps the day, in the same clock and zone.
-    expect(box.querySelector('[data-testid="backup-list"]')!.textContent).toMatch(/21\.11\.2026, 11:30\sPM/)
+    // Yesterday and an older day in the same clock and zone, in the forms of plan E62 (sicherung 1.0.2).
+    const list = box.querySelector('[data-testid="backup-list"]')!
+    expect(list.textContent).toMatch(/gestern, 11:30\sPM/)
+    expect(list.textContent).toMatch(/20\.11\.2026, 11:30\sPM/)
+    // The row's buttons put the time in brackets (E62), never "Sicherung vom heute".
+    const row = box.querySelector('[data-testid="backup-nextime-backup-20261122-080000.zip"]')!
+    const names = Array.from(row.querySelectorAll('button')).map((button) => button.getAttribute('aria-label'))
+    expect(names.filter((name) => /^Löschen: Sicherung \(heute, 3:00\sAM\)$/.test(name ?? ''))).toHaveLength(1)
   })
 
   it('TIME-3 AC-6 AC-8 the log shows its times in the account\'s clock and zone', async () => {

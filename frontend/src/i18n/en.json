@@ -436,7 +436,8 @@
         "off": "{{variable}} is empty: nextime does not check the internet and lets iCloud, Google and subscribed calendars rest. Remove the variable or set an address the server should reach."
       }
     },
-    "todayAt": "today {{time}}"
+    "todayAt": "today, {{time}}",
+    "yesterdayAt": "yesterday, {{time}}"
   },
   "session": {
     "blockedText": "The operator has blocked your account. Nothing more is saved. Ask the operator.",

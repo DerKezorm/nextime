@@ -436,7 +436,8 @@
         "off": "{{variable}} ist leer: nextime prüft das Internet nicht und lässt iCloud, Google und abonnierte Kalender ruhen. Entferne die Variable oder trag eine Adresse ein, die der Server erreichen soll."
       }
     },
-    "todayAt": "heute {{time}}"
+    "todayAt": "heute, {{time}}",
+    "yesterdayAt": "gestern, {{time}}"
   },
   "session": {
     "blockedText": "Der Betreiber hat dein Konto gesperrt. Es wird nichts mehr gespeichert. Wende dich an den Betreiber.",
