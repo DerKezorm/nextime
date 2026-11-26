@@ -301,7 +301,9 @@
     "use_logout": "Diesen Browser meldest du mit „Abmelden“ ab.",
     "name_missing": "Gib einen Namen ein.",
     "webpush_not_here": "Dieser Browser bekommt noch keine Mitteilungen von nextime. Erst „Mitteilungen einschalten“.",
-    "webpush_failed": "Der Mitteilungsdienst des Browsers hat die Probemeldung nicht angenommen. Gleich noch einmal versuchen."
+    "webpush_failed": "Der Mitteilungsdienst des Browsers hat die Probemeldung nicht angenommen. Gleich noch einmal versuchen.",
+    "nexnotes_not_connected": "nextime ist nicht mit nexnotes verbunden.",
+    "nexnotes_refused": "Die Notiz ist nicht bei nexnotes angekommen."
   },
   "me": {
     "emailDeclined": "nextime fragt nicht mehr nach dieser Adresse.",

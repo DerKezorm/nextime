@@ -59,9 +59,9 @@ def note_for_event(db: Session, account: Account, event_id: int, occurrence: str
                                    "/api/v1/notes", datetime.now(UTC), body=body)
     except nexverbinden.Refused as refusal:
         logger.info("nexnotes did not take a note account_id=%s reason=%s", account.id, refusal.code)
-        raise error(f"nexnotes_{refusal.code}", "nexnotes cannot be reached or refused the note.", 502) from None
+        raise error("nexnotes_refused", "The note did not reach nexnotes.", 502) from None
     if answer.status not in (200, 201):
         logger.info("nexnotes refused a note account_id=%s status=%s", account.id, answer.status)
-        raise error("nexnotes_refused", "nexnotes cannot be reached or refused the note.", 502)
+        raise error("nexnotes_refused", "The note did not reach nexnotes.", 502)
     logger.info("Note made in nexnotes account_id=%s event_id=%s new=%s", account.id, event_id, answer.status == 201)
     return {"made": answer.status == 201, "title": title}
