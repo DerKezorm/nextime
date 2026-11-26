@@ -1,6 +1,7 @@
 /** TIME-1 in the interface: the setup page, the HTTPS hint for the operator, and the settings' group "Server" with its
  * switches and limits under General, "Ready for the internet?" under Sign-in, the backups under Storage and backups (the
  * module sicherung) and the version under "Über nextime" (plan "Einstellungen"); a member never reaches it. */
+import { act } from 'react'
 import { Route, Routes } from 'react-router-dom'
 
 import App from './App'
@@ -214,6 +215,24 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(box.querySelector('[data-testid="language-built-in-de"]')!.textContent).toContain('Deutsch')
     expect(box.querySelector('[data-testid="language-nl"]')!.textContent).toContain('Nederlands (nl)')
     expect(box.querySelector<HTMLElement>('[data-testid="language-template"]')!.dataset.icon).toBe('Download')
+    // Uploading and removing go through nextime's way to the server: the tab's name in X-Nextime-Client, without
+    // which a change is refused (client_required, found in the gallery).
+    type(box.querySelector<HTMLInputElement>('[data-testid="language-code"] input, input[data-testid="language-code"]')!, 'sv')
+    const input = box.querySelector<HTMLInputElement>('[data-testid="language-upload-file"]')!
+    Object.defineProperty(input, 'files', { value: [new File(['{"save": "Spara"}'], 'sv.json', { type: 'application/json' })], configurable: true })
+    await act(async () => {
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await settle()
+    const tabOf = (method: string, path: string) => {
+      const call = calls.find((entry) => entry.method === method && entry.path === path)
+      return call ? new Headers(call.headers).get('X-Nextime-Client') : undefined
+    }
+    expect(tabOf('PUT', '/api/locales/sv')).toMatch(/^tab-/)
+    await click(box.querySelector('[data-testid="language-nl"] button'))
+    const confirm = box.querySelector<HTMLElement>('[data-testid="language-remove-dialog"] button[data-kind="danger"], [data-testid="language-remove-dialog"] button[data-kind="primary"]')
+    await click(confirm)
+    expect(tabOf('DELETE', '/api/locales/nl')).toMatch(/^tab-/)
   })
 
   it('TIME-1 AC-4 EC-11 a wrong limit is said at the field, nothing is sent, the old value stays', async () => {
