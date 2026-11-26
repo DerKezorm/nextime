@@ -62,6 +62,10 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**Galerie-Funde Endlauf (26.11.2026, `daf8f7a`):** `AccountButton` mit der Größe des Moduls, 24 px zwischen den
+Karten von Profil/Sicherheit, Konten, „Mitnehmen und umziehen“; MCP-Kästen offen (Fragen-Datei, Frage 16). Lauf:
+pytest 1838 grün, 11 übersprungen; `-m timing` 8; vitest 1317 grün in 76 Dateien; ruff, lint, build sauber.
+
 **sicherung `6edff85` (26.11.2026):** neuer Vertragstest fürs Anlegen einer Sicherung, grün ohne Änderung an nextime.
 
 **sicherung `155621a` (26.11.2026):** die alten Sicherungswege prüfen `{name}` wieder mit Muster und Länge von
