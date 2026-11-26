@@ -1,3 +1,4 @@
+// Vorlage nexoidc 1.2.0
 /**
  * Every text of the oidc module is in the app, in German and English, through the app's own i18n. Copied once by
  * the module's `tools/sync.py` to `frontend/src/nexoidc.wording.test.ts`; then the
@@ -36,7 +37,8 @@ function leaves(tree: Tree, prefix = ''): [string, string][] {
 }
 
 // Every placeholder of the texts but `{{app}}` and `{{slug}}`, which the app's i18n fills in itself (`address` since
-// 1.0.10, in the template since 1.0.11).
+// 1.0.10, in the template since 1.0.11). The module's own test tests/test_template_values.py turns red when a text
+// asks for one this line does not give.
 const values = { name: 'N', count: 2, only: 1, status: 403, address: 'https://app.example.com' }
 
 describe('the oidc texts', () => {
