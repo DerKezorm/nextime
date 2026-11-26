@@ -44,7 +44,14 @@ DEFAULTS: dict[str, Any] = {
     "google_redirect": "",
     #: Programs may ask under the programming interface (TIME-26), and MCP tools may (its own switch, TIME-26 AC-11).
     "api_enabled": True,
-    "mcp_enabled": True,
+    #: Off on a new installation (the shared module mcp, decision 5). An installation of before kept it on without
+    #: storing it; the start that brings the module writes that down first (``db.init_db``), so it stays on there.
+    "mcp_enabled": False,
+    #: The shared module mcp: whether programs may connect over OAuth (``None``: on), the highest level of a key
+    #: (``None``: write), the tools blocked for every account (``None``: none).
+    "mcp_programs": None,
+    "mcp_max_level": None,
+    "mcp_blocked_tools": None,
     #: Typing a place asks a free OpenStreetMap service for addresses; only the typed text goes out (TIME-1 AC-10).
     "address_suggestions": True,
     #: A member's nextasks may stand in the operator's own network (LAN, VPN); off from the start, as nexnotes and

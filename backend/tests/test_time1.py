@@ -501,7 +501,9 @@ def test_time1_ec12_a_lower_limit_counts_for_what_comes_after(client: TestClient
 
 def test_time1_ac5_the_switches_from_the_start(client: TestClient, operator: Account) -> None:
     settings = client.get("/api/settings").json()
-    assert settings["share_links"] is True and settings["api_enabled"] is True and settings["mcp_enabled"] is True
+    # MCP is off on a new installation since the shared module mcp (decision 5); one of before keeps it on
+    # (test_mcp_module.py).
+    assert settings["share_links"] is True and settings["api_enabled"] is True and settings["mcp_enabled"] is False
     assert settings["address_suggestions"] is True
     # Google: off while it is not set up, on as soon as it is.
     assert settings["google_enabled"] is False and settings["google_configured"] is False
@@ -512,6 +514,7 @@ def test_time1_ac5_the_switches_from_the_start(client: TestClient, operator: Acc
 
 
 def test_time1_ac5_each_switch_counts_at_once_on_its_own(client: TestClient, operator: Account) -> None:
+    assert client.put("/api/settings", json={"mcp_enabled": True}).json()["mcp_enabled"] is True
     for key in ("share_links", "api_enabled", "mcp_enabled", "address_suggestions"):
         off = client.put("/api/settings", json={key: False}).json()
         assert off[key] is False

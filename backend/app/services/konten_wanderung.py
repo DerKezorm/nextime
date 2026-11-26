@@ -12,6 +12,8 @@ a second start finds nothing to do.
   (both still sign in with the name written exactly).
 - Addresses get an index without regard to case, **not** a unique one: 0.4.0 could leave one address at two accounts
   (two profile saves at the same moment), and such a pair signs in by name only (the module, rule 3 of the draft).
+- mcp 1.1.0 (decision 5): at the start that makes the table ``mcp_keys`` on a database that has accounts, the switch
+  "MCP-Zugang" is written down as on where nothing was stored, before its default becomes off.
 - konten 1.1.0 (E23): at the start that adds the column ``accounts.theme`` (exactly once), every address that counts
   becomes proven, so the box "Address not confirmed yet" shows only for an address entered from now on.
 """
@@ -27,8 +29,15 @@ from sqlalchemy.engine import Engine
 logger = logging.getLogger("nextime.db")
 
 
-def run(engine: Engine, *, added: list[str] | tuple[str, ...] = ()) -> None:
+def run(engine: Engine, *, added: list[str] | tuple[str, ...] = (), older_without_mcp: bool = False) -> None:
     with engine.begin() as connection:
+        if older_without_mcp:
+            # The shared module mcp (decision 5): "MCP-Zugang" is off on a new installation. 0.4.0 had it on from the
+            # start without storing it; such an installation keeps it on, written down before the default turns.
+            stored = connection.execute(text("SELECT 1 FROM settings WHERE key = 'mcp_enabled'")).first()
+            if stored is None:
+                connection.execute(text("INSERT INTO settings (key, value) VALUES ('mcp_enabled', 'true')"))
+                logger.info("MCP stays on as before the update (it was never switched)")
         if "accounts.theme" in added:
             proven = connection.execute(
                 text("UPDATE accounts SET email_proven = 1 WHERE email IS NOT NULL AND email != '' "

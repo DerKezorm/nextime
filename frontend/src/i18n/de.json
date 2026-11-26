@@ -2033,6 +2033,17 @@
       "hiddenNote": "„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst."
     }
   },
+  "mcp": {
+    "tools": {
+      "list_calendars": "Kalender auflisten",
+      "list_events": "Termine auflisten",
+      "search_events": "Termine suchen",
+      "find_free_time": "Freie Zeit finden",
+      "create_event": "Termin anlegen",
+      "update_event": "Termin ändern",
+      "delete_event": "Termin in den Papierkorb legen"
+    }
+  },
   "tasks": {
     "block": "Aufgaben aus nextasks",
     "group": "Aus nextasks",

@@ -51,6 +51,13 @@ class Adapter(StandardAdapter):
             client = new_client(self._accounts[name])
             self._clients.append(client)
             self._calendars[name] = make_calendar(client, f"Kalender {name}")
+        # An installation of 0.4.0 had MCP on from the start; the update keeps it on (the shared module mcp,
+        # decision 5, ``konten_wanderung``), and its keys "also for AI tools" are made and presented below.
+        from app.db import SessionLocal
+        from app.services import settings_service
+
+        with SessionLocal() as db:
+            settings_service.save(db, {"mcp_enabled": True})
 
     def stop(self) -> None:
         for client in self._clients:
@@ -97,6 +104,13 @@ class Adapter(StandardAdapter):
                 key.expires_at = apikeys.clock() - timedelta(hours=1)
                 db.commit()
         return token
+
+    def old_route_key(self, options: dict[str, bool]) -> str:
+        """nextime's older way ``POST /api/keys`` with the tick, as a script makes a key (MCP decision 12)."""
+        made = self.client("owner").post("/api/keys", json={"name": "Script", "level": "write",
+                                                            "mcp": bool(options.get("mcp"))})
+        assert made.status_code == 201, made.text
+        return str(made.json()["token"])
 
     def probe(self, kind: str, secret: str) -> int:
         client = self.client("anonymous")

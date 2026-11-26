@@ -968,12 +968,20 @@ class KontenStore:
         (TIME-29 EC-5), no browser counts as known any more. The browser sessions stay as they are but count for
         nothing while the account is out (``security.account_out``), so that an open window hears that it is blocked
         instead of being sent to sign in; unblocking and bringing back end them (``end_sessions``). API keys,
-        calendar programs and providers refuse a blocked or deleted account wherever they let it in."""
+        calendar programs and providers refuse a blocked or deleted account wherever they let it in; so do MCP keys
+        (they rest, E41). AI programs connected over OAuth end like sessions and devices (E42, the shared module mcp):
+        after the block they connect anew."""
+        from ..models import McpKey
         from . import appdevices
+        from .mcp_store import Store
 
         self.renew_device_key(account_id)
         self.db.flush()
         appdevices.end_all(self.db, int(account_id))
+        programs = Store(self.db)
+        for program in self.db.scalars(select(McpKey.id).where(McpKey.account_id == int(account_id),
+                                                              McpKey.client_id.is_not(None))).all():
+            programs.end_program(f"mcp-{program}")
 
     def on_shut_out(self, account: KontoAccount) -> None:
         """konten 1.1.0 (E38): the account went out (blocked, or deleted while it could sign in), after the commit.

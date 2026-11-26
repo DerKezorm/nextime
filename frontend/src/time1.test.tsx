@@ -182,8 +182,10 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/settings')?.body).toEqual({ address_suggestions: false })
     // "MCP-Zugang" and the API for members: the card "Schnittstellen" of the key module, right after.
     const interfaces = [...box.querySelectorAll<HTMLInputElement>('[data-card="interfaces"] input[type="checkbox"]')]
-    expect(interfaces.map(label)).toEqual(['Programmschnittstelle (API) für Mitglieder', 'MCP-Zugang'])
-    expect(interfaces.map((item) => item.checked)).toEqual([true, true])
+    // Under "MCP-Zugang" the operator's settings of the shared module mcp, first whether programs may connect.
+    expect(interfaces.map(label).slice(0, 2)).toEqual(['Programmschnittstelle (API) für Mitglieder', 'MCP-Zugang'])
+    expect(box.querySelector('[data-card="interfaces"] [data-testid="mcp-operator"]')).not.toBeNull()
+    expect(interfaces.slice(0, 2).map((item) => item.checked)).toEqual([true, true])
     await click(interfaces[1])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/connections/interfaces')?.body).toEqual({ mcp: false })
   })

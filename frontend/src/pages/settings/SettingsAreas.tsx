@@ -10,11 +10,13 @@ import { moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
 import { DevicesTab } from '../../features/calendars/Devices'
 import { ConnectionsArea, keyRequest } from '../../features/keys/ConnectionsArea'
+import { mcpRequest, useMcpWords } from '../../features/mcp/McpPages'
 import { RemindersArea } from '../../features/reminders/RemindersArea'
 import { SharesArea } from '../../features/shares/SharesArea'
 import { MoveArea } from '../../features/transfer/MoveArea'
 import { MailCard } from '../../vendor/nexpost/MailCard'
 import type { PostRequest } from '../../vendor/nexpost/mailserver'
+import { McpOperatorSettings } from '../../vendor/nexmcp'
 import { InterfacesCard } from '../../vendor/nexschluessel'
 import { AboutArea } from './AboutArea'
 import { AccountsTab } from './AccountsTab'
@@ -78,15 +80,23 @@ function MailArea() {
   return <MailCard request={mailRequest} subtitle={t('server.mailSubtitle')} when={(iso, language) => moment(iso, language, false, timeOptions)} />
 }
 
-/** Server › General (TIME-1): Limits, Features for every account, the key module's Interfaces, Languages. */
+/** Server › General (TIME-1): Limits, Features for every account, the key module's Interfaces (with the operator's
+ * settings of the shared module mcp), Languages. */
 function GeneralArea() {
+  const { i18n } = useTranslation()
   const server = useServerSettings()
+  const tools = useMcpWords()
   if (!server.settings) return null
   return (
     <div className="flex flex-col gap-6" data-testid="server-general">
       <LimitsCard server={server} />
       <FeaturesCard server={server} />
-      <InterfacesCard request={keyRequest} docsHref="/api/v1/docs" />
+      {/* The shared module mcp under "MCP-Zugang": programs may connect, the highest level, blocked tools. */}
+      <InterfacesCard
+        request={keyRequest}
+        docsHref="/api/v1/docs"
+        after={{ mcp: <McpOperatorSettings request={mcpRequest} words={tools} language={i18n.language} /> }}
+      />
       <LanguagesArea />
     </div>
   )

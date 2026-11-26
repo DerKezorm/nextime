@@ -6,6 +6,7 @@ import { NotFoundPage } from './components/NotFound'
 import { FEATURE_ROUTES } from './extensions'
 import { AppConnectPage } from './features/app/AppConnectPage'
 import { SetupLinkPage } from './features/calendars/Devices'
+import { McpConsentPage, McpRequestPage } from './features/mcp/McpPages'
 import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import { SearchPage } from './features/search/SearchPage'
 import { GuestPage } from './features/shares/GuestPage'
@@ -53,6 +54,8 @@ export default function App() {
       <Route path="email/:token" element={<EmailPage />} />
       {/* The iPhone app's sign-in sheet (TIME-29 AC-5): signs in, then hands the app a one-time code. */}
       <Route path="app-connect" element={<AppConnectPage />} />
+      {/* An AI program that connects itself asks for the account's yes (the shared module mcp, OAuth). */}
+      <Route path="oauth/authorize" element={<McpConsentPage />} />
       {/* A guest's read link (TIME-19 AC-13): no account, nothing else of nextime. */}
       <Route path="abo/:token" element={<GuestPage />} />
       <Route
@@ -72,6 +75,8 @@ export default function App() {
         <Route path="search" element={<SearchPage />} />
         <Route path="trash" element={<TrashPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        {/* One request of an AI program that waits for the account's yes (the shared module mcp). */}
+        <Route path="mcp/requests/:id" element={<McpRequestPage />} />
         {/* A calendar's settings and notifications (TIME-21). */}
         <Route path="calendar/:id" element={<CalendarSettingsPage />} />
         <Route path="settings/:tab" element={<SettingsPage />} />

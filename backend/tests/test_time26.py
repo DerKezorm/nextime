@@ -44,6 +44,14 @@ def make_key(client: TestClient, name: str = "Skript", **values: Any) -> dict[st
     return answer.json()
 
 
+@pytest.fixture(autouse=True)
+def mcp_as_before() -> None:
+    """These tests are of 0.4.0's keys with the tick "also for AI tools": MCP on, as every installation of 0.4.0 keeps
+    it after the update (the shared module mcp, decision 5; a new installation starts with it off)."""
+    with SessionLocal() as db:
+        settings_service.save(db, {"mcp_enabled": True})
+
+
 @pytest.fixture
 def program() -> Iterator[TestClient]:
     """A program: no session cookie, no tab."""
@@ -524,7 +532,8 @@ def test_time26_ac3_mcp_tools_by_the_keys_right(client: TestClient, account: Acc
     hello = mcp(program, reader, "initialize", {"protocolVersion": "2025-06-18"})["result"]
     assert hello["serverInfo"]["name"] == "nextime" and hello["protocolVersion"] == "2025-06-18"
     read_tools = {entry["name"] for entry in mcp(program, reader, "tools/list")["result"]["tools"]}
-    assert read_tools == {"list_calendars", "list_events", "search_events", "find_free_time"}
+    # The shared module mcp brings request_status for every key (its own tool, answers only of its own requests).
+    assert read_tools == {"list_calendars", "list_events", "search_events", "find_free_time", "request_status"}
     write_tools = {entry["name"] for entry in mcp(program, writer, "tools/list")["result"]["tools"]}
     assert write_tools == read_tools | {"create_event", "update_event", "delete_event"}
     assert program.post("/api/mcp", headers=as_key(plain), json={"jsonrpc": "2.0", "id": 1,

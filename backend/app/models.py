@@ -1176,3 +1176,109 @@ class AppOp(Base):
     op: Mapped[str] = mapped_column(String(16))
     answer: Mapped[Any] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow, index=True)
+
+
+# --- The shared module mcp (bauplaene/mcp 1.1.0) ---------------------------------------------------------------------
+# New tables only: an older nextime (0.4.0, the way back) does not read them, and never takes a program's row for an
+# API key, because ``api_keys`` stays as it was.
+
+
+class McpKey(Base):
+    """An MCP key made by hand (``nt_mcp_``, module schluessel, kind ``mcp``) or the access of a program that connected
+    over OAuth (``client_id`` set; its access token ``nt_mcp_`` and its refresh token ``ntr_``). Only SHA-256 of a key
+    or token is kept. It acts as its account and never sees more: its calendars are ``calendar_ids`` (``None`` for all,
+    later ones too)."""
+
+    __tablename__ = "mcp_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    name: Mapped[str] = mapped_column(String(200))
+    #: ``read`` or ``write``.
+    level: Mapped[str] = mapped_column(String(8), default="read")
+    calendar_ids: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    prefix: Mapped[str] = mapped_column(String(16), default="")
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    blocked_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    #: A program: the client it signed in with, its current refresh token (hash), when it signed in and refreshed.
+    client_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    refresh_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    signed_in_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    refreshed_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class McpClient(Base):
+    """A program that registered itself (RFC 7591): public, with its addresses to return to."""
+
+    __tablename__ = "mcp_clients"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), default="")
+    redirect_uris: Mapped[Any] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    last_used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+
+
+class McpCode(Base):
+    """A code of the consent page (10 minutes, once): only its hash."""
+
+    __tablename__ = "mcp_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(String(64))
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    redirect_uri: Mapped[str] = mapped_column(String(2048))
+    challenge: Mapped[str] = mapped_column(String(200))
+    level: Mapped[str] = mapped_column(String(8))
+    calendar_ids: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    options: Mapped[Any] = mapped_column(JSON, default=dict)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    resource: Mapped[str] = mapped_column(String(2048), default="")
+
+
+class McpSpent(Base):
+    """A spent refresh token or code of a program (its hash): brought again, it ends the program. The last 20 per
+    program are kept."""
+
+    __tablename__ = "mcp_spent"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    key_id: Mapped[str] = mapped_column(String(32), index=True)
+    spent_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class McpToolRight(Base):
+    """What a key may do with one tool, where it differs from the default (allow, ask, deny). ``key_id`` is the module's
+    id of the key: ``api-<n>`` for an API key with the tick for MCP, ``mcp-<n>`` for an MCP key or a program."""
+
+    __tablename__ = "mcp_tool_rights"
+
+    key_id: Mapped[str] = mapped_column(String(32), primary_key=True)
+    tool: Mapped[str] = mapped_column(String(64), primary_key=True)
+    value: Mapped[str] = mapped_column(String(8))
+
+
+class McpRequest(Base):
+    """A call that waits for the account's yes (the right "ask"): its arguments fixed (canonical JSON and SHA-256)."""
+
+    __tablename__ = "mcp_requests"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    key_id: Mapped[str] = mapped_column(String(32))
+    key_name: Mapped[str] = mapped_column(String(200), default="")
+    tool: Mapped[str] = mapped_column(String(64))
+    arguments: Mapped[str] = mapped_column(Text)
+    digest: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(16), index=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+    decided_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    decided_by: Mapped[str] = mapped_column(String(200), default="")
+    result: Mapped[str | None] = mapped_column(Text, nullable=True)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    dangerous: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())

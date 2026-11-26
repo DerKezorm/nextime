@@ -87,6 +87,9 @@ def get_db() -> Iterator[Session]:
 
 
 def init_db() -> None:
+    # An installation of before the shared module mcp: it has accounts but no table of MCP keys yet (decision 5).
+    before = inspect(engine)
+    older_without_mcp = before.has_table("accounts") and not before.has_table("mcp_keys")
     Base.metadata.create_all(engine)
     added = _add_missing_columns()
     # create_all makes the indexes of new tables only; one added to an existing table comes here.
@@ -96,7 +99,7 @@ def init_db() -> None:
     # What the shared account module needs of a database of an older version (only adding).
     from .services import konten_wanderung
 
-    konten_wanderung.run(engine, added=added)
+    konten_wanderung.run(engine, added=added, older_without_mcp=older_without_mcp)
 
 
 def _sql_literal(value: Any) -> str:

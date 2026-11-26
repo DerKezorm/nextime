@@ -21,7 +21,8 @@ from ..deps import Account, DbSession, OperatorAccount, require_account, require
 from ..errors import error
 from ..models import ApiKey
 from ..services import apikeys, calendars
-from ..services.schluessel_store import CONFIG, KeyStore
+from ..services.mcp_store import Store
+from ..services.schluessel_store import API, CONFIG, MCP, KeyStore
 from ..vendor.nexschluessel import api as schluessel_api
 from ..vendor.nexschluessel import keys as schluessel_keys
 from ..vendor.nexschluessel.errors import KeyRefused
@@ -77,7 +78,9 @@ def listing(account: Account, db: DbSession, request: Request) -> dict[str, Any]
         "max_keys": apikeys.MAX_KEYS,
         "expiry_days": list(apikeys.EXPIRY_DAYS),
         "default_days": apikeys.DEFAULT_DAYS,
-        "keys": [_old(db, int(entry["id"]), names) for entry in sorted(found["keys"], key=lambda entry: entry["id"])],
+        # The API keys only, as before (MCP keys and programs have their card); by number, as before.
+        "keys": [_old(db, number, names) for number in sorted(
+            int(str(entry["id"])[len(API):]) for entry in found["keys"] if str(entry["id"]).startswith(API))],
     }
 
 
@@ -89,19 +92,22 @@ def make(body: KeyIn, account: Account, db: DbSession, response: Response) -> di
             KeyStore(db), CONFIG, account.id, kind="api", name=body.name, right=body.level,
             areas="all" if body.calendar_ids is None else body.calendar_ids, options={"mcp": body.mcp},
             days=body.days, client_ref=body.client_ref, now=apikeys.clock(),
+            # The tick "also for AI tools" is retired on the page (MCP decisions 6, 11); this older way sets it as
+            # before, so scripts notice nothing (decision 12).
+            retired=True,
         )
     except KeyRefused as exc:
         db.rollback()
         raise _refused(exc) from exc
     if not made.new:
         response.status_code = 200
-    return {"made": _old(db, int(made.key.id)), "token": made.secret if made.new else None}
+    return {"made": _old(db, int(str(made.key.id)[len(API):])), "token": made.secret if made.new else None}
 
 
 @router.delete("/api/keys/{key_id}", status_code=204, summary="Revoke a key at once, or remove an expired one")
 def revoke(key_id: KeyId, account: Account, db: DbSession) -> Response:
     try:
-        schluessel_keys.revoke(KeyStore(db), CONFIG, account.id, key_id)
+        schluessel_keys.revoke(KeyStore(db), CONFIG, account.id, f"{API}{key_id}")
     except KeyRefused as exc:
         raise _refused(exc) from exc
     return Response(status_code=204)
@@ -114,19 +120,24 @@ def overview(_operator: OperatorAccount, db: DbSession) -> dict[str, Any]:
     store = KeyStore(db)
     counted: dict[int, dict[str, Any]] = {}
     for entry in schluessel_keys.overview(store, CONFIG, now=apikeys.clock()):
+        # API keys as before; an MCP key made by hand counts as a key for MCP (programs have their own place).
+        made_by_hand_mcp = str(entry["id"]).startswith(MCP) and not entry.get("program")
+        if not str(entry["id"]).startswith(API) and not made_by_hand_mcp:
+            continue
         holder = entry["account"]
         row = counted.setdefault(int(holder["id"]), {"account": {"id": int(holder["id"]),
                                                                  "name": holder.get("display_name") or holder["name"]},
                                                      "keys": 0, "mcp": 0})
         row["keys"] += 1
-        row["mcp"] += 1 if (entry.get("options") or {}).get("mcp") else 0
+        row["mcp"] += 1 if made_by_hand_mcp or (entry.get("options") or {}).get("mcp") else 0
     rows = sorted(counted.values(), key=lambda row: row["account"]["name"].casefold())
     return {"accounts": rows, "keys": sum(row["keys"] for row in rows), "mcp": sum(row["mcp"] for row in rows),
             "api_allowed": store.switch("api"), "mcp_allowed": store.switch("mcp")}
 
 
-def _key_store(db: DbSession) -> KeyStore:
-    return KeyStore(db)
+def _key_store(db: DbSession) -> Store:
+    """One store for both modules (schluessel and mcp), as the reference app has it."""
+    return Store(db)
 
 
 def _address(request: Request) -> str:

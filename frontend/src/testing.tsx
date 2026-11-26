@@ -58,6 +58,12 @@ export const KEYS_LISTING = {
   keys: [],
 }
 
+/** What the operator's settings of the shared module mcp answer (`/api/connections/mcp/admin`): as from the start. */
+export const MCP_ADMIN = {
+  programs: true, levels: ['read', 'write'], max_level: 'write', blocked_tools: [],
+  tools: [{ name: 'list_events', group: 'read', level: 'read' }, { name: 'delete_event', group: 'risky', level: 'write' }],
+}
+
 export function signedIn(account: Me, more: Handler = () => undefined): Handler {
   return (method, path, body) =>
     more(method, path, body) ??
@@ -77,7 +83,9 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
                   ? ok({ keys: [] })
                   : path === '/api/connections/interfaces'
                     ? ok({ api: true, mcp: true })
-                    : undefined)
+                    : path === '/api/connections/mcp/admin'
+                      ? ok(MCP_ADMIN)
+                      : undefined)
 }
 
 export function start(): void {

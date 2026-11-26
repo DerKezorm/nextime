@@ -631,3 +631,38 @@ def test_after_the_settings_pass_addresses_of_0_4_0_need_no_link(bestand):
     anmelden(klient, konto)
     selbst = ich(klient)
     assert selbst["email_proven"] is True and selbst["theme"] == ""
+
+
+# --- After the change (modules pass, plans MCP and Update-Prüfung): what the modules of 26.11.2026 change on purpose --
+
+
+def test_after_the_modules_pass_mcp_stays_on_and_a_key_of_0_4_0_with_the_tick_still_opens_it(bestand):
+    """MCP decision 5: a new installation starts with MCP off, but 0.4.0 had it on without storing it; the update
+    writes that down, so it stays on. Decision 12: the older way ``POST /api/keys`` still makes a key with the tick,
+    and that key opens ``/api/mcp``; the key of 0.4.0 without the tick opens only ``/api/v1``, as before."""
+    with SessionLocal() as db:
+        assert settings_service.get(db, "mcp_enabled") is True
+    konto = next(k for k in KONTEN if k.get("api_token"))
+    alt = {"Authorization": f"Bearer {konto['api_token']}"}
+    frage = {"jsonrpc": "2.0", "id": 1, "method": "ping"}
+    assert browser().post("/api/mcp", headers=alt, json=frage).status_code == 401
+    klient = browser()
+    anmelden(klient, konto)
+    gemacht = klient.post("/api/keys", json={"name": "Skript", "level": "read", "mcp": True})
+    assert gemacht.status_code == 201, gemacht.text
+    neu = {"Authorization": f"Bearer {gemacht.json()['token']}"}
+    assert browser().post("/api/mcp", headers=neu, json=frage).status_code == 200
+    assert browser().get("/api/v1/me", headers=neu).status_code == 200
+
+
+def test_after_the_modules_pass_the_update_check_stays_on_and_the_page_server_answers_as_before(bestand):
+    """Update-Prüfung U9, U16: 0.4.0 never stored the switch; it stays on, and ``/api/server/state`` keeps its form."""
+    with SessionLocal() as db:
+        from app.models import Setting
+
+        assert db.get(Setting, "update_check") is None
+    klient, _konto = betreiber()
+    zustand = klient.get("/api/server/state")
+    assert zustand.status_code == 200, zustand.text
+    assert {"version", "newer", "update_check", "https", "internet", "zone"} <= set(zustand.json())
+    assert zustand.json()["update_check"] is True

@@ -2033,6 +2033,17 @@
       "hiddenNote": "“All calendars” means all you show. A key reads hidden calendars only when you choose them under “Only these …”."
     }
   },
+  "mcp": {
+    "tools": {
+      "list_calendars": "List calendars",
+      "list_events": "List events",
+      "search_events": "Search events",
+      "find_free_time": "Find free time",
+      "create_event": "Create an event",
+      "update_event": "Change an event",
+      "delete_event": "Put an event into the trash"
+    }
+  },
   "tasks": {
     "block": "Tasks from nextasks",
     "group": "From nextasks",
