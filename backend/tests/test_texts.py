@@ -37,9 +37,10 @@ RAISED = re.compile(
 
 
 #: The shared modules bring their own sentences for their codes (``account.error.*``, ``mail.error.*``, the backup
-#: module's ``sicherung`` texts, the key module's ``schluessel`` texts; checked in their own vitest files) and name
+#: module's ``sicherung`` texts, the key module's ``schluessel`` texts, the languages module's ``sprachen`` texts;
+#: checked in their own vitest files) and name
 #: other apps in their comments; they are not nextime's to word.
-SHARED = {"nexkonten", "nexpost", "nexsicherung", "nexlog", "nexschluessel"}
+SHARED = {"nexkonten", "nexpost", "nexsicherung", "nexlog", "nexschluessel", "nexsprachen"}
 
 
 def _sources(folder: Path, suffixes: tuple[str, ...]) -> str:
@@ -90,9 +91,10 @@ def test_every_sentence_belongs_to_a_code_still_used() -> None:
     from app.vendor.nexkonten import CODES
 
     shared = set(CODES) | set(OLD_CODES.values())
-    # The shared log and backup modules answer nextime's old ways (``/api/logs``, ``/api/backups``) with codes the
-    # older pages and scripts know; nextime keeps those sentences (read from the modules' sources).
-    modules = "\n".join(path.read_text(encoding="utf-8") for name in ("nexlog", "nexsicherung")
+    # The shared log, backup and languages modules answer nextime's old ways (``/api/logs``, ``/api/backups``,
+    # ``/api/locales``) with codes the older pages and scripts know; nextime keeps those sentences (read from the
+    # modules' sources).
+    modules = "\n".join(path.read_text(encoding="utf-8") for name in ("nexlog", "nexsicherung", "nexsprachen")
                         for path in sorted((APP / "vendor" / name).glob("*.py")))
     shared |= {code for code in texts("de") if f'"{code}"' in modules}
     unused = [code for code in texts("de") if code not in server_codes() and f'"{code}"' not in backend
