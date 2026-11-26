@@ -236,6 +236,10 @@ def test_the_box_passkeys_offers_to_add_one_only_with_a_public_https_address_or_
     assert client.get("/api/auth/me", headers={"origin": "http://nextime.example.com"}).json()["passkeys_can_add"] \
         is False
     assert client.get("/api/auth/me", headers={"origin": "http://localhost:5173"}).json()["passkeys_can_add"] is True
+    # A set address counts alone, and only with https: an http one says no even on localhost (c0b07ab).
+    with SessionLocal() as db:
+        settings_service.save(db, {"public_url": "http://time.example.com"})
+    assert client.get("/api/auth/me", headers={"origin": "http://localhost:5173"}).json()["passkeys_can_add"] is False
     with SessionLocal() as db:
         settings_service.save(db, {"public_url": "https://time.example.com"})
     assert client.get("/api/auth/me", headers={"origin": "https://time.example.com"}).json()["passkeys_can_add"] \

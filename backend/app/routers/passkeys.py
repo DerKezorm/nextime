@@ -53,9 +53,10 @@ def _party(request: Request, db: DbSession) -> passkeys.Party:
 
 def can_add(request: Request, db: DbSession) -> bool:
     """konten 1.1.0 (E49): whether the box "Passkeys" offers "Passkey hinzufügen": with a public https address, or on a
-    page on ``localhost``; the same inputs as ``_party``."""
-    base = settings_service.public_url(db) or str(request.base_url).rstrip("/")
-    return passkeys.can_add(base, origin=request.headers.get("origin", ""), request_url=str(request.url))
+    page on ``localhost``. The address set counts alone (only with https); without one only a page on ``localhost``
+    (``passkeys.can_add``, c0b07ab), so the address the request came to is no stand-in for it here."""
+    return passkeys.can_add(settings_service.public_url(db), origin=request.headers.get("origin", ""),
+                            request_url=str(request.url))
 
 
 @router.get("/auth/passkeys", summary="The own passkeys")
