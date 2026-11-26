@@ -152,7 +152,7 @@ export function AccountTab({ part }: { part?: AccountPart } = {}) {
   const lastLinkOf = (provider: MyProvider) => me.sign_in === 'oidc' && provider.linked && (providers ?? []).filter((entry) => entry.linked).length === 1
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <SecondFactorOffNotice on={me.second_factor_off} />
       {me.new_password_origin && <RemainingAccess onDone={() => void refresh()} />}
       <div aria-live="polite" className="space-y-2 empty:hidden">

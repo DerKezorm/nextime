@@ -33,7 +33,7 @@ import { follow, transferApi, type Failed, type ImportPreview, type ImportResult
 export function MoveArea() {
   const { list } = useCalendars()
   return (
-    <div className="flex flex-col gap-4" data-testid="move-area">
+    <div className="flex flex-col gap-6" data-testid="move-area">
       <ExportCard calendars={list?.calendars ?? null} />
       <LoadCard calendars={list?.calendars ?? null} />
       <MoveCards />
