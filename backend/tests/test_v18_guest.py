@@ -24,8 +24,10 @@ from app.vendor import nexverbinden
 from app.vendor.nexverbinden import connect as verbinden_connect
 
 from . import test_nexpaper as paper_tests
-from .test_time25 import PUBLIC, Fake, connect, tasks, tick
-from .test_time25 import fake as fake
+from .test_time25 import PUBLIC, Fake, connect, fake, tasks, tick
+
+#: The fake nextasks of TIME-25, used here as a fixture.
+FIXTURES = (fake,)
 
 ACCESS = "ntc_" + "a" * 40
 
