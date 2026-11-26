@@ -6,6 +6,7 @@ configures the module with the folder of before), its routes under ``/api/locale
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 from pathlib import Path
@@ -79,6 +80,19 @@ class Adapter(StandardAdapter):
         from app.main import app
 
         return app.openapi()
+
+    def offered_template(self) -> dict[str, Any]:
+        """The template the page offers (``LanguagesArea``: ``SHIPPED.en.texts``): nextime's English texts with the
+        shared modules' words it merges in (``i18n/index.ts``: its own, oidc, konten, post), through ``texts_only`` as
+        the page's ``textsOnly``, with ``_meta``."""
+        from app.vendor import nexsprachen
+
+        src = Path(__file__).resolve().parents[2] / "frontend" / "src"
+        english: dict[str, Any] = {}
+        for part in ("i18n/en.json", "vendor/nexoidc/oidc.en.json", "vendor/nexkonten/konten.en.json",
+                     "vendor/nexpost/post.en.json"):
+            english.update(json.loads((src / part).read_text(encoding="utf-8")))
+        return {"_meta": {"name": "Esperanto"}, **nexsprachen.texts_only(english)}
 
     def client(self, role: str) -> Any:
         from app.models import MEMBER, OPERATOR
