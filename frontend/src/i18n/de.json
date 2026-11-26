@@ -299,7 +299,9 @@
     "too_many_ops": "Höchstens 50 Änderungen auf einmal.",
     "event_unknown": "Den Termin gibt es noch nicht. Die Datei wartet, bis er angelegt ist.",
     "use_logout": "Diesen Browser meldest du mit „Abmelden“ ab.",
-    "name_missing": "Gib einen Namen ein."
+    "name_missing": "Gib einen Namen ein.",
+    "webpush_not_here": "Dieser Browser bekommt noch keine Mitteilungen von nextime. Erst „Mitteilungen einschalten“.",
+    "webpush_failed": "Der Mitteilungsdienst des Browsers hat die Probemeldung nicht angenommen. Gleich noch einmal versuchen."
   },
   "me": {
     "emailDeclined": "nextime fragt nicht mehr nach dieser Adresse.",
@@ -436,7 +438,15 @@
     "restoreEvents": "Termine: {{add}} kommen dazu, {{change}} ändern sich, {{remove}} fallen weg.",
     "restoreAccounts": "Konten: {{add}} kommen dazu, {{remove}} fallen weg.",
     "httpsMissing": "nextime ist nicht über HTTPS erreichbar. Kalender auf iPhones und Android verbinden sich erst mit HTTPS.",
-    "mailSubtitle": "Der Mailserver, über den nextime Einladungen, Links für ein neues Passwort, Links zum Bestätigen einer Adresse und den Hinweis bei einer neuen Anmeldung verschickt."
+    "mailSubtitle": "Der Mailserver, über den nextime Einladungen, Links für ein neues Passwort, Links zum Bestätigen einer Adresse und den Hinweis bei einer neuen Anmeldung verschickt.",
+    "ready": {
+      "internet": {
+        "title": "Server erreicht das Internet",
+        "ok": "iCloud, Google und abonnierte Kalender gleichen ab, und Mitteilungen kommen in Browsern, auf dem iPhone und dem iPad an.",
+        "bad": "Der Server kommt gerade nicht ins Internet. Bis dahin ruhen iCloud, Google und abonnierte Kalender, und keine Mitteilung kommt an. Prüf DNS, Firewall und einen Proxy für ausgehende Verbindungen.",
+        "off": "{{variable}} ist leer: nextime prüft das Internet nicht und lässt iCloud, Google und abonnierte Kalender ruhen. Entferne die Variable oder trag eine Adresse ein, die der Server erreichen soll."
+      }
+    }
   },
   "session": {
     "blockedText": "Der Betreiber hat dein Konto gesperrt. Es wird nichts mehr gespeichert. Wende dich an den Betreiber.",
@@ -1413,7 +1423,8 @@
     "webApp": "nextime auf {{system}} (Web-App)",
     "device": "dem Gerät",
     "browserOn": "{{browser}} auf {{system}}",
-    "otherBrowser": "Anderer Browser"
+    "otherBrowser": "Anderer Browser",
+    "probeSent": "Probemeldung ist raus."
   },
   "reminders": {
     "add": "+ Erinnerung",

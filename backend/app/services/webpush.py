@@ -25,6 +25,7 @@ import base64
 import hashlib
 import hmac
 import ipaddress
+import json
 import logging
 import os
 import socket
@@ -256,6 +257,35 @@ def unsubscribe(db: Session, account_id: int, session_id: int) -> bool:
                                                           WebPushSubscription.session_id == session_id))
     db.commit()
     return bool(getattr(result, "rowcount", 0))
+
+
+def remove(db: Session, account_id: int, subscription_id: int) -> bool:
+    """"Entfernen" in the list "Browser mit Mitteilungen" (plan "Einstellungen"): one of the account's own browsers no
+    longer gets notifications. Another account's is never touched (False, as for one that is not there)."""
+    result = db.execute(delete(WebPushSubscription).where(WebPushSubscription.account_id == account_id,
+                                                          WebPushSubscription.id == subscription_id))
+    db.commit()
+    return bool(getattr(result, "rowcount", 0))
+
+
+#: The probe ("Probemeldung schicken"), in the words of the person who asks for it.
+PROBE = {
+    "de": {"title": "nextime", "body": "So sehen Mitteilungen von nextime in diesem Browser aus."},
+    "en": {"title": "nextime", "body": "This is how notifications from nextime look in this browser."},
+}
+
+
+def probe(db: Session, row: WebPushSubscription, language: str) -> None:
+    """One notification to this browser at once, nothing queued: ``Gone`` (the push service forgot the browser; the
+    row goes), ``Refused`` or ``Failed`` as ``deliver`` says."""
+    words = PROBE.get(language, PROBE["en"])
+    body = {"title": words["title"], "body": words["body"], "url": "/settings/notifications", "tag": "probe"}
+    try:
+        deliver(db, row, json.dumps(body, ensure_ascii=False).encode("utf-8"), topic="probe")
+    except Gone:
+        db.delete(row)
+        db.commit()
+        raise
 
 
 def of_session(db: Session, session_id: int) -> WebPushSubscription | None:

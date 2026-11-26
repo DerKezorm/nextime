@@ -9,6 +9,7 @@ import { AuthProvider } from './state/auth'
 import { box, byText, calls, click, me, ok, render, serve, settle, signedIn, start, stop, type } from './testing'
 import { wholeNumber } from './pages/settings/GeneralCards'
 import type { ServerState } from './api/client'
+import { INTERNET_POINT } from './pages/settings/readyPoints'
 
 const OPERATOR = me({ id: 1, name: 'tester', display_name: 'Tester', role: 'operator' })
 
@@ -22,7 +23,9 @@ const SETTINGS = {
 type Backups = { schedule: { every: string; time: string; keep: number }; zone: string; last: { created: string; size: number; kind: string } | null; count: number; kept: number; failure: { at: string; reason: string } | null; running: boolean; restore_failure: null; restored: null; restore: string; download_password: boolean; backups: unknown[] }
 const BACKUPS: Backups = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: null, count: 0, kept: 0, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [] }
 const STORAGE = { app: 'nextime', used: 10, parts: [{ key: 'database', bytes: 10, within: '', complete: true }], complete: true, total: 1000, disk_used: 100, free: 900, nearly_full: false, where: {}, network: [] }
-const READY = (https: boolean) => ({ state: https ? 'ok' : 'bad', open: https ? 0 : 1, points: [{ key: 'address', state: https ? 'ok' : 'bad', title: 'account.ready.address.title', text: https ? 'account.ready.address.ok' : 'account.ready.address.bad', values: { address: https ? 'https://time.example.com' : 'http://time.example.com', app: 'nextime' } }] })
+/** nextime's own points the server adds (E34); none unless a test puts them. */
+let ownPoints: { key: string; state: string; title: string; text: string; values: Record<string, unknown> }[] = []
+const READY = (https: boolean) => ({ state: https ? 'ok' : 'bad', open: https ? 0 : 1, points: [{ key: 'address', state: https ? 'ok' : 'bad', title: 'account.ready.address.title', text: https ? 'account.ready.address.ok' : 'account.ready.address.bad', values: { address: https ? 'https://time.example.com' : 'http://time.example.com', app: 'nextime' } }, ...ownPoints] })
 const STATE: ServerState = { version: '0.1.0', newer: '0.2.0', https: true, internet: true, zone: 'Europe/Berlin' }
 
 function server(state = STATE, settings = SETTINGS, backups = BACKUPS) {
@@ -47,6 +50,7 @@ function server(state = STATE, settings = SETTINGS, backups = BACKUPS) {
 
 beforeEach(async () => {
   start()
+  ownPoints = []
   await i18n.changeLanguage('de')
 })
 afterEach(stop)
@@ -173,6 +177,24 @@ describe('TIME-1 the group "Server" of the settings', () => {
     const ready = box.querySelector<HTMLElement>('[data-card="sign-in-ready"]')!
     expect(ready.textContent).toContain('Öffentliche Adresse mit https')
     expect(ready.textContent).toContain('1 Punkt offen')
+  })
+
+  it('"Bereit fürs Internet?" (plan "Einstellungen", E34) has nextime\'s own point "Server erreicht das Internet" in nextime\'s words', async () => {
+    const shown = async (state: string, text: string, values: Record<string, unknown> = {}) => {
+      ownPoints = [{ key: 'internet', state, title: INTERNET_POINT.title, text, values }]
+      serve(server())
+      await render(<AuthProvider><App /></AuthProvider>, '/settings/sign-in')
+      const ready = box.querySelector<HTMLElement>('[data-card="sign-in-ready"]')!
+      expect(ready.textContent).toContain('Server erreicht das Internet')
+      // Which points are open stays per device: open it only when it is closed.
+      const head = box.querySelector<HTMLElement>('#ready-internet [data-part="collapsible-head"]')!
+      if (head.getAttribute('aria-expanded') !== 'true') await click(head)
+      return box.querySelector('[data-testid="ready-text-internet"]')?.textContent ?? ''
+    }
+    expect(await shown('ok', INTERNET_POINT.ok)).toContain('iCloud, Google und abonnierte Kalender gleichen ab')
+    expect(await shown('bad', INTERNET_POINT.bad)).toContain('kommt gerade nicht ins Internet')
+    expect(box.querySelector('[data-testid="ready-summary"]')?.textContent).toBe('1 Punkt offen')
+    expect(await shown('bad', INTERNET_POINT.off, { variable: 'NEXTIME_INTERNET_PROBE_URL' })).toContain('NEXTIME_INTERNET_PROBE_URL ist leer')
   })
 
   it('TIME-1 AC-4 EC-11 a wrong limit is said at the field, nothing is sent, the old value stays', async () => {

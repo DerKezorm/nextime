@@ -21,6 +21,10 @@ export const notifyApi = {
   webpush: () => api<{ key: string; subscribed: boolean; reminders: boolean }>('/api/notify/webpush'),
   subscribe: (subscription: Subscription) => api<void>('/api/notify/webpush', { method: 'PUT', body: subscription }),
   unsubscribe: () => api<void>('/api/notify/webpush', { method: 'DELETE' }),
+  /** "Probemeldung schicken": one notification to this browser at once (plan "Einstellungen"). */
+  probe: () => api<void>('/api/notify/webpush/probe', { method: 'POST' }),
+  /** "Entfernen" in "Browser mit Mitteilungen": one of the account's own browsers no longer. */
+  remove: (id: number) => api<void>(`/api/notify/webpush/${id}`, { method: 'DELETE' }),
 }
 
 /** The message the service worker (`public/sw.js`) sends a window for a tapped notification: the address in `url`. */

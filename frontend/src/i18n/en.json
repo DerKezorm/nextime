@@ -299,7 +299,9 @@
     "too_many_ops": "At most 50 changes at once.",
     "event_unknown": "The event is not there yet. The file waits until it has been made.",
     "use_logout": "Sign out of this browser with Sign out.",
-    "name_missing": "Enter a name."
+    "name_missing": "Enter a name.",
+    "webpush_not_here": "This browser gets no notifications from nextime yet. Switch them on first.",
+    "webpush_failed": "The browser's push service did not take the probe. Try again in a moment."
   },
   "me": {
     "emailDeclined": "nextime no longer asks about this address.",
@@ -436,7 +438,15 @@
     "restoreEvents": "Events: {{add}} come, {{change}} change, {{remove}} go.",
     "restoreAccounts": "Accounts: {{add}} come, {{remove}} go.",
     "httpsMissing": "nextime is not reachable over HTTPS. Calendars on iPhones and Android connect only with HTTPS.",
-    "mailSubtitle": "The mail server through which nextime sends invitations, links for a new password, links to confirm an address and the notice of a new sign-in."
+    "mailSubtitle": "The mail server through which nextime sends invitations, links for a new password, links to confirm an address and the notice of a new sign-in.",
+    "ready": {
+      "internet": {
+        "title": "Server reaches the internet",
+        "ok": "iCloud, Google and subscribed calendars sync, and notifications reach browsers, the iPhone and the iPad.",
+        "bad": "The server cannot reach the internet right now. Until it can, iCloud, Google and subscribed calendars rest, and no notification arrives. Check DNS, the firewall and any proxy for outgoing connections.",
+        "off": "{{variable}} is empty: nextime does not check the internet and lets iCloud, Google and subscribed calendars rest. Remove the variable or set an address the server should reach."
+      }
+    }
   },
   "session": {
     "blockedText": "The operator has blocked your account. Nothing more is saved. Ask the operator.",
@@ -1413,7 +1423,8 @@
     "webApp": "nextime on {{system}} (web app)",
     "device": "the device",
     "browserOn": "{{browser}} on {{system}}",
-    "otherBrowser": "Other browser"
+    "otherBrowser": "Other browser",
+    "probeSent": "The probe is on its way."
   },
   "reminders": {
     "add": "+ Reminder",

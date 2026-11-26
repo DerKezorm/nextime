@@ -115,3 +115,28 @@ def unsubscribe(request: Request, account: Account, db: DbSession) -> None:
     session_id = _session_id(request, db, required=True)
     assert session_id is not None
     webpush.unsubscribe(db, account.id, session_id)
+
+
+@router.post("/api/notify/webpush/probe", status_code=204, summary="One notification to this browser, at once")
+def probe(request: Request, account: Account, db: DbSession) -> None:
+    """"Probemeldung schicken" under Notifications › Which way (plan "Einstellungen"): this browser only, signed up by
+    this account; nothing waits in the outbox."""
+    from ..services.events import language_of
+
+    session_id = _session_id(request, db, required=True)
+    row = webpush.of_session(db, session_id) if session_id is not None else None
+    if row is None or row.account_id != account.id:
+        raise error("webpush_not_here", "This browser has no notifications from nextime.", 409)
+    try:
+        webpush.probe(db, row, language_of(account))
+    except webpush.Gone as exc:
+        raise error("webpush_not_here", "This browser has no notifications from nextime.", 409) from exc
+    except (webpush.Refused, webpush.Failed) as exc:
+        raise error("webpush_failed", "The push service did not take the notification.", 502) from exc
+
+
+@router.delete("/api/notify/webpush/{subscription_id}", status_code=204, summary="One of the own browsers no longer")
+def remove_browser(subscription_id: int, account: Account, db: DbSession) -> None:
+    """"Entfernen" in the list "Browser mit Mitteilungen": only a browser of the own account (another's: 404)."""
+    if not webpush.remove(db, account.id, subscription_id):
+        raise error("not_found", "Not found.", 404)

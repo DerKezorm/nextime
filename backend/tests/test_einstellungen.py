@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from app.config import get_settings
 from app.db import SessionLocal
 from app.models import Account
-from app.services import backups
+from app.services import backups, internet
 
 from .conftest import PASSWORD, make_account, new_client
+from .test_time21 import push  # noqa: F401 - the fixture
 
 
 def _code(answer) -> str:
@@ -50,6 +52,28 @@ def test_ready_for_the_internet_is_the_operators_and_names_its_points(client: Te
     assert member.get("/api/server/sign-in/readiness").status_code == 403
 
 
+def test_ready_for_the_internet_has_nextimes_own_point_whether_the_server_reaches_the_internet(
+        client: TestClient, operator: Account, monkeypatch) -> None:
+    def point() -> dict:
+        internet.forget()
+        found = client.get("/api/server/sign-in/readiness").json()["points"]
+        assert found[-1]["key"] == "internet" and [each["key"] for each in found].count("internet") == 1
+        return found[-1]
+
+    internet.probe_override = lambda: True
+    assert point() == {"key": "internet", "state": "ok", "title": "server.ready.internet.title",
+                       "text": "server.ready.internet.ok", "values": {}}
+    internet.probe_override = lambda: False
+    found = point()
+    assert (found["state"], found["text"]) == ("bad", "server.ready.internet.bad")
+    # No address to ask: no check, and the syncs pause as well; the point names the variable.
+    monkeypatch.setattr(get_settings(), "internet_probe_url", "")
+    internet.probe_override = lambda: True
+    found = point()
+    assert (found["state"], found["text"]) == ("bad", "server.ready.internet.off")
+    assert found["values"] == {"variable": "NEXTIME_INTERNET_PROBE_URL"}
+
+
 def test_the_storage_limit_per_account_is_gone_and_its_old_way_says_so(client: TestClient, operator: Account) -> None:
     anna = make_account("anna")
     answer = client.put(f"/api/accounts/{anna.id}/storage-limit", json={"limit": 1024, "current_password": PASSWORD})
@@ -82,3 +106,36 @@ def test_the_old_summary_of_the_backups_keeps_its_shape(client: TestClient, oper
     assert set(summary["last"]) == {"created", "size"}
     # Every week and every month are new choices (the module sicherung), on the old way too.
     assert client.put("/api/settings", json={"backup_schedule": "monthly"}).json()["backup_schedule"] == "monthly"
+
+
+# --- Notifications › Which way: the probe and the list of browsers (plan "Einstellungen", question 5, E34) ----------
+
+
+def test_the_probe_goes_to_this_browser_at_once_in_the_accounts_words(client: TestClient, operator: Account,
+                                                                      push) -> None:
+    assert client.post("/api/notify/webpush/probe").status_code == 409  # not signed up yet
+    push.browser(client)
+    assert client.post("/api/notify/webpush/probe").status_code == 204
+    (message,) = push.messages()
+    assert message["tag"] == "probe" and "nextime" in message["body"]
+    push.answer = 500
+    failed = client.post("/api/notify/webpush/probe")
+    assert failed.status_code == 502 and _code(failed) == "webpush_failed"
+    # A browser the push service forgot is gone from the list, and the probe says so.
+    push.answer = 410
+    assert client.post("/api/notify/webpush/probe").status_code == 409
+    assert client.get("/api/reminders").json()["browsers"] == []
+
+
+def test_a_browser_of_the_own_account_can_be_removed_another_ones_never(client: TestClient, operator: Account,
+                                                                        push) -> None:
+    push.browser(client)
+    mine = client.get("/api/reminders").json()["browsers"][0]["id"]
+    other = new_client(make_account("mia"))
+    push.browser(other)
+    theirs = other.get("/api/reminders").json()["browsers"][0]["id"]
+    assert client.delete(f"/api/notify/webpush/{theirs}").status_code == 404
+    assert [row["id"] for row in other.get("/api/reminders").json()["browsers"]] == [theirs]
+    assert client.delete(f"/api/notify/webpush/{mine}").status_code == 204
+    assert client.get("/api/reminders").json()["browsers"] == []
+    assert client.delete(f"/api/notify/webpush/{mine}").status_code == 404

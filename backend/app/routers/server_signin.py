@@ -19,7 +19,7 @@ from ..config import get_settings
 from ..deps import PROXY_HEADERS, DbSession, OperatorAccount, confirm_operator, unknown_proxy_seen
 from ..models import SIGN_IN_PASSWORD, OidcProvider
 from ..models import Account as AccountRow
-from ..services import settings_service
+from ..services import internet, settings_service
 from ..services.konten_store import KontenStore
 from ..vendor import nexkonten
 from ..vendor.nexkonten import readiness, signin
@@ -94,6 +94,22 @@ def save(payload: SignInIn, request: Request, operator: OperatorAccount, db: DbS
     return view(db, operator)
 
 
+#: The variable that names the address the internet check asks (``config.internet_probe_url``).
+PROBE_VARIABLE = "NEXTIME_INTERNET_PROBE_URL"
+
+
+def internet_point() -> readiness.Point:
+    """nextime's own point "Server erreicht das Internet" (plan "Einstellungen", E34): without the internet iCloud,
+    Google and subscribed calendars pause and no notification reaches a browser, an iPhone or an iPad. The same check
+    as the box "State" (``services.internet``); an empty probe address means no check, and the syncs pause too."""
+    if not get_settings().internet_probe_url.strip():
+        return readiness.Point("internet", readiness.BAD, "server.ready.internet.title", "server.ready.internet.off",
+                               {"variable": PROBE_VARIABLE})
+    if internet.reachable():
+        return readiness.Point("internet", readiness.OK, "server.ready.internet.title", "server.ready.internet.ok")
+    return readiness.Point("internet", readiness.BAD, "server.ready.internet.title", "server.ready.internet.bad")
+
+
 @router.get("/readiness", summary="Ready for the internet? What the server checks of itself, point by point")
 def ready(request: Request, operator: OperatorAccount, db: DbSession) -> dict[str, Any]:
     settings = get_settings()
@@ -117,5 +133,6 @@ def ready(request: Request, operator: OperatorAccount, db: DbSession) -> dict[st
         forwarded=bool(forwarded),
         cookie_secure={"true": "on", "false": "off"}.get(settings.cookie_secure, "auto"),
         providers_checking=checking,
+        extra=[internet_point()],
     )
     return found.as_dict()

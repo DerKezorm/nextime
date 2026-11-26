@@ -249,6 +249,11 @@ function areaServer(first: ReminderSettings, subscribed = true) {
       if (path === '/api/reminders') return ok(state)
       if (path === '/api/notify/webpush' && method === 'GET') return ok({ key: 'BAAA', subscribed, reminders: true })
       if (path === '/api/notify/webpush' && method === 'PUT') return ok({})
+      if (path === '/api/notify/webpush/probe') return { status: 200, body: null }
+      if (path.startsWith('/api/notify/webpush/') && method === 'DELETE') {
+        state = { ...state, browsers: state.browsers.filter((each) => `/api/notify/webpush/${each.id}` !== path) }
+        return { status: 200, body: null }
+      }
       if (path.startsWith('/api/calendars')) return ok(calendarList([calendar(1, 'Familie')]))
       return undefined
     }),
@@ -262,6 +267,20 @@ const toggle = (label: string) => {
 }
 
 describe('TIME-7 the area "Erinnerungen"', () => {
+  it('TIME-7 "Auf welchem Weg" (plan "Einstellungen", E34): a probe to this browser, the browsers with "Entfernen"', async () => {
+    pushBrowser('granted')
+    areaServer(area())
+    await open('/settings/notifications')
+    await click(field('notify-probe'))
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/api/notify/webpush/probe')).toBe(true)
+    expect(document.body.textContent).toContain('Probemeldung ist raus.')
+    const rows = [...document.querySelectorAll<HTMLElement>('[data-testid="notify-browser-row"]')]
+    expect(rows.map((row) => row.textContent)).toEqual([expect.stringContaining('Dieser Browser'), expect.stringContaining('nextime auf iOS (Web-App)')])
+    await click(field('notify-remove-2'))
+    expect(calls.some((call) => call.method === 'DELETE' && call.path === '/api/notify/webpush/2')).toBe(true)
+    expect(document.querySelectorAll('[data-testid="notify-browser-row"]')).toHaveLength(1)
+  })
+
   it('TIME-7 AC-8 both switches, the default per calendar with color, name and choice, and the preview', async () => {
     pushBrowser('granted')
     areaServer(area())
