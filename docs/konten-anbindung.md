@@ -62,6 +62,12 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**E53 (0e372f1, 26.11.2026, `aef1695`):** Sicherung und Abmelden-überall behalten die Namen der API-Beschreibung von
+konten; gegen konten bleibt nur die verhaltensbedingte summary von `storage-limit`. Lauf `reihe.sh nextime ende`:
+ruff sauber; pytest 1830 grün, **1 rot** (Vertragstest der sicherung hält nextimes eigenes `RestoreIn` des
+Papierkorbs für eine Klasse des Moduls, Fragen-Datei Frage 15), 11 übersprungen; `-m timing` 8; lint sauber;
+vitest 1316 grün; build grün.
+
 **sprachen `68fd070` (26.11.2026, `0757a9c`):** der Vertragsadapter reicht nextimes Beschreibung über
 `description()` (`app.openapi()`) weiter, kein Weg nur für Tests.
 
