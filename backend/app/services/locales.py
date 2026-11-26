@@ -34,3 +34,11 @@ def configure() -> None:
 
 
 configure()
+
+
+def at_start() -> None:
+    """At every start of nextime (``main.lifespan``): the module configured, then what a stopped upload left (hidden
+    passing files only) tidied away (``nexsprachen.tidy_at_start``, E52)."""
+    configure()
+    nexsprachen.tidy_at_start()
+

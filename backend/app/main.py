@@ -172,6 +172,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     for directory in (settings.locales_dir, backups.media_root()):
         if directory is not None:
             directory.mkdir(parents=True, exist_ok=True)
+    locales.at_start()
     added = locales.available()
     if added:
         logger.info("Languages added by the operator: %s", ", ".join(locale.code for locale in added))

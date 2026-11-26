@@ -53,6 +53,18 @@ class Adapter(StandardAdapter):
         self._main.__enter__()
         app.add_api_route(self.openapi_path, lambda: app.openapi(), include_in_schema=False)
 
+    def restart(self) -> None:
+        """nextime stopped and started again on the same data, as in production: the lifespan runs once more
+        (``locales.at_start``: configure, then ``tidy_at_start``)."""
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+        from tests.conftest import TAB
+
+        self._main.__exit__(None, None, None)
+        self._main = TestClient(app, base_url="http://testserver", headers=TAB)
+        self._main.__enter__()
+
     def stop(self) -> None:
         from app.main import app
 
