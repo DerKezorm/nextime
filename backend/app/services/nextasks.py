@@ -48,7 +48,7 @@ from sqlalchemy.orm import Session
 
 from ..errors import detail
 from ..models import Account, NextasksConnection, TaskTick, utcnow
-from . import display, ical, outbound, settings_service, vault
+from . import display, ical, outbound, settings_service, vault, verbinden_store
 
 logger = logging.getLogger("nextime.nextasks")
 
@@ -361,13 +361,79 @@ def _place(account_id: int) -> str:
     return f"nextasks:{account_id}"
 
 
+#: What ``token_sealed`` holds for a connection made by a click (the shared module verbinden, V18): no key of its own;
+#: the access comes from the module's connection each time. The row keeps nextime's choices as for a key.
+BY_CONNECTION = {"connection": "nextasks"}
+
+
+def by_connection(row: NextasksConnection) -> bool:
+    return bool((vault.open_(row.token_sealed, _place(row.account_id)) or {}).get("connection"))
+
+
 def connection_of(db: Session, account_id: int) -> NextasksConnection | None:
-    return db.get(NextasksConnection, account_id)
+    row = db.get(NextasksConnection, account_id)
+    if row is None and verbinden_store.has_connection(db, account_id, "nextasks"):
+        # nextasks started the connection (its consent page, then the token here): nextime takes it up on first use.
+        try:
+            return connected_by_click(db, account_id)
+        except verbinden_store.NotConnected:
+            return None
+    if row is not None and by_connection(row) and not verbinden_store.has_connection(db, account_id, "nextasks"):
+        # The connection made by a click ended (here or in nextasks): its row goes with it, as after "Trennen".
+        db.delete(row)
+        db.query(TaskTick).filter(TaskTick.account_id == account_id).delete()
+        db.commit()
+        _drop_cache(account_id)
+        return None
+    return row
 
 
 def access_of(db: Session, row: NextasksConnection) -> Access:
     opened = vault.open_(row.token_sealed, _place(row.account_id)) or {}
+    if opened.get("connection"):
+        return Access(url=row.url, token=_connection_token(db, row.account_id), local=local_allowed(db))
     return Access(url=row.url, token=str(opened.get("token") or ""), local=local_allowed(db))
+
+
+def _connection_token(db: Session, account_id: int) -> str:
+    """A valid access of the connection made by a click; its refusals in the words of a key (EC-4, EC-5)."""
+    try:
+        _base, token = verbinden_store.access(db, account_id, "nextasks")
+    except verbinden_store.NotConnected as exc:
+        if exc.code == "unreachable":
+            raise _unreachable("the connection could not renew its access") from exc
+        raise NextasksError("nextasks_token_invalid", "The nextasks server does not take this key.", 409) from exc
+    return token
+
+
+def connected_by_click(db: Session, account_id: int) -> NextasksConnection:
+    """The shared module verbinden made a connection with nextasks (``on_connected``): nextime keeps its row for it as
+    for a key typed in by hand (same address: the choices of before stay), reads who it is there, and from then on
+    everything goes as before (V18)."""
+    base, token = verbinden_store.access(db, account_id, "nextasks")
+    clean = clean_url(base)
+    row = db.get(NextasksConnection, account_id)
+    if row is None:
+        row = NextasksConnection(account_id=account_id, url=clean)
+        db.add(row)
+    elif row.url != clean:
+        db.query(TaskTick).filter(TaskTick.account_id == account_id,
+                                  TaskTick.state.in_(("waiting", "sending"))).delete()
+    row.url = clean
+    row.token_sealed = vault.seal(BY_CONNECTION, _place(account_id))
+    row.problem = ""
+    row.checked_at = clock()
+    try:
+        with outgoing(account_id, connecting=True):
+            found = check(Access(url=clean, token=token, local=local_allowed(db)))
+        row.name, row.time_zone, row.level = found["name"], found["time_zone"], found["level"]
+    except NextasksError as exc:
+        row.problem = exc.code if exc.code in ("nextasks_token_invalid", "nextasks_too_old",
+                                               "nextasks_api_off") else ""
+    db.commit()
+    _drop_cache(account_id)
+    logger.info("nextasks connected by a click account_id=%s host=%s", account_id, urlsplit(clean).hostname)
+    return row
 
 
 def connect(db: Session, account_id: int, url: str, token: str) -> NextasksConnection:
@@ -403,6 +469,9 @@ def disconnect(db: Session, account_id: int) -> None:
     """The tasks go from nextime with the key; in nextasks everything stays (AC-8)."""
     row = connection_of(db, account_id)
     if row is not None:
+        if by_connection(row):
+            # A connection made by a click ends on both sides (the shared module verbinden, V3).
+            verbinden_store.disconnect(db, account_id, "nextasks")
         db.delete(row)
     db.query(TaskTick).filter(TaskTick.account_id == account_id).delete()
     db.commit()
@@ -416,7 +485,9 @@ def connection_out(db: Session, row: NextasksConnection | None) -> dict[str, Any
         return {"connected": False, "local_allowed": allowed}
     return {"connected": True, "url": row.url, "host": urlsplit(row.url).hostname or "", "name": row.name,
             "level": row.level, "hidden": bool(row.hidden), "problem": row.problem or None,
-            "checked_at": row.checked_at.isoformat() if row.checked_at else None, "local_allowed": allowed}
+            "checked_at": row.checked_at.isoformat() if row.checked_at else None, "local_allowed": allowed,
+            # Since the shared module verbinden: made by a click (no key of its own) or typed in by hand.
+            "by_connection": by_connection(row)}
 
 
 def _note_problem(db: Session, account_id: int, code: str) -> None:

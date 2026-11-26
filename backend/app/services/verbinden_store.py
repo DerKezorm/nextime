@@ -71,6 +71,10 @@ def _connection(row: AppConnection | None) -> Any:
     )
 
 
+def _by_click(sealed: str, place: str) -> bool:
+    return bool((vault.open_(sealed, place) or {}).get("connection"))
+
+
 def _shown(sealed: str, place: str) -> str:
     """The start of an old key, as the card names it (``ntk_AbCd``); empty when it does not open here."""
     opened = vault.open_(sealed, place) or {}
@@ -213,14 +217,15 @@ class Store:
         """nextime's connections typed in by hand (TIME-25 nextasks, nexpaper), as the cards show them."""
         found = []
         tasks = self.db.get(NextasksConnection, int(account_id))
-        if tasks is not None:
+        # A row nextime keeps for a connection made by a click is no connection of before (V18).
+        if tasks is not None and not _by_click(tasks.token_sealed, f"nextasks:{account_id}"):
             found.append(nexverbinden.Legacy(
                 partner="nextasks", partner_base=tasks.url,
                 shown=_shown(tasks.token_sealed, f"nextasks:{account_id}"),
                 ok_at=_aware(tasks.checked_at),
                 problem="refused" if tasks.problem == "nextasks_token_invalid" else None))
         paper = self.db.get(NexpaperConnection, int(account_id))
-        if paper is not None:
+        if paper is not None and not _by_click(paper.token_sealed, f"nexpaper:{account_id}"):
             found.append(nexverbinden.Legacy(
                 partner="nexpaper", partner_base=paper.url,
                 shown=_shown(paper.token_sealed, f"nexpaper:{account_id}"),
@@ -273,7 +278,18 @@ def old_key(store: Store, account_id: Any, partner: str) -> str | None:
     if row is None:
         return None
     opened = vault.open_(row.token_sealed, f"{place}:{account_id}") or {}
+    # A row for a connection made by a click holds no key (``connection``).
     return str(opened.get("token") or "") or None
+
+
+def connected(store: Store, account_id: Any, partner: str) -> None:
+    """``on_connected`` of the module: nextime's services take the new connection as they took a key (V18)."""
+    from . import nexpaper, nextasks
+
+    if partner == "nextasks":
+        nextasks.connected_by_click(store.db, int(account_id))
+    elif partner == "nexpaper":
+        nexpaper.connected_by_click(store.db, int(account_id))
 
 
 
@@ -307,3 +323,47 @@ async def run_forever(stop: Any) -> None:
 def end_all(db: Session, account_id: int) -> int:
     """The account is gone for good: every connection ends, the partners hear it (or later)."""
     return int(nexverbinden.end_all(Store(db), CONFIG, account_id, datetime.now(UTC)))
+
+
+# --- The guest's side: nextime's own services over a connection made by a click (V18) ---------------------------------
+
+
+class NotConnected(Exception):
+    """The connection is gone, refused or cannot reach the partner: ``code`` is the module's (``not_connected``,
+    ``unreachable``, ``refused``, ``resting``, ``partner_off``)."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def access(db: Session, account_id: int, partner: str) -> tuple[str, str]:
+    """The partner's address and a valid access token of the account's connection with it, renewed when it runs out,
+    so that nextime's services (``services/nextasks.py``, ``services/nexpaper.py``) talk to the partner as they did
+    with a key typed in by hand: the same routes, the same rules for the address.
+
+    TODO verbinden 0.1.2: the module has no public way to hand out the connection's access yet (MODULFEHLER V-8); this
+    uses its renewal ``connect._fresh_access`` until ``nexverbinden.access`` comes."""
+    from ..vendor.nexverbinden import connect as verbinden_connect
+
+    store = Store(db)
+    connection = store.connection(account_id, partner)
+    if connection is None:
+        raise NotConnected("not_connected")
+    try:
+        token = verbinden_connect._fresh_access(store, CONFIG, connection, datetime.now(UTC))
+    except nexverbinden.Refused as refusal:
+        raise NotConnected(refusal.code) from None
+    return connection.partner_base, token
+
+
+def has_connection(db: Session, account_id: int, partner: str) -> bool:
+    return Store(db).connection(account_id, partner) is not None
+
+
+def disconnect(db: Session, account_id: int, partner: str) -> None:
+    """"Trennen" from nextime's own card of a connection made by a click: both sides end (V3)."""
+    try:
+        nexverbinden.disconnect(Store(db), CONFIG, account_id, partner, datetime.now(UTC))
+    except nexverbinden.Refused:
+        pass

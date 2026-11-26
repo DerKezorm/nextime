@@ -37,7 +37,7 @@ from sqlalchemy.orm import Session
 
 from ..errors import detail
 from ..models import Account, NexpaperConnection, utcnow
-from . import nextasks, outbound, vault
+from . import nextasks, outbound, vault, verbinden_store
 
 logger = logging.getLogger("nextime.nexpaper")
 
@@ -282,13 +282,67 @@ def _place(account_id: int) -> str:
     return f"nexpaper:{account_id}"
 
 
+#: What ``token_sealed`` holds for a connection made by a click (the shared module verbinden, V18).
+BY_CONNECTION = {"connection": "nexpaper"}
+
+
+def by_connection(row: NexpaperConnection) -> bool:
+    return bool((vault.open_(row.token_sealed, _place(row.account_id)) or {}).get("connection"))
+
+
 def connection_of(db: Session, account_id: int) -> NexpaperConnection | None:
-    return db.get(NexpaperConnection, account_id)
+    row = db.get(NexpaperConnection, account_id)
+    if row is None and verbinden_store.has_connection(db, account_id, "nexpaper"):
+        # nexpaper started the connection (its consent page, then the token here): nextime takes it up on first use.
+        try:
+            return connected_by_click(db, account_id)
+        except verbinden_store.NotConnected:
+            return None
+    if row is not None and by_connection(row) and not verbinden_store.has_connection(db, account_id, "nexpaper"):
+        # The connection made by a click ended (here or in nexpaper): its row goes with it.
+        db.delete(row)
+        db.commit()
+        _drop_cache(account_id)
+        return None
+    return row
 
 
 def access_of(db: Session, row: NexpaperConnection) -> Access:
     opened = vault.open_(row.token_sealed, _place(row.account_id)) or {}
+    if opened.get("connection"):
+        try:
+            _base, token = verbinden_store.access(db, row.account_id, "nexpaper")
+        except verbinden_store.NotConnected as exc:
+            if exc.code == "unreachable":
+                raise _unreachable("the connection could not renew its access") from exc
+            raise NexpaperError("nexpaper_token_invalid", "The nexpaper server does not take this key.", 409) from exc
+        return Access(url=row.url, token=token, local=nextasks.local_allowed(db))
     return Access(url=row.url, token=str(opened.get("token") or ""), local=nextasks.local_allowed(db))
+
+
+def connected_by_click(db: Session, account_id: int) -> NexpaperConnection:
+    """The shared module verbinden made a connection with nexpaper: nextime keeps its row for it as for a key typed in
+    by hand and reads who it is there; from then on the deadlines come as before (V18)."""
+    base, token = verbinden_store.access(db, account_id, "nexpaper")
+    clean = clean_url(base)
+    row = db.get(NexpaperConnection, account_id)
+    if row is None:
+        row = NexpaperConnection(account_id=account_id, url=clean)
+        db.add(row)
+    row.url = clean
+    row.token_sealed = vault.seal(BY_CONNECTION, _place(account_id))
+    row.problem = ""
+    row.checked_at = clock()
+    try:
+        with outgoing(account_id, connecting=True):
+            found = check(Access(url=clean, token=token, local=nextasks.local_allowed(db)))
+        row.name, row.version = found["name"], found["version"]
+    except NexpaperError as exc:
+        row.problem = exc.code if exc.code == "nexpaper_token_invalid" else ""
+    db.commit()
+    _drop_cache(account_id)
+    logger.info("nexpaper connected by a click account_id=%s host=%s", account_id, urlsplit(clean).hostname)
+    return row
 
 
 def connect(db: Session, account_id: int, url: str, token: str) -> NexpaperConnection:
@@ -319,6 +373,9 @@ def disconnect(db: Session, account_id: int) -> None:
     """The deadlines go from nextime with the key; in nexpaper everything stays."""
     row = connection_of(db, account_id)
     if row is not None:
+        if by_connection(row):
+            # A connection made by a click ends on both sides (the shared module verbinden, V3).
+            verbinden_store.disconnect(db, account_id, "nexpaper")
         db.delete(row)
         db.commit()
     _drop_cache(account_id)
@@ -331,7 +388,9 @@ def connection_out(db: Session, row: NexpaperConnection | None) -> dict[str, Any
         return {"connected": False, "local_allowed": allowed}
     return {"connected": True, "url": row.url, "host": urlsplit(row.url).hostname or "", "name": row.name,
             "version": row.version, "hidden": bool(row.hidden), "problem": row.problem or None,
-            "checked_at": row.checked_at.isoformat() if row.checked_at else None, "local_allowed": allowed}
+            "checked_at": row.checked_at.isoformat() if row.checked_at else None, "local_allowed": allowed,
+            # Since the shared module verbinden: made by a click (no key of its own) or typed in by hand.
+            "by_connection": by_connection(row)}
 
 
 def set_hidden(db: Session, account_id: int, hidden: bool) -> None:

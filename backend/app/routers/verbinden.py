@@ -10,7 +10,7 @@ from fastapi import Request
 
 from ..db import SessionLocal
 from ..deps import require_account, require_operator
-from ..services.verbinden_store import CONFIG, Store, old_key
+from ..services.verbinden_store import CONFIG, Store, connected, old_key
 from ..vendor.nexverbinden import api as verbinden_api
 from . import devices
 
@@ -32,4 +32,5 @@ router = verbinden_api.router(
     operator=require_operator,
     address=_address,
     old_key=old_key,
+    on_connected=connected,
 )
