@@ -41,6 +41,9 @@ router = mcp_api.router(
     address=_address,
     sender=client_ip,
     prefix="/api/connections/mcp",
-    # nextime has no bell: a request that waits goes to the account's browsers (MCP decision 14).
-    notify=notify.mcp_waiting,
+    # nextime has no bell: a request that waits goes to the account's browsers (MCP decision 14). Looked up at each
+    # call, so that a test can listen.
+    notify=lambda event, request: notify.mcp_waiting(event, request),
+    # The summary of before (E53, mcp 1.1.1; question 4 of the modules pass).
+    summaries={"endpoint": "MCP (JSON-RPC over HTTP) with a key made for MCP in Authorization: Bearer"},
 )

@@ -40,6 +40,7 @@ class Adapter(StandardAdapter):
 
         self._main = TestClient(app, base_url="http://testserver", headers=TAB)
         self._main.__enter__()
+        self._listen()
         self._clients: list[Any] = []
         self._accounts = {
             "owner": make_account("owner", MEMBER),
@@ -72,9 +73,40 @@ class Adapter(StandardAdapter):
         assert all(name in Base.metadata.tables for name in NEW_TABLES)
 
     def stop(self) -> None:
+        from app.services import notify
+
         for client in self._clients:
             client.close()
         self._main.__exit__(None, None, None)
+        notify.mcp_waiting = self._told_before
+
+    def _listen(self) -> None:
+        """Every call of nextime's ``notify`` (``notify.mcp_waiting``, Web Push to the account's browsers), recorded
+        and passed on."""
+        from app.services import notify
+
+        self._told: list[tuple[str, Any]] = []
+        self._told_before = notify.mcp_waiting
+
+        def told(event: str, request: Any) -> None:
+            self._told.append((event, request.id))
+            self._told_before(event, request)
+
+        notify.mcp_waiting = told
+
+    def notified(self) -> list[tuple[str, Any]]:
+        return list(self._told)
+
+    def change_arguments(self, request_id: Any, arguments: str) -> None:
+        """Other arguments in a waiting request, written straight into ``mcp_requests``."""
+        from app.db import SessionLocal
+        from app.models import McpRequest
+
+        with SessionLocal() as db:
+            row = db.get(McpRequest, int(request_id))
+            assert row is not None
+            row.arguments = arguments
+            db.commit()
 
     def client(self, role: str) -> Any:
         from fastapi.testclient import TestClient
