@@ -114,3 +114,34 @@ def test_v18_deadlines_run_alike_over_the_old_and_the_click_connection(
     assert client.get("/api/nexpaper").json()["by_connection"] is (way == "click")
     with SessionLocal() as db:
         assert db.get(NexpaperConnection, account.id) is not None
+
+
+def test_v18_a_401_asks_once_more_with_a_renewed_access(client: TestClient, account: Account, fake: Fake,
+                                                         monkeypatch: pytest.MonkeyPatch) -> None:
+    """An access can end before its time: nextasks answers 401, nextime renews the access of the connection once
+    (``nexverbinden.access(force=True)``) and asks again; only a second 401 counts as refused."""
+    from app.vendor.nexverbinden import reach
+
+    renewed = "ntc_" + "n" * 40
+    trades: list[str] = []
+
+    def partner(request: httpx.Request) -> httpx.Response:
+        trades.append(request.url.path)
+        return httpx.Response(200, json={"access_token": renewed, "refresh_token": "ntcr_" + "m" * 40,
+                                         "expires_in": 3600, "token_type": "Bearer"})
+
+    monkeypatch.setattr(reach, "TRANSPORT", httpx.MockTransport(partner))
+    monkeypatch.setattr(reach, "RESOLVER", lambda host, port: [PUBLIC])
+    fake.add("own", "Eigene", "2026-11-26")
+    fake.token = renewed
+    click_connection(account.id, "nextasks", "https://tasks.example.com")
+    found = tasks(client, "2026-11-30")
+    assert [task["id"] for task in found["tasks"]] == ["own"] and found["problem"] is None
+    # Renewed at the partner (one renewal per request that met the 401; requests of one view may run side by side).
+    assert trades and set(trades) == {"/api/connect/token"}
+    before = len(trades)
+    # With a key typed in by hand nothing is renewed: a 401 is refused at once, as before.
+    fake.token = "ntk_" + "x" * 40
+    client.delete("/api/nextasks")
+    assert connect(client).status_code == 409
+    assert trades.count("/api/connect/token") == before

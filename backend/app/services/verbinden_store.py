@@ -340,15 +340,24 @@ class NotConnected(Exception):
         self.code = code
 
 
-def access(db: Session, account_id: int, partner: str) -> tuple[str, str]:
+def access(db: Session, account_id: int, partner: str, *, force: bool = False) -> tuple[str, str]:
     """The partner's address and a valid access token of the account's connection with it, renewed when it runs out
     (``nexverbinden.access``, V18), so that nextime's services (``services/nextasks.py``, ``services/nexpaper.py``)
     talk to the partner as they did with a key typed in by hand: the same routes, the same rules for the address."""
     try:
-        found = nexverbinden.access(Store(db), CONFIG, account_id, partner, datetime.now(UTC))
+        found = nexverbinden.access(Store(db), CONFIG, account_id, partner, datetime.now(UTC), force=force)
     except nexverbinden.Refused as refusal:
         raise NotConnected(refusal.code) from None
     return found.base, found.token
+
+
+def renewed(account_id: int, partner: str) -> str:
+    """A new access of the connection although the old one should still hold: the partner answered 401 once (an
+    access can end before its time). ``NotConnected`` when even that fails."""
+    from ..db import SessionLocal
+
+    with SessionLocal() as db:
+        return access(db, account_id, partner, force=True)[1]
 
 
 def reached(db: Session, account_id: int, partner: str, problem: str | None) -> None:

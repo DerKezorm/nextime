@@ -32,7 +32,7 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timedelta
 from datetime import time as dtime
 from typing import Any, NoReturn
@@ -243,6 +243,8 @@ class Access:
     url: str
     token: str
     local: bool
+    #: A connection made by a click (the shared module verbinden): its account, to renew the access once on a 401.
+    connection_of: int | None = None
 
 
 def _code(answer: httpx.Response) -> str:
@@ -260,7 +262,8 @@ def _refusal(answer: httpx.Response, method: str, path: str) -> NoReturn:
     logger.info("nextasks answered HTTP %s (%s) on %s %s", status, code or "-", method, path.split("/")[0])
     if status == 401 and code == "api_off":
         raise NextasksError("nextasks_api_off", "The operator of nextasks has switched API keys off.", 409)
-    if status == 401 and code == "token_invalid":
+    # ``account_resting``: the module's word for a connection made by a click whose account rests there (V18).
+    if status == 401 and code in ("token_invalid", "account_resting"):
         raise NextasksError("nextasks_token_invalid", "The nextasks server does not take this key.", 409, final=True)
     if status == 403 and code == "token_reads_only":
         raise NextasksError("nextasks_read_only", "This key of nextasks may only read.", 409, final=True)
@@ -284,7 +287,7 @@ def _allowed_with_switch(url: str) -> bool:
     return True
 
 
-def request(access: Access, method: str, path: str, *, params: dict[str, str] | None = None,
+def _request_once(access: Access, method: str, path: str, *, params: dict[str, str] | None = None,
             body: dict[str, Any] | None = None, seconds: float = SECONDS) -> Any:
     """``<address>/api/v1/<path>`` with the key; the JSON of the answer, every failure as ``NextasksError``."""
     url = clean_url(access.url) + "/api/v1/" + path
@@ -324,6 +327,21 @@ def request(access: Access, method: str, path: str, *, params: dict[str, str] | 
         return answer.json()
     except ValueError as exc:
         raise _unreachable("an answer that is no JSON") from exc
+
+
+def request(access: Access, *args: Any, **kwargs: Any) -> Any:
+    """One request to nextasks; over a connection made by a click a 401 asks once more with a renewed access (an access
+    can end before its time, V18), and only then counts as refused."""
+    try:
+        return _request_once(access, *args, **kwargs)
+    except NextasksError as exc:
+        if exc.code != "nextasks_token_invalid" or access.connection_of is None:
+            raise
+        try:
+            token = verbinden_store.renewed(access.connection_of, "nextasks")
+        except verbinden_store.NotConnected:
+            raise exc from None
+        return _request_once(replace(access, token=token), *args, **kwargs)
 
 
 #: What connecting may say besides "cannot be reached": a nextasks answered in its own words.
@@ -391,7 +409,8 @@ def connection_of(db: Session, account_id: int) -> NextasksConnection | None:
 def access_of(db: Session, row: NextasksConnection) -> Access:
     opened = vault.open_(row.token_sealed, _place(row.account_id)) or {}
     if opened.get("connection"):
-        return Access(url=row.url, token=_connection_token(db, row.account_id), local=local_allowed(db))
+        return Access(url=row.url, token=_connection_token(db, row.account_id), local=local_allowed(db),
+                      connection_of=row.account_id)
     return Access(url=row.url, token=str(opened.get("token") or ""), local=local_allowed(db))
 
 

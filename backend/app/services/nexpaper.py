@@ -25,7 +25,7 @@ import time
 from collections import defaultdict, deque
 from collections.abc import Iterator
 from contextlib import contextmanager
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime
 from typing import Any, NoReturn
 from urllib.parse import urlsplit
@@ -184,6 +184,8 @@ class Access:
     url: str
     token: str
     local: bool
+    #: A connection made by a click (the shared module verbinden): its account, to renew the access once on a 401.
+    connection_of: int | None = None
 
 
 def _code(answer: httpx.Response) -> str:
@@ -201,7 +203,8 @@ def _refusal(answer: httpx.Response, path: str) -> NoReturn:
     logger.info("nexpaper answered HTTP %s (%s) on GET %s", status, code or "-", path)
     if status == 401 and code == "api_off":
         raise NexpaperError("nexpaper_api_off", "The operator of nexpaper has not switched API keys on.", 409)
-    if status == 401 and code in ("key_invalid", "token_wrong_kind"):
+    # ``token_invalid`` and ``account_resting``: the module's words for a connection made by a click (V18).
+    if status == 401 and code in ("key_invalid", "token_wrong_kind", "token_invalid", "account_resting"):
         raise NexpaperError("nexpaper_token_invalid", "The nexpaper server does not take this key.", 409)
     if status == 403 and code == "key_scope":
         raise NexpaperError("nexpaper_key_scope", "This key of nexpaper is not one that reads.", 409)
@@ -212,7 +215,7 @@ def _refusal(answer: httpx.Response, path: str) -> NoReturn:
     raise _unreachable("an answer nextime cannot use (HTTP %s)", status)
 
 
-def request(access: Access, path: str, *, params: dict[str, str] | None = None) -> Any:
+def _request_once(access: Access, path: str, *, params: dict[str, str] | None = None) -> Any:
     """``GET <address>/api/v1/<path>`` with the key; the JSON of the answer, every failure as ``NexpaperError``."""
     url = clean_url(access.url) + "/api/v1/" + path
     try:
@@ -242,6 +245,21 @@ def request(access: Access, path: str, *, params: dict[str, str] | None = None) 
         return answer.json()
     except ValueError as exc:
         raise _unreachable("an answer that is no JSON") from exc
+
+
+def request(access: Access, *args: Any, **kwargs: Any) -> Any:
+    """One request to nexpaper; over a connection made by a click a 401 asks once more with a renewed access (an access
+    can end before its time, V18), and only then counts as refused."""
+    try:
+        return _request_once(access, *args, **kwargs)
+    except NexpaperError as exc:
+        if exc.code != "nexpaper_token_invalid" or access.connection_of is None:
+            raise
+        try:
+            token = verbinden_store.renewed(access.connection_of, "nexpaper")
+        except verbinden_store.NotConnected:
+            raise exc from None
+        return _request_once(replace(access, token=token), *args, **kwargs)
 
 
 #: What connecting may say besides "cannot be reached": a nexpaper answered in its own words.
@@ -316,7 +334,7 @@ def access_of(db: Session, row: NexpaperConnection) -> Access:
             if exc.code == "unreachable":
                 raise _unreachable("the connection could not renew its access") from exc
             raise NexpaperError("nexpaper_token_invalid", "The nexpaper server does not take this key.", 409) from exc
-        return Access(url=row.url, token=token, local=nextasks.local_allowed(db))
+        return Access(url=row.url, token=token, local=nextasks.local_allowed(db), connection_of=row.account_id)
     return Access(url=row.url, token=str(opened.get("token") or ""), local=nextasks.local_allowed(db))
 
 
