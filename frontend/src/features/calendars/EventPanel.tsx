@@ -16,6 +16,7 @@ import { ApiError } from '../../api/client'
 import { Avatar } from '../../components/Avatar'
 import { Dialog } from '../../components/Dialog'
 import { NoteButton } from '../nexnotes/NoteButton'
+import { AttendeesField, INVITING_SOURCES, type Invitee } from './AttendeesField'
 import { CheckLine } from '../../components/CheckLine'
 import { knownZones, zonePlace } from '../../lib/display'
 import { errorText, problemText } from '../../lib/errors'
@@ -66,6 +67,8 @@ type Form = {
   /** The place and, for a chosen suggestion, where it lies (TIME-8). */
   location: string
   point: Point | null
+  /** The people invited, in a calendar of iCloud or Google (TIME-18 AC-12). */
+  attendees: Invitee[]
   /** The member's own reminders (TIME-7); untouched, a new event follows the calendar's default. */
   reminders: number[]
   remindersTouched: boolean
@@ -108,6 +111,7 @@ function formOf(detail: EventDetail, shown: string): Form {
     rule: detail.rule,
     location: detail.location,
     point: detail.place ?? null,
+    attendees: (detail.attendees ?? []).filter((one) => !one.self && !one.organizer).map((one) => ({ email: one.address, name: one.name })),
     reminders: detail.reminders?.minutes ?? [],
     remindersTouched: false,
     allDayTouched: true,
@@ -213,6 +217,7 @@ function EventPanel({ target }: { target: PanelTarget }) {
       rule: target.rule ?? null,
       location: '',
       point: null,
+      attendees: [],
       reminders: [],
       remindersTouched: false,
       // A time dragged or typed is the member's (TIME-4 defaults: what he gives wins); a click without one is not.
@@ -324,6 +329,10 @@ function EventPanel({ target }: { target: PanelTarget }) {
   })
 
   const calendars = list?.calendars ?? []
+  const chosenSource = calendars.find((entry) => entry.id === form?.calendarId)?.source ?? ''
+  // Someone else's invitation is not changed here (only the one who invites does).
+  const othersInvitation = Boolean(detail?.attendees?.some((one) => one.organizer && !one.self))
+  const inviting = INVITING_SOURCES.includes(chosenSource) && !othersInvitation
   const calendar = calendars.find((entry) => entry.id === (form?.calendarId ?? detail?.calendar_id)) ?? null
   const places = list?.places ?? true
   /** A new event shows its calendar's default until the member chooses (TIME-7 AC-3). */
@@ -407,6 +416,7 @@ function EventPanel({ target }: { target: PanelTarget }) {
       fields.location = value.location.trim()
       fields.geo = value.point
     }
+    if (JSON.stringify(value.attendees) !== JSON.stringify(before.attendees)) fields.attendees = value.attendees
     return fields
   }
 
@@ -432,6 +442,7 @@ function EventPanel({ target }: { target: PanelTarget }) {
             rule: form.rule,
             location: form.location.trim(),
             geo: form.location.trim() ? form.point : null,
+            ...(form.attendees.length ? { attendees: form.attendees } : {}),
             ...(form.remindersTouched || form.remindersFromDefaults ? { reminders: form.reminders } : {}),
             ...timesOf(form),
           },
@@ -777,6 +788,8 @@ function EventPanel({ target }: { target: PanelTarget }) {
                 onChange={(reminders) => set({ reminders, remindersTouched: true, remindersFromDefaults: false })}
                 note={reminderNote}
               />
+              {/* Attendees, only where the source sends the invitations (TIME-18 AC-12, V30). */}
+              {inviting && <AttendeesField value={form.attendees} onChange={(attendees) => set({ attendees })} disabled={busy || offline} />}
               <div className="space-y-2">
                 <PlaceField value={form.location} onChange={(location, point) => set({ location, point })} enabled={places} label={t('panel.location')} problem={problems.location} />
                 <PlaceView location={form.location} point={form.point} enabled={places} lookup={!!original && form.location === original.location} withText={false} />

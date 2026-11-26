@@ -303,7 +303,10 @@
     "webpush_not_here": "Dieser Browser bekommt noch keine Mitteilungen von nextime. Erst „Mitteilungen einschalten“.",
     "webpush_failed": "Der Mitteilungsdienst des Browsers hat die Probemeldung nicht angenommen. Gleich noch einmal versuchen.",
     "nexnotes_not_connected": "nextime ist nicht mit nexnotes verbunden.",
-    "nexnotes_refused": "Die Notiz ist nicht bei nexnotes angekommen."
+    "nexnotes_refused": "Die Notiz ist nicht bei nexnotes angekommen.",
+    "attendee_invalid": "Das ist keine Mailadresse.",
+    "attendees_not_here": "Nur Termine in Kalendern von iCloud und Google laden Leute ein.",
+    "attendees_not_yours": "Wer eingeladen ist, ändert nur, wer einlädt."
   },
   "me": {
     "emailDeclined": "nextime fragt nicht mehr nach dieser Adresse.",
@@ -970,7 +973,12 @@
     "inCalendars_one": "„{{title}}“ steht in {{count}} Kalender.",
     "inCalendars_other": "„{{title}}“ steht in {{count}} Kalendern.",
     "deleted": "„{{title}}“ liegt im Papierkorb.",
-    "changedVia": "zuletzt geändert über Schlüssel „{{key}}“"
+    "changedVia": "zuletzt geändert über Schlüssel „{{key}}“",
+    "attendees": "Teilnehmer",
+    "attendeesHint": "Die Einladung verschickt der Kalender der Quelle (iCloud oder Google).",
+    "attendeeAdd": "Mailadresse oder Name",
+    "attendeeRemove": "{{name}} entfernen",
+    "attendeeInvalid": "Das ist keine Mailadresse."
   },
   "conflict": {
     "text": "{{name}} hat diesen Termin eben auch geändert. Ihre Fassung gilt jetzt, deine stand kurz davor.",

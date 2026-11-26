@@ -303,7 +303,10 @@
     "webpush_not_here": "This browser gets no notifications from nextime yet. Switch them on first.",
     "webpush_failed": "The browser's push service did not take the probe. Try again in a moment.",
     "nexnotes_not_connected": "nextime is not connected with nexnotes.",
-    "nexnotes_refused": "The note did not reach nexnotes."
+    "nexnotes_refused": "The note did not reach nexnotes.",
+    "attendee_invalid": "This is not a mail address.",
+    "attendees_not_here": "Only events of iCloud and Google calendars invite people.",
+    "attendees_not_yours": "Only the one who invites changes who is invited."
   },
   "me": {
     "emailDeclined": "nextime no longer asks about this address.",
@@ -970,7 +973,12 @@
     "inCalendars_one": "“{{title}}” is in {{count}} calendar.",
     "inCalendars_other": "“{{title}}” is in {{count}} calendars.",
     "deleted": "“{{title}}” is in the trash.",
-    "changedVia": "last changed via key “{{key}}”"
+    "changedVia": "last changed via key “{{key}}”",
+    "attendees": "Attendees",
+    "attendeesHint": "The calendar of the source (iCloud or Google) sends the invitation.",
+    "attendeeAdd": "Mail address or name",
+    "attendeeRemove": "Remove {{name}}",
+    "attendeeInvalid": "This is not a mail address."
   },
   "conflict": {
     "text": "{{name}} changed this event a moment ago too. That version is valid now; yours came just before.",
