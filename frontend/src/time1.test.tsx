@@ -197,6 +197,25 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(await shown('bad', INTERNET_POINT.off, { variable: 'NEXTIME_INTERNET_PROBE_URL' })).toContain('NEXTIME_INTERNET_PROBE_URL ist leer')
   })
 
+  it('TIME-3 AC-5 E51 Server › Allgemein ends with the card "Sprachen" of the module sprachen, over /api/locales', async () => {
+    const base = server()
+    const languages = [
+      { code: 'de', name: 'Deutsch', keys: 0, built_in: true, own: false },
+      { code: 'en', name: 'English', keys: 0, built_in: true, own: false },
+      { code: 'nl', name: 'Nederlands', keys: 12, built_in: false, own: true },
+    ]
+    serve((method, path, body) => (path === '/api/locales' && method === 'GET' ? ok(languages) : base(method, path, body)))
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
+    await vi.waitFor(() => expect(box.querySelector('[data-testid="language-nl"]')).not.toBeNull())
+    const cards = [...box.querySelectorAll('[data-testid="server-general"] > [data-card]')].map((card) => card.getAttribute('data-card'))
+    expect(cards).toEqual(['limits', 'features', 'interfaces', 'languages'])
+    const card = box.querySelector<HTMLElement>('[data-card="languages"]')!
+    expect(card.textContent).toContain('Deutsch und Englisch sind eingebaut.')
+    expect(box.querySelector('[data-testid="language-built-in-de"]')!.textContent).toContain('Deutsch')
+    expect(box.querySelector('[data-testid="language-nl"]')!.textContent).toContain('Nederlands (nl)')
+    expect(box.querySelector<HTMLElement>('[data-testid="language-template"]')!.dataset.icon).toBe('Download')
+  })
+
   it('TIME-1 AC-4 EC-11 a wrong limit is said at the field, nothing is sent, the old value stays', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')

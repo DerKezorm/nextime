@@ -34,4 +34,18 @@ describe('the language choice', () => {
     expect(options.map((option) => option.name)).toEqual(['Afrikaans', 'Deutsch', 'English', 'Español', 'Français'])
     expect(options.filter((option) => option.added).map((option) => option.code)).toEqual(['af', 'es', 'fr'])
   })
+
+  it('reads the list of the module sprachen (built in first, marked): an overlay for de is no second Deutsch', async () => {
+    serve([
+      { code: 'de', name: 'Deutsch', keys: 2, built_in: true, own: true },
+      { code: 'en', name: 'English', keys: 0, built_in: true, own: false },
+      { code: 'nl', name: 'Nederlands', keys: 12, built_in: false, own: true },
+    ])
+    const options = await languageOptions()
+    expect(options.map((option) => [option.code, option.added])).toEqual([
+      ['de', false],
+      ['en', false],
+      ['nl', true],
+    ])
+  })
 })

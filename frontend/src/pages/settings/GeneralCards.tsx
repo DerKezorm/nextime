@@ -1,18 +1,15 @@
 /**
  * Server › General (plan "Einstellungen", "Allgemein"), the cards in their order: "Grenzen" (the largest attachment and
  * how long the trash keeps things, each with its own save, TIME-1 AC-4, EC-11), "Funktionen für alle Konten" (the
- * switches, AC-5), "Schnittstellen" (the module schluessel's, placed by `SettingsAreas`), "Sprachen" (built in, the
- * operator's own as chips, the template, upload by code). Built only from the ui kit. The cards "Zustand", the hint
+ * switches, AC-5), "Schnittstellen" (the module schluessel's, placed by `SettingsAreas`); "Sprachen" is the module
+ * sprachen's (`LanguagesArea`). Built only from the ui kit. The cards "Zustand", the hint
  * without HTTPS, the hint about the proxy and the version line are gone (plan: "Bereit fürs Internet?" under
  * Sign-in and "Über nextime" say it now).
  */
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-import { api, type ExtraLocale } from '../../api/client'
-import { byName, forgetAddedLanguages, templateFile } from '../../i18n'
-import { Button, Buttons, Card, CheckboxRow, Chip, Field } from '../../vendor/nexui'
-import { saveAsFile, useAction } from './actions'
+import { Button, Card, CheckboxRow, Field } from '../../vendor/nexui'
 import { Outcome } from './Outcome'
 import type { Server } from './ServerCards'
 
@@ -138,67 +135,6 @@ export function FeaturesCard({ server }: { server: Server }) {
         <CheckboxRow label={t('server.addresses')} hint={t('server.addressesHint')} checked={s.address_suggestions} onChange={(address_suggestions) => void server.save({ address_suggestions })} testId="feature-addresses" />
       </div>
       <Outcome problem={server.problem} />
-    </Card>
-  )
-}
-
-/** The operator's own languages (TIME-3 AC-5): files in the data folder, or uploaded here. */
-export function LanguagesCard() {
-  const { t } = useTranslation()
-  const [list, setList] = useState<ExtraLocale[]>([])
-  const [code, setCode] = useState('')
-  const action = useAction()
-  const load = useCallback(() => {
-    api<ExtraLocale[]>('/api/locales').then((rows) => setList(rows.sort(byName)), () => undefined)
-  }, [])
-  useEffect(load, [load])
-  const upload = (chosen: File) =>
-    void action.run(async () => {
-      await api(`/api/locales/${encodeURIComponent(code)}`, { method: 'PUT', raw: chosen })
-      forgetAddedLanguages()
-      load()
-    }, t('server.languageAdded'))
-  return (
-    <Card id="languages" icon="Globe" title={t('server.languages')} subtitle={t('server.languagesHint')}>
-      <div className="flex flex-wrap gap-2" data-testid="languages-list">
-        <Chip>{`Deutsch · ${t('server.builtIn')}`}</Chip>
-        <Chip>{`English · ${t('server.builtIn')}`}</Chip>
-        {list.map((entry) => (
-          <Chip
-            key={entry.code}
-            name={entry.name}
-            disabled={action.busy}
-            testId={`language-${entry.code}`}
-            onRemove={() =>
-              void action.run(async () => {
-                await api(`/api/locales/${entry.code}`, { method: 'DELETE' })
-                forgetAddedLanguages()
-                load()
-              })
-            }
-          >
-            {`${entry.name} (${entry.code}) · ${t('server.texts', { count: entry.keys })}`}
-          </Chip>
-        ))}
-      </div>
-      <Buttons>
-        <Button kind="secondary" icon="Download" onClick={() => saveAsFile('nextime-language-template.json', templateFile())} testId="language-template">
-          {t('server.template')}
-        </Button>
-      </Buttons>
-      <Field
-        label={t('server.languageCode')}
-        value={code}
-        onChange={(event) => setCode(event.target.value.trim())}
-        placeholder="nl"
-        data-testid="language-code"
-        action={
-          <Button kind="secondary" icon="Upload" disabled={!code} busy={action.busy} accept="application/json,.json" onFile={upload} testId="language-upload">
-            {t('server.upload')}
-          </Button>
-        }
-      />
-      <Outcome problem={action.problem} done={action.done} />
     </Card>
   )
 }

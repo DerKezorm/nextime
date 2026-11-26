@@ -409,7 +409,6 @@ export type BackupBrief = {
 /** The box "State" and the version (TIME-1 AC-7, AC-9). */
 export type ServerState = { version: string; newer: string | null; https: boolean; internet: boolean; zone: string; update_check?: boolean }
 
-export type ExtraLocale = { code: string; name: string; keys: number }
 
 /** An entry of the provider list as the operator sees it: never the secret, only whether one is stored. */
 export type OidcProvider = {
@@ -643,10 +642,6 @@ export const backupsApi = {
     api<Blob>(`/api/backups/${encodeURIComponent(name)}/download`, { method: 'POST', body: { password }, blob: true }),
 }
 
-export const localesApi = {
-  list: () => api<ExtraLocale[]>('/api/locales'),
-  read: (code: string) => api<Record<string, unknown>>(`/api/locales/${encodeURIComponent(code)}`),
-}
 
 /** The operator's sign-in providers (Settings, Server, Sign-in) and the authentik button. */
 export const oidcAdminApi = {

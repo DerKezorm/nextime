@@ -22,7 +22,8 @@ import { AccountTab } from './AccountTab'
 import { AppearanceArea } from './AppearanceArea'
 import type { AreaSlug } from './areas'
 import { CalendarsArea } from './CalendarsArea'
-import { FeaturesCard, LanguagesCard, LimitsCard } from './GeneralCards'
+import { FeaturesCard, LimitsCard } from './GeneralCards'
+import { LanguagesArea } from './LanguagesArea'
 import { GoogleArea } from './GoogleArea'
 import { LogCard } from './LogCard'
 import { useServerSettings } from './ServerCards'
@@ -86,7 +87,7 @@ function GeneralArea() {
       <LimitsCard server={server} />
       <FeaturesCard server={server} />
       <InterfacesCard request={keyRequest} docsHref="/api/v1/docs" />
-      <LanguagesCard />
+      <LanguagesArea />
     </div>
   )
 }
