@@ -416,14 +416,16 @@ describe('"Über nextime" in the settings', () => {
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/about/updates')?.body).toEqual({ update_check: false })
   })
 
-  it('TIME-2 AC-7 a member reaches "Über nextime" too, sees the answer and cannot ask', async () => {
+  it('TIME-2 AC-7 a member reaches "Über nextime" too and sees only the own version, no update card (updates U15)', async () => {
     serve(server(me()))
     await open('/settings/about')
     expect(where()).toBe('/settings/about')
     expect(current()).toEqual(['settings-nav-about'])
     expect($('about-version')!.textContent).toBe('0.1.0')
-    expect($('about-facts')!.textContent).toContain('Version 0.2.0 ist erschienen')
+    expect($('about-facts')!.textContent).not.toContain('ist erschienen')
+    expect(box.querySelector('[data-card="about-updates"]')).toBeNull()
     expect($('about-check')).toBeNull()
-    expect(box.querySelector('[data-card="about-updates"] input[type="checkbox"]')).toBeNull()
+    // A member's page never asks for the state of the check.
+    expect(calls.some((call) => call.path === '/api/about/updates')).toBe(false)
   })
 })

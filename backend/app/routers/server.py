@@ -10,9 +10,8 @@ from fastapi import APIRouter, Request
 
 from .. import __version__
 from ..config import server_zone
-from ..db import SessionLocal
 from ..deps import OperatorAccount
-from ..services import internet, settings_service, updates
+from ..services import internet, updates
 
 router = APIRouter(prefix="/api/server", tags=["server"])
 
@@ -25,9 +24,9 @@ def https_active(request: Request) -> bool:
 
 @router.get("/state", summary="Version, a newer version, HTTPS and internet")
 async def state(request: Request, _operator: OperatorAccount) -> dict[str, Any]:
-    with SessionLocal() as db:
-        check_on = bool(settings_service.get(db, "update_check"))
-    # The switch "Look for new versions" (TIME-1 AC-11): off, nothing is asked and no hint is shown.
+    # A thin wrapper over the shared module updates (U16): the switch "Look for new versions" (TIME-1 AC-11) as the
+    # module reads it; off, nothing is asked and no hint is shown. Operator only, as before.
+    check_on = await anyio.to_thread.run_sync(updates.check.switch_on)
     known = await anyio.to_thread.run_sync(lambda: updates.state(on=check_on))
     online = await anyio.to_thread.run_sync(internet.reachable)
     return {

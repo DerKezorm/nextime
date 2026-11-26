@@ -46,7 +46,7 @@ from ..security import (
     sessions_ended,
     start_session,
 )
-from ..services import accounts, display, kontenpost, locales, mailer, mounts, settings_service, storage, totp
+from ..services import accounts, display, kontenpost, locales, mailer, mounts, settings_service, storage, totp, updates
 from ..services.accounts import AccountError
 from ..services.konten_store import KontenStore
 from ..services.oidc_store import SqlStore, offered_address
@@ -79,6 +79,9 @@ class SetupIn(BaseModel):
     code: str = Field(default="", max_length=200)
     #: The username (since the shared account module); left out, a suggestion from the display name.
     name: str | None = Field(default=None, max_length=64)
+    #: The box "Nach neuen Versionen sehen" (the shared module updates, U1), ticked on the page; stored only while
+    #: nothing is stored. Left out (an older page, a script): nothing is stored, the check stays on as before.
+    update_check: bool | None = None
 
 
 class LoginIn(BaseModel):
@@ -360,6 +363,8 @@ def setup(payload: SetupIn, request: Request, response: Response, db: DbSession)
         raise fail(exc) from exc
     account = db.get(AccountRow, int(done.account.id))
     assert account is not None
+    if payload.update_check is not None:
+        updates.check.at_setup(payload.update_check)
     return sign_in(db, request, response, account)
 
 

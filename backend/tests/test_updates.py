@@ -30,7 +30,7 @@ def answers(monkeypatch: pytest.MonkeyPatch, tag: str | None) -> list[int]:
         asked.append(1)
         return tag
 
-    monkeypatch.setattr(updates, "_ask", ask)
+    monkeypatch.setattr(updates.check, "ask", ask)
     return asked
 
 
@@ -58,17 +58,26 @@ def test_the_about_page_names_version_licence_and_where_it_comes_from(client: Te
     assert about["license"] == "AGPL-3.0"
     assert about["repo_url"] == "https://github.com/DerKezorm/nextime"
     assert about["releases_url"] == "https://github.com/DerKezorm/nextime/releases"
-    assert about["project_url"] == "https://github.com/DerKezorm/nextime"
+    # No project page while the project pages are switched off: the about page leaves the row out (updates U18).
+    assert about["project_url"] == ""
 
 
-def test_every_account_sees_the_answer_and_only_the_operator_switches_or_asks(
+def test_only_the_operator_sees_the_answer_switches_or_asks(
     client: TestClient, account: Account, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    answers(monkeypatch, "v99.0.0")
-    anna = new_client(make_account("anna"))
-    seen = anna.get("/api/about/updates").json()
+    """The shared module updates (U2, U15, U21): the operator sees the answer; a member gets the same form with every
+    field empty and ``hidden``, and its look never asks."""
+    asked = answers(monkeypatch, "v99.0.0")
+    seen = client.get("/api/about/updates").json()
     assert (seen["update_check"], seen["checked"], seen["latest"], seen["newer"]) == (True, True, "v99.0.0", True)
     assert seen["release_url"] == "https://github.com/DerKezorm/nextime/releases/tag/v99.0.0"
+    assert seen["hidden"] is False
+    anna = new_client(make_account("anna"))
+    updates.forget()
+    hers = anna.get("/api/about/updates").json()
+    assert hers == {"update_check": False, "checked": False, "latest": None, "newer": False, "checked_at": None,
+                    "release_url": None, "hidden": True}
+    assert len(asked) == 1
     assert anna.post("/api/about/updates/check").status_code == 403
     assert anna.put("/api/about/updates", json={"update_check": False}).status_code == 403
     # Without an account: nothing.
@@ -85,9 +94,9 @@ def test_on_by_default_asked_once_a_day_and_again_when_a_day_is_over(
     client.get("/api/about/updates")
     assert len(asked) == 1
     # A day later the next look asks again.
-    old = updates._known
+    old = updates.check._known
     assert old is not None and old.checked_at is not None
-    updates._known = updates.State(
+    updates.check._known = updates.State(
         current=old.current, latest=old.latest, checked_at=old.checked_at - timedelta(hours=25)
     )
     client.get("/api/about/updates")
@@ -193,3 +202,20 @@ def test_the_question_goes_to_the_releases_of_nextime_and_carries_nothing_else(
     assert [str(request.url) for request in seen] == ["https://api.github.com/repos/DerKezorm/nextime/releases/latest"]
     assert seen[0].method == "GET" and seen[0].content == b""
     assert "cookie" not in seen[0].headers and "authorization" not in seen[0].headers
+
+
+def test_a_setup_without_the_box_stores_nothing_and_the_check_stays_on(client: TestClient) -> None:
+    """updates U1, U9: an older page or a script sets up without ``update_check``; nothing is stored, the check stays
+    on as before. With the box unticked the answer is stored."""
+    from app.db import SessionLocal
+    from app.models import Setting
+
+    from .conftest import SETUP_CODE
+
+    made = client.post("/api/setup", json={"code": SETUP_CODE, "display_name": "Boss",
+                                           "password": "correct horse battery staple", "language": "de"})
+    assert made.status_code == 200, made.text
+    with SessionLocal() as db:
+        assert db.get(Setting, "update_check") is None
+    assert updates.check.switch_on() is True
+    assert client.get("/api/about/updates").json()["update_check"] is True

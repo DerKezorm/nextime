@@ -1074,7 +1074,7 @@
     "subtitle": "Kalender für Familien und kleine Gruppen, selbst gehostet.",
     "version": "Version",
     "updates": {
-      "whatGoesOut": "Hinaus geht dafür nur die Frage: eine Anfrage an api.github.com nach der neuesten Veröffentlichung von nextime, ohne Namen, Kalender oder Einstellungen."
+      "internetCheck": "die Prüfung der Internetverbindung"
     }
   },
   "sources": {

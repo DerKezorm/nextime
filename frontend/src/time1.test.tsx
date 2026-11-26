@@ -118,7 +118,34 @@ describe('TIME-1 the setup', () => {
     type(fields[5], 'twelve chars')
     await click(byText('Einrichten', box))
     expect(sent).toMatchObject({ code: 'AB12-CD34-EF56', display_name: 'Robin', name: 'robin', email: 'robin@example.com', password: 'twelve chars' })
+    // "Nach neuen Versionen sehen", ticked by default (the shared module updates, U1).
+    expect(sent).toMatchObject({ update_check: true })
     expect(box.querySelector('[data-testid="view-today"]')).not.toBeNull()
+  })
+
+  it('TIME-1 AC-11 the setup asks once whether to look for new versions; unticked, it says so (updates U1)', async () => {
+    let sent: Record<string, unknown> | null = null
+    serve((method, path, body) => {
+      if (path === '/api/setup' && method === 'POST') {
+        sent = body as Record<string, unknown>
+        return ok(OPERATOR)
+      }
+      if (path === '/api/setup') return ok({ ...SETUP, https: true, needs_setup: !sent, signed_in: !!sent })
+      if (path === '/api/auth/me') return ok(OPERATOR)
+      return undefined
+    })
+    await render(<AuthProvider><App /></AuthProvider>, '/setup')
+    const tick = box.querySelector<HTMLInputElement>('input[data-testid="setup-update-check"]')!
+    expect(tick.parentElement!.textContent).toContain('Nach neuen Versionen sehen')
+    expect(tick.checked).toBe(true)
+    await click(tick)
+    const fields = [...box.querySelectorAll('input')]
+    type(fields[0], 'AB12-CD34-EF56')
+    type(fields[1], 'Robin')
+    type(fields[4], 'twelve chars')
+    type(fields[5], 'twelve chars')
+    await click(byText('Einrichten', box))
+    expect(sent).toMatchObject({ update_check: false })
   })
 })
 

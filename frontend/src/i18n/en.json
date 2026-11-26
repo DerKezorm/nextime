@@ -1074,7 +1074,7 @@
     "subtitle": "Calendars for families and small groups, self-hosted.",
     "version": "Version",
     "updates": {
-      "whatGoesOut": "Only the question goes out for this: a request to api.github.com for the newest release of nextime, with no names, calendars or settings."
+      "internetCheck": "the check of the internet connection"
     }
   },
   "sources": {

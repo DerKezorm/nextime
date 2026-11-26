@@ -150,7 +150,7 @@ def test_time1_ac7_a_newer_version_is_named_beside_the_running_one(
 ) -> None:
     from app.services import updates
 
-    monkeypatch.setattr(updates, "_ask", lambda: "v9.9.9")
+    monkeypatch.setattr(updates.check, "ask", lambda: "v9.9.9")
     internet.probe_override = lambda: True
     state = client.get("/api/server/state").json()
     assert state["version"] == __version__ and state["newer"] == "v9.9.9"
@@ -634,7 +634,7 @@ def test_time1_ac11_looking_for_new_versions_is_on_from_the_start_and_asks_githu
 
     assert updates.API_URL == "https://api.github.com/repos/DerKezorm/nextime/releases/latest"
     assert client.get("/api/settings").json()["update_check"] is True
-    monkeypatch.setattr(updates, "_ask", lambda: "v9.9.9")
+    monkeypatch.setattr(updates.check, "ask", lambda: "v9.9.9")
     internet.probe_override = lambda: True
     state = client.get("/api/server/state").json()
     assert state["update_check"] is True and state["newer"] == "v9.9.9"
@@ -646,7 +646,7 @@ def test_time1_ac11_switched_off_nothing_is_asked_and_no_hint_shows(
     from app.services import updates
 
     asked: list[int] = []
-    monkeypatch.setattr(updates, "_ask", lambda: asked.append(1) or "v9.9.9")
+    monkeypatch.setattr(updates.check, "ask", lambda: asked.append(1) or "v9.9.9")
     internet.probe_override = lambda: True
     assert client.put("/api/settings", json={"update_check": False}).json()["update_check"] is False
     state = client.get("/api/server/state").json()
