@@ -135,6 +135,31 @@ export function NextasksSection({ bare = false }: { bare?: boolean } = {}) {
   )
 }
 
+/** What nextime keeps of a connection made by a click with nextasks, open in the module's card (plan V23): what went
+ * wrong last, whether the key only reads, and the choice of areas and lists, as for a key typed in by hand. Nothing
+ * while not connected. */
+export function NextasksChoices() {
+  const { t } = useTranslation()
+  const status = useNextasks()
+  const offline = useOffline()
+  if (!status?.connected) return null
+  return (
+    <div className="flex flex-col gap-4" data-testid="nextasks-choices">
+      {status.problem && (
+        <div role="alert" data-testid="nextasks-problem">
+          <Notice tone="warn">{errorText(status.problem, {})}</Notice>
+        </div>
+      )}
+      {!status.problem && status.level === 'read' && (
+        <p className="m-0 text-sm text-[var(--nexui-text-muted)]" data-testid="nextasks-read-only">
+          {t('nextasks.section.readOnly')}
+        </p>
+      )}
+      <AreaChoice disabled={offline} />
+    </div>
+  )
+}
+
 function ConnectForm({ url: before, localAllowed, changing, disabled, onCancel, onDone }: { url: string; localAllowed: boolean; changing: boolean; disabled: boolean; onCancel?: () => void; onDone: () => void }) {
   const { t } = useTranslation()
   const [url, setUrl] = useState(before)

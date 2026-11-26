@@ -18,8 +18,8 @@ import { ConnectionsArea as AppConnections } from '../../vendor/nexverbinden'
 import { ApiKeysCard, ToolsCard } from '../../vendor/nexschluessel'
 import type { KeyRequest } from '../../vendor/nexschluessel/schluessel'
 import { AppDevicesSection } from '../app/AppDevicesSection'
-import { NexpaperSection } from '../nexpaper/NexpaperSection'
-import { NextasksSection } from '../nextasks/NextasksSection'
+import { NexpaperChoices, NexpaperSection } from '../nexpaper/NexpaperSection'
+import { NextasksChoices, NextasksSection } from '../nextasks/NextasksSection'
 import { mcpRequest, useMcpWords } from '../mcp/McpPages'
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -36,6 +36,21 @@ export function useKeyWords() {
     areasAll: t('keys.dialog.calendarsAll'),
     areasSome: t('keys.dialog.calendarsSome'),
   }
+}
+
+/** The partners nextime has a use for (plan V20: no card without effect): nextasks and nexpaper as their guest,
+ * nexmail and nexdiary as their host. The others of the catalog come with their use. */
+// eslint-disable-next-line react-refresh/only-export-components
+export const PARTNERS_IN_USE = ['nextasks', 'nexpaper', 'nexmail', 'nexdiary']
+
+/** The module's calls for the cards, with the list of partners cut to those in use.
+ * TODO verbinden 0.1.2: the module's `ConnectionsArea` takes no list of partners yet (V20). */
+const connectionsRequest: typeof keyRequest = async <T,>(path: string, init: Parameters<typeof keyRequest>[1] = {}) => {
+  const found = await keyRequest<T>(path, init)
+  if (path.endsWith('/api/connect/partners') && Array.isArray(found)) {
+    return found.filter((view: { partner?: string }) => PARTNERS_IN_USE.includes(String(view.partner))) as T
+  }
+  return found
 }
 
 /** The marks of the other nex apps (`public/apps/`), on their cards. */
@@ -56,9 +71,11 @@ export function ConnectionsArea() {
       <InstallCard />
       <AppConnections
         app="nextime"
-        request={keyRequest}
+        request={connectionsRequest}
         logos={PARTNER_LOGOS}
         manual={{ nextasks: <NextasksSection bare />, nexpaper: <NexpaperSection bare /> }}
+        // nextime's choices of a connection made by a click stand open in the card (V23).
+        extra={(view) => (view.partner === 'nextasks' ? <NextasksChoices /> : view.partner === 'nexpaper' ? <NexpaperChoices /> : null)}
         areaWord={t('keys.dialog.calendars')}
         language={i18n.language}
         when={when}

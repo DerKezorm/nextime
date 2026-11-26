@@ -123,6 +123,18 @@ export function NexpaperSection({ bare = false }: { bare?: boolean } = {}) {
   )
 }
 
+/** What nextime knows of a connection made by a click with nexpaper, open in the module's card (plan V23): what went
+ * wrong last. Nothing while not connected or all is well. */
+export function NexpaperChoices() {
+  const status = useNexpaper()
+  if (!status?.connected || !status.problem) return null
+  return (
+    <div role="alert" data-testid="nexpaper-problem">
+      <Notice tone="warn">{errorText(status.problem, {})}</Notice>
+    </div>
+  )
+}
+
 function ConnectForm({ url: before, localAllowed, changing, disabled, onCancel, onDone }: { url: string; localAllowed: boolean; changing: boolean; disabled: boolean; onCancel?: () => void; onDone: () => void }) {
   const { t } = useTranslation()
   const [url, setUrl] = useState(before)
