@@ -74,7 +74,7 @@ export function AppDevicesSection() {
         </Rows>
       )}
       <div>
-        <Button kind="primary" icon="Plus" onClick={() => setConnecting(true)} testId="app-devices-connect">
+        <Button kind="primary" icon="Smartphone" onClick={() => setConnecting(true)} testId="app-devices-connect">
           {t('appDevices.section.connect')}
         </Button>
       </div>

@@ -368,6 +368,8 @@ class SqlStore:
             email=address,
             email_confirmed=True,
             email_proven=bool(address and invitation is not None and invitation.mailed),
+            # Since E45: a new account through a provider starts with "system" as every new one.
+            theme="system",
             whats_new_seen=__version__,
         )
         self.db.add(row)

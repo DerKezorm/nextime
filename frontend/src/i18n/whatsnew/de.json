@@ -44,7 +44,7 @@
       },
       {
         "title": "Termine im Monat farbig",
-        "where": "Einstellungen › Darstellung",
+        "where": "Einstellungen › Mein Konto › Darstellung",
         "body": "Unter „Termine im Monat“ wählst du zwischen dem Punkt in der Kalenderfarbe und einer farbig hinterlegten Zeile."
       }
     ],
@@ -65,7 +65,7 @@
       },
       {
         "title": "Für nexmail",
-        "where": "Einstellungen › Verbindungen",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
         "body": "Mit einem Schlüssel für nextime zeigt nexmail deine Kalender so gruppiert wie hier, erkennt, ob eine Einladung schon eingetragen ist, beantwortet sie und trägt Einladungen aus einer Mail ein. Dabei schickt nextime selbst nichts, die Antwort geht genau einmal hinaus. Kommt derselbe Termin später aus iCloud oder Google, bleibt er nur einmal stehen."
       }
     ],
@@ -101,12 +101,12 @@
       },
       {
         "title": "Kalenderkonto für iPhone und Android",
-        "where": "Einstellungen › Auf iPhone und Co",
+        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
         "body": "Über CalDAV erscheinen deine Kalender in Apple Kalender, auf Android mit DAVx5 und in Thunderbird. Jedes Gerät bekommt ein eigenes Passwort und lässt sich einzeln sperren; das iPhone scannt einen QR-Code und lädt ein Profil. Dafür muss nextime über HTTPS erreichbar sein."
       },
       {
         "title": "Erinnerungen, Ort und Anhänge",
-        "where": "Einen Termin öffnen; Einstellungen › Benachrichtigungen",
+        "where": "Einen Termin öffnen; Einstellungen › Mein Konto › Benachrichtigungen",
         "body": "Erinnerungen gehören dir allein und lassen sich je Gerät regeln. Ein Ort bekommt Vorschläge für die Adresse und eine kleine Karte, Notizen dürfen Links enthalten, und ein Termin nimmt Anhänge auf. Zu einer Videokonferenz kommst du mit „Beitreten“."
       },
       {
@@ -121,17 +121,17 @@
       },
       {
         "title": "Aufgaben und Fristen im Kalender",
-        "where": "Einstellungen › Verbindungen",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
         "body": "Fällige Aufgaben aus nextasks und Fristen aus nexpaper stehen in deinem Kalender. Jede Person verbindet sie selbst, mit einem Schlüssel der jeweiligen App."
       },
       {
         "title": "Mitnehmen und umziehen",
-        "where": "Einstellungen › Mitnehmen und umziehen",
+        "where": "Einstellungen › Mein Konto › Mitnehmen und umziehen",
         "body": "Jeder Kalender lässt sich als ICS-Datei herunterladen, alle zusammen als ZIP mit den Anhängen. Eine ICS-Datei übernimmst du mit Vorschau und ohne Doppelte in einen eigenen Kalender. Einen Kalender aus iCloud oder Google ziehst du in einen eigenen um; dort bleibt alles unverändert."
       },
       {
         "title": "API und MCP",
-        "where": "Einstellungen › Verbindungen",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
         "body": "Mit einem eigenen Schlüssel lesen Programme deine Kalender und tragen, wenn du willst, Termine ein: über die REST-API oder als MCP-Server für KI-Werkzeuge. Jeder Schlüssel hat eigene Rechte, und der Betreiber entscheidet, wer sie nutzen darf."
       }
     ],

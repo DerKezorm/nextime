@@ -278,7 +278,11 @@ describe('TIME-15 "Kalender und Konten"', () => {
     expect(all('source-choose')).toHaveLength(3)
     expect(all('source-remove').map((button) => button.textContent)).toEqual(['Trennen', 'Trennen', 'Trennen'])
     expect(one('sources-add')!.textContent).toBe('Kalender hinzufügen')
-    expect(one('sources-below')!.textContent).toBe('Trennen entfernt die Kalender und die gespeicherten Zugangsdaten aus nextime. In iCloud und Google bleibt alles, wie es ist.')
+    // The sentence below is the line of the card "Konten und Abos" (only cards, plan "Einstellungen").
+    expect(one('sources-head')!.querySelector('h2')!.textContent).toBe('Konten und Abos')
+    expect(one('sources-head')!.textContent).toContain('Trennen entfernt die Kalender und die gespeicherten Zugangsdaten aus nextime. In iCloud und Google bleibt alles, wie es ist.')
+    // Every button of a row is the kit's.
+    expect(all('source-row').flatMap((entry) => [...entry.querySelectorAll('button')]).every((button) => button.dataset.kind === 'secondary' && button.dataset.size === 'sm')).toBe(true)
   })
 
   it('TIME-15 EC-1 AC-11 an expired access stands in orange with "Neu verbinden", a hint names the calendars; a new password sends', async () => {
@@ -288,7 +292,7 @@ describe('TIME-15 "Kalender und Konten"', () => {
     const state = one('source-state')!
     expect(state.textContent).toBe('Zugang abgelaufen seit gestern 18:02')
     expect(state.dataset.warn).toBe('true')
-    expect(state.className).toContain('text-warn-500')
+    expect(state.className).toContain('text-[var(--nexui-warn)]')
     expect(one('expired-hint')!.textContent).toBe('iCloud-Zugang abgelaufen. „Arbeit“ und „Persönlich“ zeigen weiter den Stand von gestern 18:02; Ändern geht erst nach dem neuen Verbinden.')
     await click(one('source-reconnect'))
     type(one('reconnect-password') as HTMLInputElement, ' wxyz-wxyz-wxyz-wxyz ')
@@ -341,7 +345,15 @@ describe('TIME-15 "Kalender und Konten"', () => {
     const list = one('settings-calendars')!
     const rows = [...list.querySelectorAll<HTMLElement>('[data-testid="settings-calendar"]')]
     expect(rows.length).toBeGreaterThan(0)
-    expect(rows[0].textContent).toContain('Standard')
+    expect(list.querySelector('[data-testid="calendar-marks"]')!.textContent).toContain('Standard')
+    // The kit's buttons with their words (gallery, E39): "Bearbeiten", "Ausblenden", "Mehr".
+    expect([rows[0], list.querySelector<HTMLElement>('[data-testid="calendar-eye"]')!].map((button) => [button.dataset.kind, button.dataset.size, button.textContent])).toEqual([
+      ['secondary', 'sm', 'Bearbeiten'],
+      ['secondary', 'sm', 'Ausblenden'],
+    ])
+    expect(one('calendars-area')!.querySelectorAll('button:not([data-kind])')).toHaveLength(0)
+    // Only cards: "Kalender" and "Konten und Abos".
+    expect([...one('sources')!.children].map((child) => child.getAttribute('data-card'))).toEqual(['calendars', 'calendar-sources'])
     expect(list.querySelectorAll('[data-testid="calendar-eye"]')).toHaveLength(rows.length)
     // Before the sources.
     const area = one('calendars-area')!
@@ -494,7 +506,7 @@ describe('TIME-15 asked for while testing (2026-11-23)', () => {
     expect(one('calendar-delete')).toBeNull()
     await click(one('calendar-leave'))
     expect(document.querySelector('[role="dialog"]')!.textContent).toContain('„Arbeit“ aus nextime entfernen?')
-    expect(one('leave-calendar-dialog')!.textContent).toContain('In iCloud bleibt er, wie er ist. Wieder aufnehmen kannst du ihn unter Kalender und Konten › Kalender wählen.')
+    expect(one('leave-calendar-dialog')!.textContent).toContain('In iCloud bleibt er, wie er ist. Wieder aufnehmen kannst du ihn unter Mein Konto › Kalender und Konten › Kalender wählen.')
     await click(one('leave-calendar-confirm'))
     expect(one('leave-calendar-waiting')!.textContent).toContain('2 Änderungen')
     await click(one('leave-calendar-confirm'))

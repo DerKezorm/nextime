@@ -41,6 +41,8 @@ export function me(change: Partial<Me> = {}): Me {
     whats_new_seen: '0.1.0',
     min_password: 12,
     display: { week_start: 1, week_numbers: true, clock: 'auto', time_zone: '', home_zone: '' },
+    // Since E45 every new account starts with "system"; an account of before (none) is a test of its own.
+    theme: 'system',
     ...change,
   }
 }

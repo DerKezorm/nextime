@@ -6,7 +6,7 @@
  *
  * The page `/setup/<code>` is where the QR code leads: the same setup on the phone, without signing in.
  */
-import { MonitorSmartphone, Smartphone } from 'lucide-react'
+import { MonitorSmartphone, ShieldAlert, Smartphone } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useParams } from 'react-router-dom'
@@ -17,7 +17,7 @@ import { copyText } from '../../lib/copy'
 import { errorText, problemText } from '../../lib/errors'
 import { ago } from '../../lib/time'
 import { useTitle } from '../../lib/title'
-import { Button, Card, ConfirmDialog } from '../../vendor/nexui'
+import { Box, Button, Card, ConfirmDialog, Field, Notice } from '../../vendor/nexui'
 import { useAuth } from '../../state/auth'
 import { browser, devicesApi, profileAddress, type ComingAlong, type Credentials, type DeviceOverview, type NewDevice } from './api'
 import { Swatch } from './Swatch'
@@ -97,24 +97,15 @@ function PhoneSetup({ defaultName, calendars, onProfile, onData, data, busy, pro
   const [name, setName] = useState(defaultName)
   const android = deviceKind() === 'android'
   return (
-    <div className="mx-auto max-w-md space-y-5" data-testid="phone-setup">
-      <h2 className="text-2xl font-bold text-mist-100">{android ? t('devices.phoneTitleAndroid') : t('devices.phoneTitle')}</h2>
-      <p className="text-sm text-mist-400">{android ? t('devices.phoneTextAndroid') : t('devices.phoneText')}</p>
-      <label className="block text-sm">
-        <span className="font-medium text-mist-100">{t('devices.deviceName')}</span>
-        <input value={name} onChange={(event) => setName(event.target.value)} className="nt-field mt-1 h-11" data-testid="phone-name" />
-      </label>
-      {problem && (
-        <p role="alert" className="text-sm text-bad-500">
-          {problem}
-        </p>
-      )}
+    <Card id="devices-phone" icon={Smartphone} title={android ? t('devices.phoneTitleAndroid') : t('devices.phoneTitle')} subtitle={android ? t('devices.phoneTextAndroid') : t('devices.phoneText')} testId="phone-setup">
+      <Field label={t('devices.deviceName')} value={name} onChange={(event) => setName(event.target.value)} data-testid="phone-name" />
+      {problem && <Notice tone="danger">{problem}</Notice>}
       {data ? (
-        <div className="space-y-2 rounded-[12px] border border-ink-700 p-3" data-testid="phone-data">
+        <div className="space-y-2" data-testid="phone-data">
           <CopyRow label={t('devices.address')} value={data.address} testId="data-address" />
           <CopyRow label={t('devices.user')} value={data.user} testId="data-user" />
           <CopyRow label={t('devices.password')} value={data.password} testId="data-password" />
-          <p className="text-xs text-warn-500">{t('devices.onlyNow')}</p>
+          <Notice tone="warn">{t('devices.onlyNow')}</Notice>
         </div>
       ) : android ? (
         <Button kind="primary" icon="KeyRound" wide disabled={busy || !name.trim()} onClick={() => onData(name.trim())} testId="phone-show-data">
@@ -126,14 +117,12 @@ function PhoneSetup({ defaultName, calendars, onProfile, onData, data, busy, pro
         </Button>
       )}
       {!android && (
-        <div className="space-y-2 rounded-[12px] border border-ink-700 bg-ink-850 p-4">
-          <h3 className="text-xs font-semibold tracking-wider text-mist-500 uppercase">{t('devices.after')}</h3>
+        <Box title={t('devices.after')} hint={t('devices.unsigned')}>
           <Steps keys={['devices.phoneStep1', 'devices.phoneStep2', 'devices.phoneStep3']} />
-          <p className="text-xs text-mist-500">{t('devices.unsigned')}</p>
-        </div>
+        </Box>
       )}
       <ComingAlongList calendars={calendars} />
-    </div>
+    </Card>
   )
 }
 
@@ -238,14 +227,23 @@ export function DevicesTab() {
     }
   }
 
-  if (!overview) return problem ? <p className="text-sm text-bad-500">{problem}</p> : <div className="h-32 animate-pulse rounded-[12px] bg-ink-800" aria-hidden />
+  if (!overview)
+    return problem ? (
+      <Card id="devices-new" icon={Smartphone} title={t('devices.addTitle')}>
+        <Notice tone="danger">{problem}</Notice>
+      </Card>
+    ) : (
+      <div className="h-32 animate-pulse rounded-[12px] bg-ink-800" aria-hidden />
+    )
   if (!overview.https) {
+    // Only cards (plan "Einstellungen", page frame): what is missing stands in a card of its own.
     return (
-      <div className="space-y-2 rounded-[12px] border border-warn-500/40 bg-warn-wash p-4 text-sm" data-testid="https-hint">
-        <p className="font-medium text-warn-500">{t('devices.httpsTitle')}</p>
-        <p className="text-mist-200">{t('devices.httpsText')}</p>
-        {me?.role === 'operator' && <p className="text-mist-400">{t('devices.httpsOperator')}</p>}
-      </div>
+      <Card id="devices-https" icon={ShieldAlert} title={t('devices.httpsTitle')} testId="https-hint">
+        <Notice tone="warn">
+          <p className="m-0">{t('devices.httpsText')}</p>
+          {me?.role === 'operator' && <p className="m-0 mt-1">{t('devices.httpsOperator')}</p>}
+        </Notice>
+      </Card>
     )
   }
   if (here) {
@@ -275,25 +273,25 @@ export function DevicesTab() {
       <div className="flex flex-col gap-5">
         <Card id="devices-new" icon={Smartphone} title={t('devices.addTitle')} subtitle={t('devices.intro')}>
           <form
-            className="flex flex-wrap items-end gap-2"
             onSubmit={(event) => {
               event.preventDefault()
               void create(name).then((answer) => answer && setMade(answer))
             }}
           >
-            <label className="min-w-48 flex-1 text-sm">
-              <span className="font-medium text-mist-100">{t('devices.device')}</span>
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder={t('devices.defaultName', { name: shown })} className="nt-field mt-1" data-testid="device-name" />
-            </label>
-            <Button kind="primary" icon="Plus" type="submit" disabled={busy} testId="device-create">
-              {t('devices.create')}
-            </Button>
+            <Field
+              label={t('devices.device')}
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder={t('devices.defaultName', { name: shown })}
+              data-testid="device-name"
+              action={
+                <Button kind="primary" icon="Plus" type="submit" disabled={busy} testId="device-create">
+                  {t('devices.create')}
+                </Button>
+              }
+            />
           </form>
-          {problem && (
-            <p role="alert" className="text-sm text-bad-500">
-              {problem}
-            </p>
-          )}
+          {problem && <Notice tone="danger">{problem}</Notice>}
           {made && (
             <div className="space-y-4" data-testid="device-made">
               <div className="flex flex-wrap items-center gap-4">

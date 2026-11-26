@@ -138,6 +138,8 @@ describe('TIME-20 on iPhone and co', () => {
     expect(hint.textContent).toContain('Dafür braucht nextime HTTPS.')
     expect(hint.textContent).toContain('Das richtet der Betreiber deines nextime-Servers ein.')
     expect(hint.textContent).toContain('Du bist der Betreiber')
+    // A card of its own: the area holds only cards (plan "Einstellungen", page frame; gallery).
+    expect(hint.getAttribute('data-card')).toBe('devices-https')
     expect(box.querySelector('[data-testid="device-create"]')).toBeNull()
   })
 })

@@ -100,6 +100,8 @@ const APP_BUTTON_WORDS: Partial<Record<keyof typeof BUTTONS, string>> = {
 const ME = {
   id: 1, name: 'anna', display_name: 'Anna', email: 'anna@example.com', role: 'member', sign_in: 'password', language: '',
   two_factor: false, two_factor_recovery_left: 0, version: '0.1.0', whats_new_seen: '0.1.0', min_password: PASSWORD_MIN,
+  // Since E45 a new account has "system"; one of before (none) takes its theme once, a test of its own (time3).
+  theme: 'system',
 }
 
 /** The server's answers to the pages above; reading only, anything else an empty list. */

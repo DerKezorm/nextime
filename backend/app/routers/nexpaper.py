@@ -50,8 +50,8 @@ def connect(payload: ConnectIn, account: Account, db: DbSession) -> dict[str, An
     except nexpaper.NexpaperError as exc:
         if exc.local_only and account.role == OPERATOR:
             # The operator can change it and is told how; a member hears "cannot be reached" as for anything else.
-            raise error("nexpaper_address_local", "This nexpaper is in the local network. Allow that under Settings, "
-                        "Server, General: 'Connections into the local network'.", 422) from exc
+            raise error("nexpaper_address_local", "This nexpaper is in the local network. Allow that under Server › "
+                        "General › Features for every account › 'Connections into the local network'.", 422) from exc
         raise exc.http() from exc
     return nexpaper.connection_out(db, row)
 

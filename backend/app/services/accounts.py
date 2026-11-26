@@ -155,6 +155,8 @@ def create_with_password(
         sign_in=SIGN_IN_PASSWORD,
         password_hash=hash_password(password),
         password_changed_at=utcnow(),
+        # Since E45: a new account starts with "system".
+        theme="system",
         whats_new_seen=__version__,
     )
     db.add(account)

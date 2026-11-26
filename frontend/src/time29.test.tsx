@@ -159,6 +159,8 @@ describe('TIME-29 devices in Settings, On iPhone and co', () => {
 describe('TIME-29 connecting an iPhone or iPad', () => {
   it('TIME-29 AC-1 shows the QR code with three steps, valid 10 minutes, and the address without a camera', async () => {
     await render(<AppDevicesSection />)
+    // As nexnotes (gallery, E39): primary, md, the symbol Smartphone.
+    expect([$('app-devices-connect')!.dataset.kind, $('app-devices-connect')!.dataset.size, $('app-devices-connect')!.dataset.icon]).toEqual(['primary', 'md', 'Smartphone'])
     await click($('app-devices-connect'))
     const dialog = $('app-connect-dialog')!
     expect(document.body.textContent).toContain('iPhone oder iPad verbinden')

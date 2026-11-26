@@ -119,6 +119,36 @@ describe('TIME-3 the section "Darstellung"', () => {
     applyMode('system')
   })
 
+  it('TIME-3 AC-4 E45 an account of before takes once only what this browser really kept, never what it prefers', async () => {
+    const adopted = () => calls.filter((call) => call.method === 'POST' && call.path === '/api/me/theme/adopt').map((call) => call.body)
+    vi.stubGlobal('matchMedia', (query: string) => ({ matches: query.includes('light'), media: query, onchange: null, addEventListener: () => undefined, removeEventListener: () => undefined, addListener: () => undefined, removeListener: () => undefined, dispatchEvent: () => false }) as MediaQueryList)
+    try {
+      const before = (theme: string) => {
+        const base = account(me({ theme }))
+        return (method: string, path: string, body: unknown) => (path === '/api/me/theme/adopt' ? ok({ theme: 'system' }) : base(method, path, body))
+      }
+      // Kept "dark" before 1.1.0: exactly that goes, once.
+      localStorage.setItem('nextime.theme', 'dark')
+      serve(before(''))
+      await render(<AuthProvider><App /></AuthProvider>, '/')
+      expect(adopted()).toEqual([{ theme: 'dark' }])
+      // Nothing kept: nothing made up (the browser prefers light here); the server takes nextime's default of before.
+      calls.length = 0
+      localStorage.removeItem('nextime.theme')
+      serve(before(''))
+      await render(<AuthProvider><App /></AuthProvider>, '/')
+      expect(adopted()).toEqual([{ theme: '' }])
+      // An account with a choice (every new one has "system") asks nothing.
+      calls.length = 0
+      serve(before('system'))
+      await render(<AuthProvider><App /></AuthProvider>, '/')
+      expect(adopted()).toEqual([])
+    } finally {
+      vi.unstubAllGlobals()
+      applyMode('system')
+    }
+  })
+
   it('TIME-3 AC-4 light, dark or like the device stays on this device', () => {
     applyMode('light')
     expect(storedMode()).toBe('light')

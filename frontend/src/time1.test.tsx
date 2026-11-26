@@ -203,6 +203,11 @@ describe('TIME-1 the group "Server" of the settings', () => {
     const form = box.querySelector('[data-testid="limit-trash"]')!
     const field = form.querySelector('input')!
     expect(field.value).toBe('30')
+    // The field's name as nexnotes', the unit in its hint (gallery, E39); the largest attachment keeps "(MB)".
+    expect(form.querySelector('label')!.textContent).toBe('Papierkorb leeren nach')
+    expect(form.textContent).toContain('In Tagen, von 1 bis 3650.')
+    expect(box.querySelector('[data-testid="limit-upload"] label')!.textContent).toBe('Größte Datei je Anhang (MB)')
+    expect(box.querySelector('[data-card="features"]')!.textContent).toContain('Was jedes Konto auf diesem Server nutzen darf.')
     for (const wrong of ['0', '-3', '', 'zwölf']) {
       type(field, wrong)
       await click(byText('Speichern', form))

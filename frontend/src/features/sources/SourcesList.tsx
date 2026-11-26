@@ -7,12 +7,13 @@
  * Google sends the browser back here with what happened in the address (TIME-16 AC-2, EC-6, EC-7, AC-8): the choice of
  * calendars opens, or a sentence says why nothing is connected.
  */
-import { Plus } from 'lucide-react'
+import { CalendarDays, Cloud, ListChecks } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSearchParams } from 'react-router-dom'
 
 import { problemText } from '../../lib/errors'
+import { Button, Buttons, Card, Notice, Rows } from '../../vendor/nexui'
 import { showNotice } from '../../lib/notice'
 import { ago } from '../../lib/time'
 import { sourcesApi, type HolidayCountry, type SourceRow } from './api'
@@ -37,7 +38,7 @@ function fromGoogle(params: URLSearchParams): { open: Open | null; message: { to
 }
 
 /** `calendars`: the account's calendars, between the button at the top and the sources (Settings). */
-export function SourcesList({ calendars }: { calendars?: ReactNode } = {}) {
+export function SourcesList({ calendars, more }: { calendars?: ReactNode; more?: ReactNode } = {}) {
   const { t, i18n } = useTranslation()
   const { data, failed, take } = useSources()
   const kindName = useKindName()
@@ -86,67 +87,51 @@ export function SourcesList({ calendars }: { calendars?: ReactNode } = {}) {
   const expired = rows.filter((row) => row.state === 'expired' && row.calendars.length > 0)
 
   return (
-    <div className="space-y-5" data-testid="sources">
-      <div className="flex flex-wrap items-center gap-3">
-        <button type="button" className="nt-btn nt-btn-accent ml-auto" onClick={() => setOpen({ kind: 'add' })} data-testid="sources-add">
-          <Plus className="h-4 w-4" aria-hidden />
-          {t('calendars.add')}
-        </button>
-      </div>
-      {message && (
-        <p
-          role="status"
-          className={'rounded-[9px] border px-3 py-2 text-sm ' + (message.tone === 'ok' ? 'border-ok-500/30 bg-ok-wash text-ok-500' : 'border-bad-500/30 bg-bad-500/10 text-bad-500')}
-          data-testid="google-message"
-        >
-          {t(`sources.googleBack.${message.key}`)}
-        </p>
-      )}
-      {problem && (
-        <p role="alert" className="rounded-[9px] border border-bad-500/30 bg-bad-500/10 px-3 py-2 text-sm text-bad-500">
-          {problem}
-        </p>
-      )}
-      {failed && !data && (
-        <p role="alert" className="text-sm text-bad-500">
-          {t('views.loadFailed')}
-        </p>
-      )}
-      {calendars}
-      <h3 className="pt-2 text-[11px] font-semibold tracking-[0.06em] text-mist-500 uppercase" data-testid="sources-head">
-        {t('sources.head')}
-      </h3>
-      {data && rows.length === 0 && (
-        // Only when no source is connected; "Kalender hinzufügen" stands at the top already.
-        <div className="nt-empty" data-testid="sources-empty">
-          <p>{t('sources.empty')}</p>
-        </div>
-      )}
-      {rows.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-[12px] border border-ink-700 bg-ink-850" data-testid="source-rows">
-          {rows.map((row) => (
-            rowView(row, countries, setOpen, () => void refresh(row))
-          ))}
-        </ul>
-      )}
-      {expired.map((row) => (
-        <p key={row.id} role="status" className="rounded-[9px] border border-warn-500/30 bg-warn-wash px-3 py-2 text-sm text-warn-500" data-testid="expired-hint">
-          {t('sources.expiredHint', {
-            kind: kindName(row.kind),
-            names: names(row.calendars.map((entry) => entry.name), true),
-            when: stamp(row.synced_at),
-            count: row.calendars.length,
-          })}
-        </p>
-      ))}
-      {data && data.events_total > data.events_smooth_up_to && (
-        <p className="text-xs text-warn-500" data-testid="events-over">
-          {t('sources.eventsOver', { total: data.events_total.toLocaleString(i18n.language), limit: data.events_smooth_up_to.toLocaleString(i18n.language) })}
-        </p>
-      )}
-      <p className="text-xs text-mist-500" data-testid="sources-below">
-        {t('sources.below')}
-      </p>
+    <div className="flex flex-col gap-6" data-testid="sources">
+      <Card id="calendars" icon={CalendarDays} title={t('calendars.settingsCard.title')} subtitle={t('calendars.settingsCard.text')}>
+        <Buttons>
+          <Button kind="primary" icon="Plus" onClick={() => setOpen({ kind: 'add' })} testId="sources-add">
+            {t('calendars.add')}
+          </Button>
+        </Buttons>
+        {message && (
+          <Notice tone={message.tone === 'ok' ? 'ok' : 'danger'} testId="google-message">
+            {t(`sources.googleBack.${message.key}`)}
+          </Notice>
+        )}
+        {calendars}
+      </Card>
+      <Card id="calendar-sources" icon={Cloud} title={t('sources.head')} subtitle={t('sources.below')} testId="sources-head">
+        {problem && <Notice tone="danger">{problem}</Notice>}
+        {failed && !data && <Notice tone="danger">{t('views.loadFailed')}</Notice>}
+        {data && rows.length === 0 && (
+          // Only when no source is connected; "Kalender hinzufügen" stands in the card above.
+          <p className="m-0 text-sm text-[var(--nexui-text-muted)]" data-testid="sources-empty">
+            {t('sources.empty')}
+          </p>
+        )}
+        {rows.length > 0 && (
+          <Rows testId="source-rows">
+            {rows.map((row) => rowView(row, countries, setOpen, () => void refresh(row)))}
+          </Rows>
+        )}
+        {expired.map((row) => (
+          <Notice key={row.id} tone="warn" testId="expired-hint">
+            {t('sources.expiredHint', {
+              kind: kindName(row.kind),
+              names: names(row.calendars.map((entry) => entry.name), true),
+              when: stamp(row.synced_at),
+              count: row.calendars.length,
+            })}
+          </Notice>
+        ))}
+        {data && data.events_total > data.events_smooth_up_to && (
+          <Notice tone="warn" testId="events-over">
+            {t('sources.eventsOver', { total: data.events_total.toLocaleString(i18n.language), limit: data.events_smooth_up_to.toLocaleString(i18n.language) })}
+          </Notice>
+        )}
+        {more}
+      </Card>
       {open?.kind === 'add' && <AddCalendar onClose={() => setOpen(null)} />}
       {open?.kind === 'choose' && (
         <ChooseSource sourceId={open.sourceId} connected={open.connected} note={open.note === 'exists' ? t('sources.exists') : open.note} onClose={() => setOpen(null)} />
@@ -164,63 +149,56 @@ export function SourcesList({ calendars }: { calendars?: ReactNode } = {}) {
     const fix = fixOf(row)
     const line = lineOf(row, countries)
     const kind = row.kind === 'subscription' && row.google ? t('sources.kinds.googleRead') : kindName(row.kind)
+    const notes = [
+      row.new > 0 ? <span key="new" data-testid="source-new">{t('sources.newCalendars', { count: row.new })}</span> : null,
+      row.unreadable > 0 ? <span key="unreadable" data-testid="source-unreadable">{t('sources.unreadable', { count: row.unreadable })}</span> : null,
+      row.waiting > 0 ? <span key="waiting" data-testid="source-waiting">{t('sources.waitingCount', { count: row.waiting })}</span> : null,
+    ].filter(Boolean)
     return (
-      <li key={row.id} className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3" data-testid="source-row" data-kind={row.kind}>
-        <span className="w-24 shrink-0 text-[11px] font-semibold tracking-wider text-mist-500 uppercase" data-testid="source-kind">
-          {kind}
-        </span>
-        <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-0.5">
-          <span className="truncate text-sm font-medium text-mist-100" title={line} data-testid="source-line">
-            {line}
-          </span>
-          <span className={'text-xs ' + (state.warn ? 'text-warn-500' : 'text-mist-500')} data-testid="source-state" data-warn={state.warn ? 'true' : 'false'}>
-            {state.text}
-          </span>
-          {row.new > 0 && (
-            <span className="text-xs text-accent-400" data-testid="source-new">
-              {t('sources.newCalendars', { count: row.new })}
+      <li key={row.id} className="flex flex-col gap-1 py-2" data-testid="source-row" data-kind={row.kind}>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-0.5">
+            <span className="text-[11px] font-semibold tracking-wider text-[var(--nexui-text-muted)] uppercase" data-testid="source-kind">
+              {kind}
             </span>
-          )}
-          {row.unreadable > 0 && (
-            <span className="text-xs text-mist-500" data-testid="source-unreadable">
-              {t('sources.unreadable', { count: row.unreadable })}
+            <span className="truncate text-sm font-medium text-[var(--nexui-text)]" title={line} data-testid="source-line">
+              {line}
             </span>
-          )}
-          {row.waiting > 0 && (
-            <span className="text-xs text-mist-500" data-testid="source-waiting">
-              {t('sources.waitingCount', { count: row.waiting })}
+            <span className={'text-xs ' + (state.warn ? 'text-[var(--nexui-warn)]' : 'text-[var(--nexui-text-muted)]')} data-testid="source-state" data-warn={state.warn ? 'true' : 'false'}>
+              {state.text}
             </span>
-          )}
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {fix === 'reconnect' && (
-            <button type="button" className="nt-btn nt-btn-accent h-9 px-3" onClick={() => onOpen(row.kind === 'google' ? { kind: 'google', row } : { kind: 'reconnect', row })} data-testid="source-reconnect">
-              {t('sources.reconnect')}
-            </button>
-          )}
-          {fix === 'refresh' && (
-            <button type="button" className="nt-btn nt-btn-accent h-9 px-3" onClick={onRefresh} data-testid="source-refresh">
-              {t('sources.refresh')}
-            </button>
-          )}
-          {row.kind === 'subscription' && row.state !== 'ok' && (row.google || row.problem === 'subscription_gone') && (
-            <button type="button" className="nt-btn nt-btn-ghost h-9 px-3" onClick={() => onOpen({ kind: 'link', row })} data-testid="source-link">
-              {t('sources.newLink')}
-            </button>
-          )}
-          {(row.kind === 'icloud' || row.kind === 'caldav' || row.kind === 'google') && (
-            <button type="button" className="nt-btn nt-btn-ghost h-9 px-3" onClick={() => onOpen({ kind: 'choose', sourceId: row.id })} data-testid="source-choose">
-              {t('sources.choose')}
-            </button>
-          )}
-          {row.kind === 'holidays' && (
-            <button type="button" className="nt-btn nt-btn-ghost h-9 px-3" onClick={() => onOpen({ kind: 'holidays', row })} data-testid="source-change">
-              {t('sources.change')}
-            </button>
-          )}
-          <button type="button" className="nt-btn nt-btn-ghost h-9 px-3" onClick={() => onOpen({ kind: 'remove', row })} data-testid="source-remove">
-            {row.kind === 'subscription' || row.kind === 'holidays' ? t('sources.remove') : t('sources.disconnect')}
-          </button>
+            {notes.length > 0 && <span className="flex flex-col text-xs text-[var(--nexui-text-muted)]">{notes}</span>}
+          </div>
+          <Buttons>
+            {fix === 'reconnect' && (
+              <Button kind="secondary" size="sm" icon="RefreshCw" onClick={() => onOpen(row.kind === 'google' ? { kind: 'google', row } : { kind: 'reconnect', row })} testId="source-reconnect">
+                {t('sources.reconnect')}
+              </Button>
+            )}
+            {fix === 'refresh' && (
+              <Button kind="secondary" size="sm" icon="RefreshCw" onClick={onRefresh} testId="source-refresh">
+                {t('sources.refresh')}
+              </Button>
+            )}
+            {row.kind === 'subscription' && row.state !== 'ok' && (row.google || row.problem === 'subscription_gone') && (
+              <Button kind="secondary" size="sm" icon="Link" onClick={() => onOpen({ kind: 'link', row })} testId="source-link">
+                {t('sources.newLink')}
+              </Button>
+            )}
+            {(row.kind === 'icloud' || row.kind === 'caldav' || row.kind === 'google') && (
+              <Button kind="secondary" size="sm" icon={ListChecks} onClick={() => onOpen({ kind: 'choose', sourceId: row.id })} testId="source-choose">
+                {t('sources.choose')}
+              </Button>
+            )}
+            {row.kind === 'holidays' && (
+              <Button kind="secondary" size="sm" icon="Pencil" onClick={() => onOpen({ kind: 'holidays', row })} testId="source-change">
+                {t('sources.change')}
+              </Button>
+            )}
+            <Button kind="secondary" size="sm" icon="Trash2" onClick={() => onOpen({ kind: 'remove', row })} testId="source-remove">
+              {row.kind === 'subscription' || row.kind === 'holidays' ? t('sources.remove') : t('sources.disconnect')}
+            </Button>
+          </Buttons>
         </div>
       </li>
     )

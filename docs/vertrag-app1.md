@@ -96,7 +96,7 @@ that is not this JSON, means "no nextime at this address" (TIMEIOS-4 EC-3).
 
 ### With the QR code (TIME-29 AC-1)
 
-Browser (session), in Settings › My account › On iPhone and co ("Auf iPhone und Co"), card "Devices" ("Geräte"),
+Browser (session), in Settings › My account › Connections ("Verbindungen", since the settings pass; before: On iPhone and co), card "Devices" ("Geräte"),
 button "Connect iPhone or iPad" ("iPhone oder iPad verbinden"):
 
 - `POST /api/app-pairing {"address"?}` → `201 {"id", "secret", "expires_at", "link", "address", "qr_svg"}`, valid
@@ -118,7 +118,8 @@ The dialog's three steps (de / en):
 Below: „Ohne Kamera: In der App die Adresse <host> eingeben und anmelden.“ The app's hint under the camera names the
 way there: „Im Browser: Einstellungen › Mein Konto › Auf iPhone und Co › „iPhone oder iPad verbinden“. Der Code gilt
 10 Minuten.“ / "In the browser: Settings › My account › On iPhone and co › “Connect iPhone or iPad”. The code is valid
-for 10 minutes."
+for 10 minutes." ⚠️ Since the settings pass the button stands under Settings › My account › Connections;
+the app's hint still names the old place (a question of the settings pass, nextime-ios to follow).
 
 App:
 
@@ -645,7 +646,7 @@ Only where a calendar needs it:
    named by `calendar_id` and `href` (an event keeps its `id` when it moves to another calendar).
 4. **Conflicts with both versions** (`conflicts`, op `resolve`): nexnotes merges text and has none.
 5. **Calendar account on the same device** (`/calendar-account`): nexnotes has no CalDAV.
-6. **The browser's card "Geräte" stands in Settings › My account › On iPhone and co** (above the calendar account),
+6. **The browser's card "Geräte" stands in Settings › My account › Connections** (since the settings pass, E4; before in On iPhone and co) (above the calendar account),
    not under Connections: TIME-29 AC-7 and TIMEIOS-4 AC-3 put it there. The QR dialog's step 2 names „Server
    hinzufügen“, the button of the app (nexnotes' web still says „Server verbinden“).
 7. **No device token on the browser's routes** in api 1 (nexnotes takes it for attachments); attachments (0.5) and

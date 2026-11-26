@@ -28,10 +28,12 @@ export function wholeNumber(text: string, lowest: number, highest: number): { va
 
 /** A whole number with its unit and its own save on the height of the field (`Field action`); a wrong value is said at
  * the field and nothing is sent, the old one stays (TIME-1 EC-11). */
-function NumberField({ id, label, unit, value, lowest, highest, onSave }: {
+function NumberField({ id, label, unit, hint, value, lowest, highest, onSave }: {
   id: string
   label: string
-  unit: string
+  /** In the label, "Größte Datei je Anhang (MB)" as nexnotes; without one the label stands alone. */
+  unit?: string
+  hint?: string
   value: number
   lowest: number
   highest: number
@@ -59,8 +61,9 @@ function NumberField({ id, label, unit, value, lowest, highest, onSave }: {
       }}
     >
       <Field
-        label={`${label} (${unit})`}
+        label={unit ? `${label} (${unit})` : label}
         inputMode="numeric"
+        hints={hint ? [hint] : undefined}
         value={text ?? String(value)}
         onChange={(event) => setText(event.target.value)}
         error={problem ?? undefined}
@@ -94,7 +97,7 @@ export function LimitsCard({ server }: { server: Server }) {
       <NumberField
         id="limit-trash"
         label={t('server.trash')}
-        unit={t('server.daysUnit')}
+        hint={t('server.trashHint')}
         value={s.trash_days}
         lowest={1}
         highest={3650}
@@ -114,7 +117,7 @@ export function FeaturesCard({ server }: { server: Server }) {
   const s = server.settings
   if (!s) return null
   return (
-    <Card id="features" icon="SlidersHorizontal" title={t('server.features')}>
+    <Card id="features" icon="SlidersHorizontal" title={t('server.features')} subtitle={t('server.featuresHint')}>
       <div className="flex flex-col gap-3" data-testid="switches">
         <CheckboxRow label={t('server.shareLinks')} hint={t('server.shareLinksHint')} checked={s.share_links} onChange={(share_links) => void server.save({ share_links })} testId="feature-share-links" />
         <CheckboxRow

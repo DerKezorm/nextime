@@ -445,7 +445,7 @@ def free(
 # --- The description (AC-8) ----------------------------------------------------------------------------------------
 
 DOCS_TEXT = (
-    "Programs read and write the calendars of one account with a key from Settings, My account, Connections: "
+    "Programs read and write the calendars of one account with a key from My account › Connections › API keys: "
     "`Authorization: Bearer nt_api_...`. A key never sees more than its account and its calendars; a calendar "
     "shared \"busy only\" gives times only. Errors come as `{\"detail\": {\"code\", \"message\"}}`. "
     "Times are ISO 8601; `start`/`end` of an event you send are wall clock times of `time_zone`. "

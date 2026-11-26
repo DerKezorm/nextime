@@ -291,6 +291,8 @@ class KontenStore:
             password_hash=hash_password(new.password) if new.password else "",
             password_changed_at=utcnow() if new.password else None,
             language=new.language or "",
+            # Since E45 (konten 1.1.0): a new account starts with "system"; only accounts of before have none.
+            theme=getattr(new, "theme", "system") or "system",
             whats_new_seen=__version__,
         )
         self.db.add(row)
