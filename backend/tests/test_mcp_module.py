@@ -155,3 +155,19 @@ def test_a_blocked_account_s_mcp_keys_rest_and_its_programs_end(client: TestClie
         assert program.post("/api/mcp", headers=_bearer(tokens["access_token"]), json=PING).status_code == 401
     with SessionLocal() as db:
         assert db.scalar(select(func.count()).select_from(McpKey).where(McpKey.client_id.is_not(None))) == 0
+
+
+def test_a_program_registers_trades_and_revokes_without_a_tab_as_programs_do(client: TestClient,
+                                                                              account: Account) -> None:
+    """A program sends no ``X-Nextime-Client``: the OAuth routes of the program's side take it without one (the
+    consent stays a page of a person, with its tab)."""
+    _mcp_on()
+    with TestClient(client.app, base_url="http://testserver") as program:
+        registered = program.post("/api/oauth/register", json={"client_name": "Probe",
+                                                                "redirect_uris": ["http://127.0.0.1:33418/callback"]})
+        assert registered.status_code == 201, registered.text
+        assert program.post("/api/oauth/token", data={"grant_type": "refresh_token", "refresh_token": "ntr_x",
+                                                      "client_id": registered.json()["client_id"]}).status_code == 400
+        assert program.post("/api/oauth/revoke", data={"token": "ntr_x"}).status_code == 200
+        # The consent is a person's page: without the tab it is refused as every change.
+        assert program.post("/api/oauth/authorize", json={}).status_code == 400

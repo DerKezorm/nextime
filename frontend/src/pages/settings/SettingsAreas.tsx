@@ -16,7 +16,9 @@ import { SharesArea } from '../../features/shares/SharesArea'
 import { MoveArea } from '../../features/transfer/MoveArea'
 import { MailCard } from '../../vendor/nexpost/MailCard'
 import type { PostRequest } from '../../vendor/nexpost/mailserver'
+import { verbindenRequest } from '../../features/connect/ConnectPages'
 import { McpOperatorSettings } from '../../vendor/nexmcp'
+import { ConnectionsOperatorCard } from '../../vendor/nexverbinden'
 import { InterfacesCard } from '../../vendor/nexschluessel'
 import { AboutArea } from './AboutArea'
 import { AccountsTab } from './AccountsTab'
@@ -81,7 +83,7 @@ function MailArea() {
 }
 
 /** Server › General (TIME-1): Limits, Features for every account, the key module's Interfaces (with the operator's
- * settings of the shared module mcp), Languages. */
+ * settings of the shared module mcp), "Andere nex-Apps" (the shared module verbinden), Languages. */
 function GeneralArea() {
   const { i18n } = useTranslation()
   const server = useServerSettings()
@@ -97,6 +99,8 @@ function GeneralArea() {
         docsHref="/api/v1/docs"
         after={{ mcp: <McpOperatorSettings request={mcpRequest} words={tools} language={i18n.language} /> }}
       />
+      {/* "Andere nex-Apps": connections with other nex apps on or off, their addresses (the shared module verbinden). */}
+      <ConnectionsOperatorCard app="nextime" request={verbindenRequest} language={i18n.language} />
       <LanguagesArea />
     </div>
   )

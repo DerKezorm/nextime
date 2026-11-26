@@ -77,9 +77,14 @@ class Adapter(StandardAdapter):
         self._main.__exit__(None, None, None)
 
     def client(self, role: str) -> Any:
+        from fastapi.testclient import TestClient
+
+        from app.main import app
         from tests.conftest import new_client
 
-        client = new_client() if role == "anonymous" else new_client(self._accounts[role])
+        # A program sends no tab of nextime's page (``X-Nextime-Client``), only its key.
+        client = TestClient(app, base_url="http://testserver") if role == "anonymous" else new_client(
+            self._accounts[role])
         self._clients.append(client)
         return client
 

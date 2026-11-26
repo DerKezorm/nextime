@@ -50,6 +50,10 @@ DEFAULTS: dict[str, Any] = {
     #: The shared module mcp: whether programs may connect over OAuth (``None``: on), the highest level of a key
     #: (``None``: write), the tools blocked for every account (``None``: none).
     "mcp_programs": None,
+    #: The shared module verbinden: "Verbindungen mit anderen nex-Apps" (``None``: on, V1 7a) and the addresses of
+    #: the other nex apps the operator wrote down once (V1 1b).
+    "connections_enabled": None,
+    "connections_addresses": None,
     "mcp_max_level": None,
     "mcp_blocked_tools": None,
     #: Typing a place asks a free OpenStreetMap service for addresses; only the typed text goes out (TIME-1 AC-10).

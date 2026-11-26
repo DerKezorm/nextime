@@ -2,6 +2,7 @@
  * click shows the popover with day, sender, amount and "In nexpaper öffnen" to the document in a new tab; the block
  * under today; "Meine Fristen" in the sidebar with its eye. The server is a stand-in. */
 import App from './App'
+import { NexpaperSection } from './features/nexpaper/NexpaperSection'
 import { forgetNexpaper, type Deadline, type DeadlineList, type NexpaperStatus } from './features/nexpaper/api'
 import { setViewDay } from './features/views/state'
 import i18n from './i18n'
@@ -108,9 +109,11 @@ describe('nexpaper deadlines', () => {
     expect(one('deadlines-block')).toBeNull()
   })
 
-  it('nexpaper: a connected card is folded from the start with "verbunden" and the address in its head, opens and stays open on this device', async () => {
+  it('nexpaper: a connected card of its own is folded from the start with "verbunden" and the address in its head, opens and stays open on this device', async () => {
+    // Its own card, as before; on the page Connections it stands under "Von Hand verbinden" of the shared module
+    // verbinden's card (bare, the module's card the frame).
     server([])
-    await open('/settings/connections')
+    await render(<AuthProvider><NexpaperSection /></AuthProvider>)
     const card = () => document.querySelector<HTMLElement>('[data-card="nexpaper"]')!
     expect(card().dataset.open).toBe('false')
     expect(card().querySelector('[data-testid="nexpaper-connected"]')).toBeNull()
@@ -122,7 +125,7 @@ describe('nexpaper deadlines', () => {
     start()
     forgetPrefs()
     server([])
-    await open('/settings/connections')
+    await render(<AuthProvider><NexpaperSection /></AuthProvider>)
     expect(card().dataset.open).toBe('true')
   })
 })

@@ -55,6 +55,7 @@ from .routers import sources as sources_router
 from .routers import totp as totp_router
 from .routers import transfer as transfer_router
 from .routers import trash as trash_router
+from .routers import verbinden as verbinden_router
 from .security import HashingBusy, purge_sessions
 from .services import (
     apppush,
@@ -68,6 +69,7 @@ from .services import (
     settings_service,
     sync,
     totp,
+    verbinden_store,
 )
 from .services.konten_store import KontenStore
 from .vendor import nexoidc
@@ -87,7 +89,7 @@ FEATURE_ROUTERS: list = [calendars_router, collections_router, events_router, de
                          sources_router, shares_router, notify_router, reminders_router,
                          places_router, attachments_router, search_router, trash_router, offline_router,
                          transfer_router, keys_router, api_v1_router, mcp_router, nextasks_router,
-                         nexpaper_router, app_pairing_router, app1_router]
+                         nexpaper_router, app_pairing_router, app1_router, verbinden_router]
 
 
 def _read_log_mode() -> tuple[str, datetime | None]:
@@ -190,6 +192,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(sync.run_forever(stop)))
         # Ticks of nextasks tasks that wait for nextasks (TIME-25 EC-12).
         tasks.append(asyncio.create_task(nextasks.run_forever(stop)))
+        # Revocations another nex app has not heard yet (the shared module verbinden).
+        tasks.append(asyncio.create_task(verbinden_store.run_forever(stop)))
     logger.info("nextime %s started sqlite=%s", __version__, sqlite3.sqlite_version)
     with SessionLocal() as db:
         konten_setup.announce_setup(KontenStore(db))

@@ -118,6 +118,9 @@ async function unfold(id: string): Promise<void> {
   // The kit's Collapsible card (plan "Einstellungen", Verbindungen 3): folded while `data-open` is false.
   const card = document.querySelector<HTMLElement>(`[data-card="${id}"]`)
   if (card?.dataset.open === 'false') await click(card.querySelector<HTMLElement>('[data-part="collapsible-head"]'))
+  // Since the shared module verbinden the card is the module's; nextime's connection typed in by hand stands under
+  // "Von Hand verbinden".
+  if (!document.querySelector(`[data-testid="${id}-card"]`)) await click(card?.querySelector<HTMLElement>('[data-testid="connection-manual"]'))
 }
 
 describe('TIME-25 the connection', () => {

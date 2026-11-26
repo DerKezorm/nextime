@@ -16,7 +16,9 @@ import { useOffline } from '../offline/connection'
 import { nexpaperApi, setNexpaper } from './api'
 import { useNexpaper } from './hooks'
 
-export function NexpaperSection() {
+/** ``bare``: only the inside, for the place "Von Hand verbinden" of the shared module verbinden's card (the module's
+ * card is the frame then); without, the card of its own as before. */
+export function NexpaperSection({ bare = false }: { bare?: boolean } = {}) {
   const { t } = useTranslation()
   const status = useNexpaper()
   const offline = useOffline()
@@ -40,25 +42,8 @@ export function NexpaperSection() {
     setLeaving(false)
   }
 
-  return (
-    <Collapsible
-      variant="card"
-      id="nexpaper"
-      logo="/apps/nexpaper.svg"
-      title={t('nexpaper.section.title')}
-      subtitle={t('nexpaper.section.text')}
-      open={!foldable || !folded}
-      onOpenChange={(open) => setFolded(open ? '0' : null)}
-      status={
-        status?.connected ? (
-          <span className="flex min-w-0 items-center gap-2" data-testid="nexpaper-summary">
-            <Badge tone="on">{t('nexpaper.section.connected')}</Badge>
-            <span className="min-w-0 truncate text-sm text-[var(--nexui-text-muted)]">{status.host}</span>
-          </span>
-        ) : undefined
-      }
-      testId="nexpaper-card"
-    >
+  const inside = (
+    <>
       {problem && <Notice tone="danger">{problem}</Notice>}
       {status?.connected && !editing && (
         <>
@@ -105,6 +90,35 @@ export function NexpaperSection() {
           testId="nexpaper-disconnect-dialog"
         />
       )}
+    </>
+  )
+  if (bare) {
+    return (
+      <div className="flex flex-col gap-4" data-testid="nexpaper-card">
+        {inside}
+      </div>
+    )
+  }
+  return (
+    <Collapsible
+      variant="card"
+      id="nexpaper"
+      logo="/apps/nexpaper.svg"
+      title={t('nexpaper.section.title')}
+      subtitle={t('nexpaper.section.text')}
+      open={!foldable || !folded}
+      onOpenChange={(open) => setFolded(open ? '0' : null)}
+      status={
+        status?.connected ? (
+          <span className="flex min-w-0 items-center gap-2" data-testid="nexpaper-summary">
+            <Badge tone="on">{t('nexpaper.section.connected')}</Badge>
+            <span className="min-w-0 truncate text-sm text-[var(--nexui-text-muted)]">{status.host}</span>
+          </span>
+        ) : undefined
+      }
+      testId="nexpaper-card"
+    >
+      {inside}
     </Collapsible>
   )
 }

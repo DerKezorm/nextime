@@ -238,7 +238,8 @@ describe('TIME-1 the group "Server" of the settings', () => {
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
     await vi.waitFor(() => expect(box.querySelector('[data-testid="language-nl"]')).not.toBeNull())
     const cards = [...box.querySelectorAll('[data-testid="server-general"] > [data-card]')].map((card) => card.getAttribute('data-card'))
-    expect(cards).toEqual(['limits', 'features', 'interfaces', 'languages'])
+    // "Andere nex-Apps" of the shared module verbinden after the interfaces (V14), the languages last (E51).
+    expect(cards).toEqual(['limits', 'features', 'interfaces', 'nex-apps', 'languages'])
     const card = box.querySelector<HTMLElement>('[data-card="languages"]')!
     expect(card.textContent).toContain('Deutsch und Englisch sind eingebaut.')
     expect(box.querySelector('[data-testid="language-built-in-de"]')!.textContent).toContain('Deutsch')
@@ -334,7 +335,8 @@ describe('TIME-1 AC-11 looking for new versions', () => {
     expect(labels).not.toContain('Nach neuen Versionen suchen')
     // The order of General (plan "Einstellungen"): limits, the features for every account, interfaces, the languages.
     const cards = [...box.querySelectorAll('[data-testid="server-general"] [data-card]')].map((card) => card.getAttribute('data-card'))
-    expect(cards).toEqual(['limits', 'features', 'interfaces', 'languages'])
+    // "Andere nex-Apps" of the shared module verbinden after the interfaces (V14), the languages last (E51).
+    expect(cards).toEqual(['limits', 'features', 'interfaces', 'nex-apps', 'languages'])
   })
 })
 

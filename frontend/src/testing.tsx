@@ -64,6 +64,14 @@ export const MCP_ADMIN = {
   tools: [{ name: 'list_events', group: 'read', level: 'read' }, { name: 'delete_event', group: 'risky', level: 'write' }],
 }
 
+/** What the shared module verbinden answers for the cards of the other nex apps (`/api/connect/partners`): nextime's
+ * six partners, none connected by it. */
+export const PARTNER_VIEWS = ['nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes'].map((partner) => ({
+  partner, state: 'none', address: '', address_from_operator: false, host: '', uses: [], grants: [], uses_levels: {},
+  grants_levels: {}, account: null, since: null, ok_at: null, used_at: null, stale_since: null, problem: null,
+  areas_used: null, areas_granted: null, legacy: null, areas_choice: [], version: null,
+}))
+
 export function signedIn(account: Me, more: Handler = () => undefined): Handler {
   return (method, path, body) =>
     more(method, path, body) ??
@@ -85,7 +93,11 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
                     ? ok({ api: true, mcp: true })
                     : path === '/api/connections/mcp/admin'
                       ? ok(MCP_ADMIN)
-                      : undefined)
+                      : path === '/api/connect/partners'
+                        ? ok(PARTNER_VIEWS)
+                        : path === '/api/connect/admin'
+                          ? ok({ connections: true, partners: ['nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes'], addresses: {} })
+                          : undefined)
 }
 
 export function start(): void {

@@ -34,8 +34,21 @@ from ..errors import detail, error
 from ..models import Account as AccountRow
 from ..models import Event as EventRow
 from ..security import brake as sign_in_brake
-from ..services import apibrake, apikeys, apiv1, dashboard, events, imip, invitations, live, logs, search
+from ..services import (
+    apibrake,
+    apikeys,
+    apiv1,
+    dashboard,
+    events,
+    imip,
+    invitations,
+    live,
+    logs,
+    search,
+    verbinden_store,
+)
 from ..services.apiv1 import Caller
+from ..vendor import nexverbinden
 from . import devices
 from .events import EventChangeIn, EventIn, _change
 
@@ -86,6 +99,9 @@ def authenticate(request: Request, *, where: str) -> Caller:
     if request.headers.get("origin"):
         raise refused(403, "origin_refused", "This API is for programs, not web pages.")
     sender = f"{where}:" + client_ip(request)
+    token = bearer(request)
+    if where == "api" and token and token.startswith(verbinden_store.CONFIG.access_prefix):
+        return _connection(request, token, sender)
     with SessionLocal() as db:
         if where == "api" and not apikeys.api_on(db):
             raise refused(403, "api_off", "The operator has switched the API off.")
@@ -95,7 +111,7 @@ def authenticate(request: Request, *, where: str) -> Caller:
         if wait:
             raise refused(429, "too_many_attempts", "Too many wrong keys. Try again later.",
                           {"Retry-After": str(wait)})
-        found = apikeys.authenticate(db, bearer(request))
+        found = apikeys.authenticate(db, token)
         if found is not None and where == "mcp" and not found[1].allow_mcp:
             # A key without "for MCP" is no key there (AC-3).
             found = None
@@ -109,6 +125,35 @@ def authenticate(request: Request, *, where: str) -> Caller:
     if not apibrake.allow(where, caller.key_id):
         raise refused(429, "slow_down", "Too many requests with this key. Wait a minute.", {"Retry-After": "60"})
     logs.set_actor(caller.account.name)
+    return caller
+
+
+def _connection(request: Request, token: str, sender: str) -> Caller:
+    """A token of another nex app connected with "Verbinden" (the shared module verbinden): it acts as its account
+    with the right of its purposes and the calendars given at the consent (stage 1: a purpose stands for the right a
+    key had, nothing of the routes' own checks changes). Its own switch counts ("Verbindungen mit anderen nex-Apps"),
+    not the one of API keys; the brake for wrong keys and the rate per key are those of the API."""
+    wait = sign_in_brake.wait_seconds(sender, FREE_WRONG_KEYS)
+    if wait:
+        raise refused(429, "too_many_attempts", "Too many wrong keys. Try again later.", {"Retry-After": str(wait)})
+    with SessionLocal() as db:
+        try:
+            found = nexverbinden.authenticate(verbinden_store.Store(db), verbinden_store.CONFIG, token, apikeys.clock())
+        except nexverbinden.Refused as refusal:
+            if refusal.code == "token_invalid":
+                sign_in_brake.failed(sender)
+            body = refusal.as_dict()
+            raise refused(refusal.status, str(body["code"]), str(body.get("message") or "")) from None
+        account = db.get(AccountRow, int(found.account_id))
+        if account is None:
+            raise refused(401, "token_invalid", "No valid key.")
+        db.expunge(account)
+    caller = Caller(account=account, key_id=f"connection-{found.connection_id}",  # type: ignore[arg-type]
+                    key_name=found.partner, level=found.level or "read",
+                    calendar_ids=[int(area) for area in found.areas] if found.areas is not None else None)
+    if not apibrake.allow("api", caller.key_id):
+        raise refused(429, "slow_down", "Too many requests with this key. Wait a minute.", {"Retry-After": "60"})
+    logs.set_actor(account.name)
     return caller
 
 

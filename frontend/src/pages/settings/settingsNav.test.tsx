@@ -309,8 +309,9 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     // "Aussehen" of the account module first, then nextime's own (plan "Einstellungen", Darstellung).
     ['appearance', ['appearance', 'week-start', 'week-numbers', 'clock', 'duplicates', 'month-style']],
     ['notifications', ['notify-ways', 'reminders', 'reminder-defaults', 'reminder-devices']],
-    ['connections', ['devices', 'install', 'nextasks', 'nexpaper', 'api-keys', 'ai-tools']],
-    ['general', ['limits', 'features', 'interfaces', 'languages']],
+    // The other nex apps are the cards of the shared module verbinden, one per partner of the catalog.
+    ['connections', ['devices', 'install', 'nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes', 'api-keys', 'ai-tools']],
+    ['general', ['limits', 'features', 'interfaces', 'nex-apps', 'languages']],
     ['sign-in', ['sign-in-ready', 'sign-in', 'sign-in-providers', 'sign-in-authentik']],
     ['mail', ['mail']],
     ['storage', ['storage', 'backups']],

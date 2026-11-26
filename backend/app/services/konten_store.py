@@ -1011,11 +1011,13 @@ class KontenStore:
     def purge_account(self, account_id: AccountId) -> None:
         """Gone for good with everything it owned (``content.account_purged``: calendars, events, attachments,
         shares); its username and its former ones stay reserved for ever."""
-        from . import content
+        from . import content, verbinden_store
 
         row = self._row(account_id)
         if row is None:
             return
+        # Its connections with other nex apps end, both sides (the shared module verbinden).
+        verbinden_store.end_all(self.db, row.id)
         content.account_purged(self.db, row.id)
         self.db.execute(update(FormerName).where(FormerName.account_id == row.id).values(account_id=None))
         self.db.add(FormerName(account_id=None, name=row.name))

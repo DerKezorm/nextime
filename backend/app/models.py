@@ -1282,3 +1282,89 @@ class McpRequest(Base):
     result: Mapped[str | None] = mapped_column(Text, nullable=True)
     summary: Mapped[str] = mapped_column(Text, default="")
     dangerous: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+
+
+# --- The shared module verbinden (bauplaene/verbinden 0.1.1) ---------------------------------------------------------
+# New tables beside nextime's own connections (``nextasks_connections``, ``nexpaper_connections``), which stay as they
+# are and show in the cards as connections by API key.
+
+
+class AppConnection(Base):
+    """A connection of an account with another nex app, the same id on both sides: what nextime may there (``uses``),
+    what the partner may here (``grants``, with the calendars ``areas_granted``), the partner's tokens for nextime
+    sealed (``held``), and only the hashes of the tokens nextime gave the partner."""
+
+    __tablename__ = "vb_connections"
+    __table_args__ = (UniqueConstraint("account_id", "partner"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    partner: Mapped[str] = mapped_column(String(32))
+    partner_base: Mapped[str] = mapped_column(String(500))
+    partner_account: Mapped[str] = mapped_column(String(200), default="")
+    uses: Mapped[Any] = mapped_column(JSON, default=list)
+    grants: Mapped[Any] = mapped_column(JSON, default=list)
+    areas_granted: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    areas_used: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    held: Mapped[str] = mapped_column(Text)
+    issued_access_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    issued_refresh_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    issued_access_expires: Mapped[datetime] = mapped_column(UtcDateTime)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+    used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    ok_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    state: Mapped[str] = mapped_column(String(16), default="connected")
+    stale_since: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
+    problem: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    partner_version: Mapped[str] = mapped_column(String(40), default="")
+
+
+class AppConnectionPending(Base):
+    """A connection nextime started: the account went to the partner's consent page (10 minutes, once)."""
+
+    __tablename__ = "vb_pending"
+
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    partner: Mapped[str] = mapped_column(String(32))
+    partner_base: Mapped[str] = mapped_column(String(500))
+    verifier: Mapped[str] = mapped_column(Text)
+    areas_granted: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
+
+
+class AppConnectionCode(Base):
+    """A code of nextime's consent page for the app that asked (10 minutes, once): only its hash."""
+
+    __tablename__ = "vb_codes"
+
+    code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
+    partner: Mapped[str] = mapped_column(String(32))
+    partner_base: Mapped[str] = mapped_column(String(500))
+    redirect_uri: Mapped[str] = mapped_column(String(2048))
+    challenge: Mapped[str] = mapped_column(String(200))
+    areas_granted: Mapped[Any] = mapped_column(JSON(none_as_null=True), nullable=True)
+    expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
+class AppConnectionSpent(Base):
+    """A spent code or refresh token of a connection (its hash): brought again, it ends the connection."""
+
+    __tablename__ = "vb_spent"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    connection_id: Mapped[str] = mapped_column(String(64), index=True)
+
+
+class AppConnectionWaiting(Base):
+    """A revocation the partner has not heard yet (sealed), tried again for 30 days."""
+
+    __tablename__ = "vb_waiting"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    partner_base: Mapped[str] = mapped_column(String(500))
+    token: Mapped[str] = mapped_column(Text)
+    since: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)

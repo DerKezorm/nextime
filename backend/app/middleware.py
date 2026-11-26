@@ -162,8 +162,13 @@ CLIENT_PATTERN = re.compile(rb"^[A-Za-z0-9_-]{8,64}$")
 API_PREFIX = "/api/v1/"
 #: The iPhone app's interface (TIME-29): it never takes a cookie, only the device's token (or a pairing's secret).
 APP_PREFIX = "/api/app/"
-#: Routes programs call without a tab: MCP (TIME-26), with its key in ``Authorization``.
-PROGRAM_PATHS: frozenset[str] = frozenset({"/api/mcp"})
+#: Routes programs call without a tab: MCP (TIME-26), with its key in ``Authorization``; the program's side of OAuth
+#: (the shared module mcp: register, token, revoke, forms of RFC 7591, 6749, 7009); the other nex apps' side of a
+#: connection (the shared module verbinden: token, revoke, retire). None of them takes a session cookie.
+PROGRAM_PATHS: frozenset[str] = frozenset({
+    "/api/mcp", "/api/oauth/register", "/api/oauth/token", "/api/oauth/revoke",
+    "/api/connect/token", "/api/connect/revoke", "/api/connect/retire",
+})
 #: Largest body an ordinary request may carry.
 MAX_BODY = 16 * 1024 * 1024
 #: Where a larger body is expected, with its own limit checked while streaming. An upload's limit is the operator's

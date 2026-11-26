@@ -6,6 +6,7 @@ import { NotFoundPage } from './components/NotFound'
 import { FEATURE_ROUTES } from './extensions'
 import { AppConnectPage } from './features/app/AppConnectPage'
 import { SetupLinkPage } from './features/calendars/Devices'
+import { ConnectConsentPage, ConnectReturnPage } from './features/connect/ConnectPages'
 import { McpConsentPage, McpRequestPage } from './features/mcp/McpPages'
 import { CalendarSettingsPage } from './features/notify/CalendarSettings'
 import { SearchPage } from './features/search/SearchPage'
@@ -56,6 +57,9 @@ export default function App() {
       <Route path="app-connect" element={<AppConnectPage />} />
       {/* An AI program that connects itself asks for the account's yes (the shared module mcp, OAuth). */}
       <Route path="oauth/authorize" element={<McpConsentPage />} />
+      {/* Another nex app asks to connect, and the way back from one (the shared module verbinden). */}
+      <Route path="connect/app" element={<ConnectConsentPage />} />
+      <Route path="connect/return" element={<ConnectReturnPage />} />
       {/* A guest's read link (TIME-19 AC-13): no account, nothing else of nextime. */}
       <Route path="abo/:token" element={<GuestPage />} />
       <Route

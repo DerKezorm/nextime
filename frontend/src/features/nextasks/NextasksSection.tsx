@@ -22,7 +22,9 @@ import { AreaMark } from './AreaMark'
 import { nextasksApi, noteChoice, setNextasks, type AreaChoice as AreaChoiceRow } from './api'
 import { useNextasks } from './hooks'
 
-export function NextasksSection() {
+/** ``bare``: only the inside, for the place "Von Hand verbinden" of the shared module verbinden's card (the module's
+ * card is the frame then); without, the card of its own as before. */
+export function NextasksSection({ bare = false }: { bare?: boolean } = {}) {
   const { t } = useTranslation()
   const status = useNextasks()
   const offline = useOffline()
@@ -46,25 +48,8 @@ export function NextasksSection() {
     setLeaving(false)
   }
 
-  return (
-    <Collapsible
-      variant="card"
-      id="nextasks"
-      logo="/apps/nextasks.svg"
-      title={t('nextasks.section.title')}
-      subtitle={t('nextasks.section.text')}
-      open={!foldable || !folded}
-      onOpenChange={(open) => setFolded(open ? '0' : null)}
-      status={
-        status?.connected ? (
-          <span className="flex min-w-0 items-center gap-2" data-testid="nextasks-summary">
-            <Badge tone="on">{t('nextasks.section.connected')}</Badge>
-            <span className="min-w-0 truncate text-sm text-[var(--nexui-text-muted)]">{status.host}</span>
-          </span>
-        ) : undefined
-      }
-      testId="nextasks-card"
-    >
+  const inside = (
+    <>
       {problem && <Notice tone="danger">{problem}</Notice>}
       {status?.connected && !editing && (
         <>
@@ -117,6 +102,35 @@ export function NextasksSection() {
           testId="nextasks-disconnect-dialog"
         />
       )}
+    </>
+  )
+  if (bare) {
+    return (
+      <div className="flex flex-col gap-4" data-testid="nextasks-card">
+        {inside}
+      </div>
+    )
+  }
+  return (
+    <Collapsible
+      variant="card"
+      id="nextasks"
+      logo="/apps/nextasks.svg"
+      title={t('nextasks.section.title')}
+      subtitle={t('nextasks.section.text')}
+      open={!foldable || !folded}
+      onOpenChange={(open) => setFolded(open ? '0' : null)}
+      status={
+        status?.connected ? (
+          <span className="flex min-w-0 items-center gap-2" data-testid="nextasks-summary">
+            <Badge tone="on">{t('nextasks.section.connected')}</Badge>
+            <span className="min-w-0 truncate text-sm text-[var(--nexui-text-muted)]">{status.host}</span>
+          </span>
+        ) : undefined
+      }
+      testId="nextasks-card"
+    >
+      {inside}
     </Collapsible>
   )
 }
