@@ -29,9 +29,10 @@ Fragen und Modulfehler in `einst-fragen/nextime-module.md`, Entwurf „Was ist n
 | mcp | 1.1.0 | Store `services/mcp_store.py` über neue Tabellen `mcp_keys`, `mcp_clients`, `mcp_codes`, `mcp_spent`, `mcp_tool_rights`, `mcp_requests`; sieben Werkzeuge als `nexmcp.Tool` (vier read, zwei change, `delete_event` risky), OAuth unter `/api/oauth` (Zugriff `nt_mcp_`, Refresh `ntr_`, Code `ntmc_`), Zustimmungsseite `/oauth/authorize`, Rückfrage `/mcp/requests/<id>`, „Rechte je Werkzeug“ und „Wartende Rückfragen“ in der Karte, Betreiber unter „MCP-Zugang“; MCP ab Werk aus, `konten_wanderung` schreibt „an“ fest, wo `mcp_keys` neu ist und Konten da sind (Entscheidung 5); gesperrtes Konto: Schlüssel ruhen, Programme enden (E41/E42) | `POST /api/mcp` mit 403 `mcp_off`, 401 `token_invalid` wie bisher, jetzt mit `WWW-Authenticate`; alte `nt_api_` mit Haken gelten weiter |
 | verbinden | 0.1.1 | Tabellen `vb_*`, Store `services/verbinden_store.py` (Zugang `ntv_`, `ntvr_`, `ntvc_`), Wege `/.well-known/nex-app`, `/api/connect/…`, Seiten `/connect/app`, `/connect/return`, Karten der sechs Partner (Modul), Betreiberkarte „Andere nex-Apps“ unter Allgemein; Gastgeber: `/api/v1` nimmt Verbindungs-Token (Recht aus den Zwecken, Kalender als Bereiche, eigener Schalter); Takt für wartende Widerrufe, `end_all` beim endgültigen Löschen | `PUT/DELETE /api/nextasks`, `/api/nexpaper` und ihre Tabellen unverändert, in der Karte als „über API-Schlüssel“, Form unter „Von Hand verbinden“; `retire` beendet einen alten `nt_api_` |
 
-**Umwege mit TODO:** `TODO updates 0.1.1` in `backend/tests/conftest.py` (`WITHOUT_A_BELL`: drei Glocken-Vertragstests
-übersprungen, nextime hat keine Glocke). Offen (Frage 3): als Gast liest nextime Aufgaben und Fristen nur über die alte
-Verbindung.
+**Umwege mit TODO:** keine mehr. Der Umweg für die Glocken-Vertragstests (updates 0.1.1) fiel mit updates 0.1.2 weg
+(`has_bell = False`); die Gast-Nutzung über die Klick-Verbindung (Frage 3) steht seit Runde 2 (V18). Module zuletzt
+aus `9bc9f73`: mcp 1.1.1 (alte Zusammenfassung von `POST /api/mcp` über `summaries=`), verbinden 0.1.3
+(`people.read`), updates 0.1.2.
 
 **Nebenbei behoben:** der Tab-Wächter (`GuardMiddleware`) ließ Programme nicht an `/api/oauth/register|token|revoke`
 und `/api/connect/token|revoke|retire` (`PROGRAM_PATHS`).
