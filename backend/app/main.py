@@ -40,6 +40,7 @@ from .routers import live as live_router
 from .routers import locales as locales_router
 from .routers import logs as logs_router
 from .routers import mcp as mcp_router
+from .routers import nexfolk as nexfolk_router
 from .routers import nexpaper as nexpaper_router
 from .routers import nextasks as nextasks_router
 from .routers import notify as notify_router
@@ -89,7 +90,7 @@ FEATURE_ROUTERS: list = [calendars_router, collections_router, events_router, de
                          sources_router, shares_router, notify_router, reminders_router,
                          places_router, attachments_router, search_router, trash_router, offline_router,
                          transfer_router, keys_router, api_v1_router, mcp_router, nextasks_router,
-                         nexpaper_router, app_pairing_router, app1_router, verbinden_router]
+                         nexpaper_router, app_pairing_router, app1_router, verbinden_router, nexfolk_router]
 
 
 def _read_log_mode() -> tuple[str, datetime | None]:

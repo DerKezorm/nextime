@@ -48,7 +48,18 @@ from app.main import app  # noqa: E402
 from app.models import MEMBER, OPERATOR, Account, Base, Setting  # noqa: E402
 from app.routers import health  # noqa: E402
 from app.security import SESSION_COOKIE, brake, hash_password, start_session  # noqa: E402
-from app.services import apibrake, internet, nexpaper, nextasks, places, reminders, storage, totp, updates  # noqa: E402
+from app.services import (  # noqa: E402
+    apibrake,
+    internet,
+    nexfolk,
+    nexpaper,
+    nextasks,
+    places,
+    reminders,
+    storage,
+    totp,
+    updates,
+)
 
 DATA_DIR = _DATA
 #: The attachments folder (``services/backups.media_root``).
@@ -174,6 +185,7 @@ def clean_db(schema: None) -> Iterator[None]:
     apibrake.forget()
     nextasks.forget()
     nexpaper.forget()
+    nexfolk.forget()
     yield
     app.dependency_overrides.clear()
 

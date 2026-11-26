@@ -2139,6 +2139,20 @@
     "openInNexpaper": "Open in nexpaper",
     "close": "Close"
   },
+  "birthdays": {
+    "block": "Birthdays from nexfolk",
+    "today": "today",
+    "tomorrow": "tomorrow",
+    "birthday": "{{name}}'s birthday",
+    "birthdayYears_one": "{{name}} turns {{count}}",
+    "birthdayYears_other": "{{name}} turns {{count}}",
+    "anniversary": "{{name}}: {{label}}",
+    "anniversaryWord": "Anniversary",
+    "problem": "nexfolk does not answer right now.",
+    "more_one": "+{{count}} more",
+    "more_other": "+{{count}} more",
+    "less": "Fewer"
+  },
   "nexpaper": {
     "section": {
       "title": "nexpaper",

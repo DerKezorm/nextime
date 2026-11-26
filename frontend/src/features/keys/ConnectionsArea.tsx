@@ -38,10 +38,10 @@ export function useKeyWords() {
   }
 }
 
-/** The partners nextime has a use for (plan V20: no card without effect): nextasks and nexpaper as their guest,
- * nexmail and nexdiary as their host. The others of the catalog come with their use. */
+/** The partners nextime has a use for (plan V20: no card without effect): nextasks, nexpaper and nexfolk (birthdays
+ * in "Heute") as their guest, nexmail and nexdiary as their host. The others of the catalog come with their use. */
 // eslint-disable-next-line react-refresh/only-export-components
-export const PARTNERS_IN_USE = ['nextasks', 'nexpaper', 'nexmail', 'nexdiary']
+export const PARTNERS_IN_USE = ['nextasks', 'nexpaper', 'nexfolk', 'nexmail', 'nexdiary']
 
 /** The module's calls for the cards, with the list of partners cut to those in use.
  * TODO verbinden 0.1.2: the module's `ConnectionsArea` takes no list of partners yet (V20). */
