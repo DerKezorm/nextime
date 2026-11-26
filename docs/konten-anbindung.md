@@ -14,6 +14,36 @@ heute jedes eingerichtete iPhone, jeden Mac und jedes DAVx5 abhängen.
 
 ## 0. Stand
 
+### Durchgang „Module“ (26.11.2026, Zweig `einst-module`)
+
+Aus `bauplaene-module` (Zweig `einst-module`, zuletzt `de70ac2`) mit `tools/sync.py copy`, `check` aller Module grün.
+Fragen und Modulfehler in `einst-fragen/nextime-module.md`, Entwurf „Was ist neu“ in
+`einst-fragen/nextime-module-was-ist-neu.md`. App-Fassung unverändert, kein Release.
+
+| Modul | Fassung | was nextime dafür gebaut hat | alte Wege |
+|---|---|---|---|
+| sicherung | 1.0.4 (E62–E64) | `when` der Karte in drei Formen „heute, 3:00 AM“, „gestern, …“, Datum (`server.todayAt`/`yesterdayAt`); `time3` prüft die Klammern in den Zeilenknöpfen | unverändert |
+| ui | 1.1.1 | `AboutPage showUpdates` | – |
+| schluessel | 1.1.0 | `key_id=str` (`api-<n>`/`mcp-<n>`, zwei Tabellen), Art `mcp` (`nt_mcp_`, eigene Tabelle `mcp_keys`, Programme zählen), Extra `mcp` der API-Schlüssel ausgedient (nur abschaltbar) | `GET/POST/DELETE /api/keys` und `/api/admin/keys` in alter Form (IDs als Zahlen, `POST` mit `mcp: true` setzt den Haken weiter, `retired=True`) |
+| updates | 0.1.1 (U1–U21) | `services/updates.py` konfiguriert das Modul (Schalter `update_check`, Projektseite leer U18, keine Glocke U19), `routers/about.py` = Modulweg mit nextimes Zusammenfassungen, Einrichtung mit `UpdateSetupRow` (`POST /api/setup` nimmt `update_check`), `AboutArea` mit `useUpdates`, Satz nennt die Internetprüfung | `/api/server/state` als dünne Hülle (U16), `PUT /api/settings` `update_check` |
+| mcp | 1.1.0 | Store `services/mcp_store.py` über neue Tabellen `mcp_keys`, `mcp_clients`, `mcp_codes`, `mcp_spent`, `mcp_tool_rights`, `mcp_requests`; sieben Werkzeuge als `nexmcp.Tool` (vier read, zwei change, `delete_event` risky), OAuth unter `/api/oauth` (Zugriff `nt_mcp_`, Refresh `ntr_`, Code `ntmc_`), Zustimmungsseite `/oauth/authorize`, Rückfrage `/mcp/requests/<id>`, „Rechte je Werkzeug“ und „Wartende Rückfragen“ in der Karte, Betreiber unter „MCP-Zugang“; MCP ab Werk aus, `konten_wanderung` schreibt „an“ fest, wo `mcp_keys` neu ist und Konten da sind (Entscheidung 5); gesperrtes Konto: Schlüssel ruhen, Programme enden (E41/E42) | `POST /api/mcp` mit 403 `mcp_off`, 401 `token_invalid` wie bisher, jetzt mit `WWW-Authenticate`; alte `nt_api_` mit Haken gelten weiter |
+| verbinden | 0.1.1 | Tabellen `vb_*`, Store `services/verbinden_store.py` (Zugang `ntv_`, `ntvr_`, `ntvc_`), Wege `/.well-known/nex-app`, `/api/connect/…`, Seiten `/connect/app`, `/connect/return`, Karten der sechs Partner (Modul), Betreiberkarte „Andere nex-Apps“ unter Allgemein; Gastgeber: `/api/v1` nimmt Verbindungs-Token (Recht aus den Zwecken, Kalender als Bereiche, eigener Schalter); Takt für wartende Widerrufe, `end_all` beim endgültigen Löschen | `PUT/DELETE /api/nextasks`, `/api/nexpaper` und ihre Tabellen unverändert, in der Karte als „über API-Schlüssel“, Form unter „Von Hand verbinden“; `retire` beendet einen alten `nt_api_` |
+
+**Umwege mit TODO:** `TODO updates 0.1.1` in `backend/tests/conftest.py` (`WITHOUT_A_BELL`: drei Glocken-Vertragstests
+übersprungen, nextime hat keine Glocke). Offen (Frage 3): als Gast liest nextime Aufgaben und Fristen nur über die alte
+Verbindung.
+
+**Nebenbei behoben:** der Tab-Wächter (`GuardMiddleware`) ließ Programme nicht an `/api/oauth/register|token|revoke`
+und `/api/connect/token|revoke|retire` (`PROGRAM_PATHS`).
+
+**Rückweg auf 0.4.0:** nur neue Tabellen (`mcp_*`, `vb_*`) und Einstellungen (`mcp_enabled` jetzt gespeichert,
+`mcp_programs`, `mcp_max_level`, `mcp_blocked_tools`, `connections_enabled`, `connections_addresses`). 0.4.0 liest sie
+nicht; MCP-Schlüssel von Hand, Programme und Verbindungen per Klick gehen dort nicht, API-Schlüssel und alte
+Verbindungen schon.
+
+**Test „Bestand“:** zwei Tests im Block „After the change (modules pass)“ (MCP bleibt an, alter Weg setzt den Haken;
+Update-Schalter bleibt an, `/api/server/state` in alter Form).
+
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 
 Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus
