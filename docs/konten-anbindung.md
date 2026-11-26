@@ -18,7 +18,7 @@ heute jedes eingerichtete iPhone, jeden Mac und jedes DAVx5 abhängen.
 
 Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus
 `bauplaene-stand` (zuletzt `b0d3618`: `7685875` mit E33 bis E38, dazu sicherung für strenges `tsc`) mit `tools/sync.py copy`, `check` aller sieben grün: **`ui` 1.1.0, `konten`
-1.1.0, `oidc` 1.2.0, `post` 1.1.0, `log` 1.0.0, `sicherung` 1.0.1, `schluessel` 1.0.2, `sprachen` 1.0.1** (konten seit E57 1.1.1). Die Frontend-Vorlagen tragen
+1.1.0, `oidc` 1.2.0, `post` 1.1.0, `log` 1.0.0, `sicherung` 1.0.1, `schluessel` 1.0.2, `sprachen` 1.0.2** (konten seit E57 1.1.1). Die Frontend-Vorlagen tragen
 ihre Kopfzeile `// Vorlage <Paket> <Fassung>`. App-Fassung unverändert 0.4.0, kein Release.
 
 | Bereich | woher jetzt | was gewandert ist (alt → neu) |
@@ -61,6 +61,9 @@ der Kopie aus `7685875` behebt). Fenster, die nextime auch außerhalb der Einste
 hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E27 im Block „After the change“, Vertrag
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
+
+**sprachen 1.0.2 (`2a565f5`, E59, 26.11.2026):** die Vorlage hält nur Texte; Vertragsadapter `offered_template()` aus
+nextimes englischen Texten samt Modulwörtern; Vorlage `nexsprachen.test.tsx` 1.0.2 mit `ENGLISH = SHIPPED.en.texts`.
 
 **Galerie, letzte Reparatur (26.11.2026):** Die Karte „Sprachen“ fragt über nextimes Weg (`sprachenFetch` mit
 `X-Nextime-Client`); vorher scheiterten Hochladen und Entfernen mit `client_required`. Test in `time1.test.tsx`
