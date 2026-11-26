@@ -13,10 +13,13 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import secrets
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
@@ -171,3 +174,40 @@ def test_a_program_registers_trades_and_revokes_without_a_tab_as_programs_do(cli
         assert program.post("/api/oauth/revoke", data={"token": "ntr_x"}).status_code == 200
         # The consent is a person's page: without the tab it is refused as every change.
         assert program.post("/api/oauth/authorize", json={}).status_code == 400
+
+
+def test_a_request_that_waits_goes_to_the_account_s_browsers(client: TestClient, account: Account,
+                                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    """MCP decision 14: nextime has no bell, so "Ein Programm wartet auf dein Ja" goes as a notification to the
+    account's browsers, with the program's name and the request's line, never its arguments; a tap opens the page."""
+    from app.models import AuthSession, NotifyOutbox, WebPushSubscription
+    from app.security import hash_token, start_session
+    from app.services import notify, webpush
+
+    _mcp_on()
+    with SessionLocal() as db:
+        row = db.get(Account, account.id)
+        assert row is not None
+        token = start_session(db, row, "127.0.0.1", "browser")
+        session = db.scalar(select(AuthSession).where(AuthSession.token_hash == hash_token(token)))
+        assert session is not None
+        db.add(WebPushSubscription(account_id=row.id, session_id=session.id, endpoint="https://push.example.com/a",
+                                   p256dh="p" * 87, auth="a" * 22))
+        db.commit()
+    made = client.post("/api/connections/keys", json={"kind": "mcp", "name": "Planer", "right": "write"}).json()
+    assert client.put(f"/api/connections/mcp/keys/{made['key']['id']}/rights",
+                      json={"rights": {"create_event": "ask"}}).status_code == 200
+    with new_client() as program:
+        asked = program.post("/api/mcp", headers=_bearer(made["secret"]), json={
+            "jsonrpc": "2.0", "id": 1, "method": "tools/call",
+            "params": {"name": "create_event", "arguments": {"title": "Geheimer Titel", "start": "2026-11-27T09:00"}}})
+    assert asked.status_code == 200, asked.text
+    with SessionLocal() as db:
+        (waiting,) = db.scalars(select(NotifyOutbox).where(NotifyOutbox.kind == "mcp")).all()
+        assert waiting.payload["url"].startswith("/mcp/requests/")
+    sent: list[dict[str, Any]] = []
+    monkeypatch.setattr(webpush, "deliver", lambda _db, _sub, body, **_kw: sent.append(json.loads(body)))
+    notify.send_round(datetime.now(UTC) + timedelta(seconds=1))
+    assert len(sent) == 1 and sent[0]["url"].startswith("/mcp/requests/")
+    assert sent[0]["title"] in ("Ein Programm wartet auf dein Ja", "A program waits for your yes")
+    assert sent[0]["body"].startswith("Planer: ") and "Geheimer Titel" in sent[0]["body"]

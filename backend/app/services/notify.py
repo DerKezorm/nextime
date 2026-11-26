@@ -550,6 +550,15 @@ def _send_round(now: datetime) -> int:
                             raise LookupError("no_target")
                         body = reminders.message_for(db, account, row, target, now)
                         topic = reminders.topic_of(row)
+                    elif row.kind == MCP:
+                        # An AI program waits for the account's yes: no calendar to look at again.
+                        target = db.get(WebPushSubscription, row.target_id)
+                        if target is None or target.account_id != row.account_id:
+                            raise LookupError("no_target")
+                        payload = dict(row.payload or {})
+                        body = {"title": payload.get("title"), "body": payload.get("text"), "url": payload.get("url"),
+                                "tag": "mcp-request"}
+                        topic = "mcp"
                     else:
                         refused = _still_for(db, account, row)
                         if refused:
@@ -795,3 +804,37 @@ def register() -> None:
         SESSIONS_ENDED.append(accounts_out)
     with SessionLocal() as db:
         webpush.server_key(db)
+
+
+# --- An AI program waits for the account's yes (the shared module mcp, decision 14) ---------------------------------
+
+#: ``notify_outbox.kind`` of "Ein Programm wartet auf dein Ja".
+MCP = "mcp"
+MCP_WORDS = {
+    "de": {"title": "Ein Programm wartet auf dein Ja", "text": "{key}: {what}"},
+    "en": {"title": "A program waits for your yes", "text": "{key}: {what}"},
+}
+
+
+def mcp_waiting(event: str, request: Any) -> None:
+    """``notify`` of the shared module mcp: nextime has no bell, so a request that waits goes as a notification to the
+    account's browsers (the way nextime has, MCP decision 14). Only the program's name and the one line of the request,
+    never its arguments; a tap opens the request's page."""
+    if event != "waiting":
+        return
+    from .events import language_of
+
+    with SessionLocal() as db:
+        account = db.get(Account, int(request.account_id))
+        if account is None or account_out(account):
+            return
+        words = MCP_WORDS.get(language_of(account), MCP_WORDS["en"])
+        payload = {"title": words["title"], "text": words["text"].format(key=request.key_name,
+                                                                         what=request.summary or request.tool),
+                   "url": f"/mcp/requests/{request.id}"}
+        now = clock()
+        for row in webpush.subscriptions(db, account.id):
+            db.add(NotifyOutbox(account_id=account.id, kind=MCP, target_id=row.id, calendar_id=None,
+                                payload=payload, created_at=now, next_try_at=now))
+        db.commit()
+    logger.info("MCP request waits, browsers told account_id=%s request=%s", request.account_id, request.id)

@@ -17,7 +17,7 @@ from fastapi import Request
 
 from ..db import SessionLocal
 from ..deps import client_ip, require_account, require_operator
-from ..services import mcp
+from ..services import mcp, notify
 from ..services.mcp_store import Store
 from ..vendor.nexmcp import api as mcp_api
 from . import devices
@@ -41,4 +41,6 @@ router = mcp_api.router(
     address=_address,
     sender=client_ip,
     prefix="/api/connections/mcp",
+    # nextime has no bell: a request that waits goes to the account's browsers (MCP decision 14).
+    notify=notify.mcp_waiting,
 )
