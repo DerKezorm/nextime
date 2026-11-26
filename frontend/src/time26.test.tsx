@@ -74,7 +74,7 @@ describe('TIME-26 keys', () => {
     expect(card.textContent).toContain('Ein API-Schlüssel lässt ein Programm mit deinen Kalendern arbeiten')
     expect(one('api-keys-new')!.textContent).toBe('Neuer API-Schlüssel')
     expect((one('api-keys-address')!.querySelector('input') as HTMLInputElement).value).toBe('https://time.example.com/api/v1')
-    expect(one('keys-hidden-note')!.textContent).toBe('„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst.')
+    expect(one('keys-hidden-note')!.textContent).toBe('„Alle Kalender, auch spätere“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese Kalender“ ausdrücklich wählst.')
   })
 
   it('TIME-26 AC-1 AC-11 the dialog with name, right, calendars, run-out (90 days chosen) and MCP; the key once to copy', async () => {
@@ -85,9 +85,9 @@ describe('TIME-26 keys', () => {
     const expiry = dialog.querySelector<HTMLSelectElement>('[data-testid="key-expiry"]')!
     expect(expiry.value).toBe('90')
     expect([...expiry.options].map((option) => option.value)).toEqual(['30', '90', '365', 'never'])
-    // nextime's words for its rights and its calendars (TIME-26).
+    // nextime's words for its rights and its calendars (TIME-26), the choice in the modules' one wording (M-5).
     expect(dialog.textContent).toContain('Lesen und schreiben')
-    expect(dialog.textContent).toContain('Alle Kalender, auch später angelegte')
+    expect([one('key-areas-all')!.textContent, one('key-areas-some')!.textContent]).toEqual(['Alle Kalender, auch spätere', 'Nur diese Kalender'])
     type(one('key-name') as HTMLInputElement, 'Planer am Laptop')
     await click(one('key-right-write'))
     await click(one('key-areas-some'))

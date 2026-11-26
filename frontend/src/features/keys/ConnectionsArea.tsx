@@ -33,8 +33,6 @@ export function useKeyWords() {
     rights: { read: t('keys.dialog.read'), write: t('keys.dialog.write') },
     rightHints: { read: t('keys.dialog.readHint'), write: t('keys.dialog.writeHint') },
     areas: t('keys.dialog.calendars'),
-    areasAll: t('keys.dialog.calendarsAll'),
-    areasSome: t('keys.dialog.calendarsSome'),
   }
 }
 

@@ -2037,10 +2037,8 @@
       "writeHint": "Dazu Termine anlegen, ändern und in den Papierkorb legen.",
       "mcp": "Auch für MCP",
       "calendars": "Kalender",
-      "calendarsAll": "Alle Kalender, auch später angelegte",
-      "calendarsSome": "Nur diese …",
       "mcpWriteHint": "Ein KI-Werkzeug liest auch Texte aus Einladungen fremder Leute. Solche Texte könnten es zu Änderungen verleiten; Gelöschtes liegt dann im Papierkorb.",
-      "hiddenNote": "„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst."
+      "hiddenNote": "„Alle Kalender, auch spätere“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese Kalender“ ausdrücklich wählst."
     }
   },
   "mcp": {

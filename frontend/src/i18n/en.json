@@ -2037,10 +2037,8 @@
       "writeHint": "Also create, change and move events to the trash.",
       "mcp": "Also for MCP",
       "calendars": "Calendars",
-      "calendarsAll": "All calendars, later ones too",
-      "calendarsSome": "Only these …",
       "mcpWriteHint": "An AI tool also reads texts from invitations by other people. Such texts could lead it to make changes; anything deleted then lies in the trash.",
-      "hiddenNote": "“All calendars” means all you show. A key reads hidden calendars only when you choose them under “Only these …”."
+      "hiddenNote": "“All calendars, including later ones” means all you show. A key reads hidden calendars only when you choose them under “Only these calendars”."
     }
   },
   "mcp": {
