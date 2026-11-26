@@ -62,6 +62,9 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**sicherung `130e4e9` (26.11.2026, `c5fd63f`):** Frage 15 im Modul behoben. Lauf `reihe.sh nextime ende`: ruff
+sauber; pytest 1831 grün, 11 übersprungen; `-m timing` 8 grün; lint sauber; vitest 1316 grün; build grün.
+
 **E53 (0e372f1, 26.11.2026, `aef1695`):** Sicherung und Abmelden-überall behalten die Namen der API-Beschreibung von
 konten; gegen konten bleibt nur die verhaltensbedingte summary von `storage-limit`. Lauf `reihe.sh nextime ende`:
 ruff sauber; pytest 1830 grün, **1 rot** (Vertragstest der sicherung hält nextimes eigenes `RestoreIn` des
