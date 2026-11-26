@@ -11,4 +11,21 @@ from ..deps import require_operator
 from ..services import locales  # noqa: F401 - configures the module before its routes are used
 from ..vendor.nexsprachen import api
 
-router = api.router(operator=require_operator)
+#: The names nextime's description of the interface had for these routes before the module (``/api/openapi.json``
+#: with ``NEXTIME_API_DOCS``): FastAPI's names of nextime's own functions, its summaries, its schema ``LocaleEntry``.
+OPERATION_IDS = {
+    "list": "list_locales_api_locales_get",
+    "read": "read_locale_api_locales__code__get",
+    "upload": "upload_locale_api_locales__code__put",
+    "remove": "delete_locale_api_locales__code__delete",
+}
+SUMMARIES = {
+    "list": "Languages the operator added",
+    "read": "The texts of one added language",
+    "upload": "Add or replace a language (operator)",
+    "remove": "Remove an added language (operator)",
+}
+SCHEMA_NAMES = {"LanguageEntry": "LocaleEntry"}
+
+router = api.router(operator=require_operator, operation_ids=OPERATION_IDS, summaries=SUMMARIES,
+                    schema_names=SCHEMA_NAMES)

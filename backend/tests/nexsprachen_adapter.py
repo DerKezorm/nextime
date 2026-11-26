@@ -13,6 +13,8 @@ from typing import Any, ClassVar
 
 from sprachen_contract import StandardAdapter
 
+from app.routers.locales import OPERATION_IDS, SCHEMA_NAMES, SUMMARIES
+
 OPERATOR_NAME = "tester"
 
 
@@ -28,6 +30,12 @@ class Adapter(StandardAdapter):
     built_in: ClassVar[dict[str, str]] = {"de": "Deutsch", "en": "English"}
     public_read = True
     has_template = False
+    # The names of before (``routers/locales.py``). nextime serves its description only with ``NEXTIME_API_DOCS``
+    # (``/api/openapi.json``, off in the tests): the adapter hands out the same description under a path of its own.
+    openapi_path = "/api/test-only/openapi.json"
+    operation_ids: ClassVar[dict[str, str]] = OPERATION_IDS
+    summaries: ClassVar[dict[str, str]] = SUMMARIES
+    schema_names: ClassVar[dict[str, str]] = SCHEMA_NAMES
 
     def start(self) -> None:
         """nextime started as in production (its lifespan), with an empty folder of own languages."""
@@ -43,8 +51,12 @@ class Adapter(StandardAdapter):
         locales.forget()
         self._main = TestClient(app, base_url="http://testserver", headers=TAB)
         self._main.__enter__()
+        app.add_api_route(self.openapi_path, lambda: app.openapi(), include_in_schema=False)
 
     def stop(self) -> None:
+        from app.main import app
+
+        app.router.routes[:] = [route for route in app.router.routes if getattr(route, "path", "") != self.openapi_path]
         from app.services import locales
 
         for client in self._clients:
