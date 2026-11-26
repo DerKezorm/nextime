@@ -1,5 +1,5 @@
 /**
- * The field "Teilnehmer" of an event in an iCloud or Google calendar (TIME-18 AC-12, plan "Apps verbinden" V30): the
+ * The field "Teilnehmer" of an event in an iCloud or Google calendar (TIME-18 AC-9, plan "Apps verbinden" V30): the
  * people to invite as chips, a free mail address with Enter, and suggestions from nexfolk's people over a connection
  * (`GET /api/people`, only name and mail addresses). nextime writes them into the event at the source, which sends the
  * invitations as usual. Not shown for nextime's own calendars.

@@ -57,7 +57,7 @@ class GeoIn(BaseModel):
 
 
 class AttendeeIn(BaseModel):
-    """One person invited (TIME-18 AC-12): a mail address, and a name where one is known (from nexfolk, V30)."""
+    """One person invited (TIME-18 AC-9): a mail address, and a name where one is known (from nexfolk, V30)."""
 
     email: str = Field(max_length=320)
     name: str = Field(default="", max_length=200)
@@ -79,7 +79,7 @@ class EventIn(BaseModel):
     client_ref: str | None = Field(default=None, max_length=64)
     #: The member's own reminders (TIME-7); left out: as the calendar's default.
     reminders: list[int] | None = Field(default=None, max_length=50)
-    #: People to invite, only in a calendar of iCloud or Google (TIME-18 AC-12); left out: none.
+    #: People to invite, only in a calendar of iCloud or Google (TIME-18 AC-9); left out: none.
     attendees: list[AttendeeIn] | None = Field(default=None, max_length=100)
 
 
@@ -109,7 +109,7 @@ class EventChangeIn(BaseModel):
     occurrence: str | None = Field(default=None, max_length=20)
     #: The version the member started from (its ETag): saving over a newer one is a conflict (EC-2).
     etag: str | None = Field(default=None, max_length=64)
-    #: The whole list of people invited (TIME-18 AC-12), only in a calendar of iCloud or Google; left out: unchanged.
+    #: The whole list of people invited (TIME-18 AC-9), only in a calendar of iCloud or Google; left out: unchanged.
     attendees: list[AttendeeIn] | None = Field(default=None, max_length=100)
 
 

@@ -67,7 +67,7 @@ def names_for(db: Session, account_id: int, addresses: list[str]) -> dict[str, A
 
 
 def people(db: Session, account_id: int, query: str) -> dict[str, Any]:
-    """``{"connected", "people"}``: suggestions for the field "Teilnehmer" (TIME-18 AC-12, V30), from nexfolk's
+    """``{"connected", "people"}``: suggestions for the field "Teilnehmer" (TIME-18 AC-9, V30), from nexfolk's
     ``/api/v1/people`` (only id, name and mail addresses, only the address books given). Nothing stored."""
     store = verbinden_store.Store(db)
     if store.connection(account_id, "nexfolk") is None:

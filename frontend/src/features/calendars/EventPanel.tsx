@@ -67,7 +67,7 @@ type Form = {
   /** The place and, for a chosen suggestion, where it lies (TIME-8). */
   location: string
   point: Point | null
-  /** The people invited, in a calendar of iCloud or Google (TIME-18 AC-12). */
+  /** The people invited, in a calendar of iCloud or Google (TIME-18 AC-9). */
   attendees: Invitee[]
   /** The member's own reminders (TIME-7); untouched, a new event follows the calendar's default. */
   reminders: number[]
@@ -788,7 +788,7 @@ function EventPanel({ target }: { target: PanelTarget }) {
                 onChange={(reminders) => set({ reminders, remindersTouched: true, remindersFromDefaults: false })}
                 note={reminderNote}
               />
-              {/* Attendees, only where the source sends the invitations (TIME-18 AC-12, V30). */}
+              {/* Attendees, only where the source sends the invitations (TIME-18 AC-9, V30). */}
               {inviting && <AttendeesField value={form.attendees} onChange={(attendees) => set({ attendees })} disabled={busy || offline} />}
               <div className="space-y-2">
                 <PlaceField value={form.location} onChange={(location, point) => set({ location, point })} enabled={places} label={t('panel.location')} problem={problems.location} />

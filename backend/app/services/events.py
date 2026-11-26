@@ -131,7 +131,7 @@ class Change:
     location: str | None = None
     geo_set: bool = False
     geo: tuple[float, float] | None = None
-    #: The people invited (TIME-18 AC-12, plan "Apps verbinden" V30): ``None`` unchanged; a list of (address, name)
+    #: The people invited (TIME-18 AC-9, plan "Apps verbinden" V30): ``None`` unchanged; a list of (address, name)
     #: the whole list, empty for none. Only in a calendar of iCloud or Google, which send the invitations themselves;
     #: ``organizer`` is the source's account (address, name), set by ``create``/``update``.
     attendees: list[tuple[str, str]] | None = None
@@ -326,7 +326,7 @@ def _apply_fields(component: icalendar.cal.Component, change: Change) -> None:
         _apply_attendees(component, change.attendees, change.organizer)
 
 
-#: The sources that take attendees and send the invitations themselves (TIME-18 AC-12, V30).
+#: The sources that take attendees and send the invitations themselves (TIME-18 AC-9, V30).
 ATTENDEE_SOURCES = ("icloud", "google")
 
 
@@ -609,7 +609,7 @@ def update(db: Session, account: Account, event_id: int, change: Change, *, scop
             raise error("scope_calendar", "A single occurrence cannot move to another calendar.", 422)
         _writable_calendar(db, account, change.calendar_id)
     if change.attendees is not None:
-        # Who invites: the account of the source the event stays in or moves to (TIME-18 AC-12, V30).
+        # Who invites: the account of the source the event stays in or moves to (TIME-18 AC-9, V30).
         change.organizer = organizer_for(db, account, change.calendar_id or row.calendar_id)
     parsed = ical.parse(row.ical)
     master = ical.master_of(parsed)

@@ -206,7 +206,7 @@ export type EventFields = {
   geo?: Point | null
   /** A new event's own reminders; left out: as the calendar's default (TIME-7). */
   reminders?: number[]
-  /** The people invited, only in a calendar of iCloud or Google (TIME-18 AC-12); left out: unchanged. */
+  /** The people invited, only in a calendar of iCloud or Google (TIME-18 AC-9); left out: unchanged. */
   attendees?: { email: string; name: string }[]
 }
 

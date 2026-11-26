@@ -1,4 +1,4 @@
-"""TIME-18 AC-12 (plan "Apps verbinden" V30): in an event of an iCloud or Google calendar the member names people to
+"""TIME-18 AC-9 (plan "Apps verbinden" V30): in an event of an iCloud or Google calendar the member names people to
 invite; nextime writes them into the event at the source as its organizer (the source's account), and the source
 sends the invitations as usual. Answers of people who stay are kept; nextime's own calendars invite nobody; a mail
 address only. The source is nextime's own calendar account in a thread (``remote_helpers``), as in TIME-15.

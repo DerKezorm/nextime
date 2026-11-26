@@ -1,5 +1,5 @@
 /**
- * TIME-18 AC-12 (plan "Apps verbinden" V30): the field "Teilnehmer" adds a free mail address with Enter and a person
+ * TIME-18 AC-9 (plan "Apps verbinden" V30): the field "Teilnehmer" adds a free mail address with Enter and a person
  * of nexfolk from the suggestions (`/api/people`), shows them as chips that can be removed, and refuses what is no
  * mail address.
  */
