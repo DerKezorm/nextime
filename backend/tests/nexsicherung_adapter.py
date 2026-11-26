@@ -31,6 +31,8 @@ class Adapter(StandardAdapter):
     operation_ids: ClassVar[dict[str, str]] = _former["operation_ids"]
     summaries: ClassVar[dict[str, str]] = _former["summaries"]
     schema_names: ClassVar[dict[str, str]] = _former["schema_names"]
+    # The old routes check ``{name}`` with the pattern and length of before (``former_names`` gives it).
+    name_pattern = bool(_former.get("name_pattern"))
     # nextime publishes its description only with ``NEXTIME_API_DOCS`` (off in the tests): ``description`` hands
     # over its own.
     openapi_path = "/api/openapi.json"
