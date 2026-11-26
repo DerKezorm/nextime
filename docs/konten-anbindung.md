@@ -53,7 +53,7 @@ Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege 
 |---|---|---|
 | nextasks | Gast (`tasks.read`, `tasks.complete`) | V18: Klick-Verbindung bekommt die Zeile in `nextasks_connections` ohne Schlüssel, Zugang aus `nexverbinden.access`; Abgleich, Listenwahl (offen in der Karte, V23), Abhaken wie über den Schlüssel; Test `test_v18_guest.py` je Weg |
 | nexpaper | Gast (`deadlines.read`) | V18 ebenso (`nexpaper_connections`), Test je Weg |
-| nexfolk | Gast (`birthdays.read`, `contacts.read`) | Runde 3: „Mit nexfolk verbinden“ legt das Geburtstags-Abo selbst an (`GET /api/v1/birthdays.ics` mit dem Zugang der Verbindung, `subscriptions.subscribe_by_connection`, Takt und Zustand wie jedes Abo, Kalender geht mit der Verbindung); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
+| nexfolk | Gast (`birthdays.read`, `people.read` seit verbinden 0.1.3) | Runde 3: „Mit nexfolk verbinden“ legt das Geburtstags-Abo selbst an (`GET /api/v1/birthdays.ics` mit dem Zugang der Verbindung, `subscriptions.subscribe_by_connection`, Takt und Zustand wie jedes Abo, Kalender geht mit der Verbindung); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
 | nexnotes | Gast (`notes.add`) | „Notiz in nexnotes“ im Seitenteil (`POST /api/events/{id}/nexnotes`, Entwurf) |
 | nexmail | Gastgeber (drei Zwecke) | `/api/v1` mit Verbindungs-Token (Stufe 1), Vertragstests |
 | nexdiary | Gastgeber (`calendars.read`) | `/api/v1` lesend, Schreiben 403, Test `test_verbinden_host.py` |
