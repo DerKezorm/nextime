@@ -4,12 +4,12 @@
     "sections": [
       {
         "title": "Connect iPhone or iPad",
-        "where": "Settings › My account › On iPhone and co",
+        "where": "Settings › My account › Connections",
         "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes. In the app tap “Add Server” and scan it, done, without a password. Without a camera, enter the address in the app and sign in as in the browser, passkeys included."
       },
       {
         "title": "Devices",
-        "where": "Settings › My account › On iPhone and co",
+        "where": "Settings › My account › Connections",
         "body": "The “Devices” card shows every connected iPhone and iPad with its last contact and whether notifications are on. “Disconnect” locks a device out at once; a new password or “Sign out everywhere else” disconnects them all."
       },
       {
@@ -106,7 +106,7 @@
       },
       {
         "title": "Reminders, place and attachments",
-        "where": "Open an event; Settings › Reminders",
+        "where": "Open an event; Settings › Notifications",
         "body": "Reminders are yours alone and can be set per device. A place gets address suggestions and a small map, notes may hold links, and an event takes attachments. “Join” takes you into a video meeting."
       },
       {

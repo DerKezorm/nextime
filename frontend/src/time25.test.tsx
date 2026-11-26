@@ -129,7 +129,7 @@ describe('TIME-25 the connection', () => {
     expect(calls.some((call) => call.path.startsWith('/api/tasks'))).toBe(false)
     await open('/settings/connections')
     await unfold('nextasks')
-    expect(one('nextasks-how')!.textContent).toContain('API-Schlüssel mit Lesen und Schreiben')
+    expect(one('nextasks-how')!.textContent).toContain('in nextasks unter Verbindungen › API-Schlüssel einen Schlüssel mit „Lesen und schreiben“')
     expect(one('nextasks-local')!.textContent).toContain('Betreiber')
   })
 
@@ -172,7 +172,7 @@ describe('TIME-25 the connection', () => {
     server({ status: { ...CONNECTED, problem: 'nextasks_token_invalid' } })
     await open('/settings/connections')
     await unfold('nextasks')
-    expect(one('nextasks-problem')!.textContent).toBe('nextasks nimmt diesen Schlüssel nicht (mehr). Lege in nextasks unter Mein Konto › Verbindungen einen neuen an und trag ihn hier ein.')
+    expect(one('nextasks-problem')!.textContent).toBe('nextasks nimmt diesen Schlüssel nicht (mehr). Lege in nextasks unter Verbindungen › API-Schlüssel einen neuen an und trag ihn hier ein.')
     stop()
     start()
     forgetNextasks()

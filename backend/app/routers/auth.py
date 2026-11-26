@@ -698,7 +698,7 @@ def remaining_access(account: Account, db: DbSession) -> dict[str, Any]:
     }
 
 
-@router.post("/auth/access/disconnect", summary="Disconnect all: every device, API token and passkey of the account")
+@router.post("/auth/access/disconnect", summary="Disconnect all: every device, API key and passkey of the account")
 def disconnect_all(request: Request, account: Account, db: DbSession) -> dict[str, Any]:
     from ..deps import confirm_fresh_session
 

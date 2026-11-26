@@ -4,12 +4,12 @@
     "sections": [
       {
         "title": "iPhone oder iPad verbinden",
-        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
         "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt. In der App „Server hinzufügen“ tippen und scannen, fertig, ohne Passwort. Ohne Kamera gibst du in der App die Adresse ein und meldest dich an wie im Browser, auch mit Passkey."
       },
       {
         "title": "Geräte",
-        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
         "body": "Die Karte „Geräte“ zeigt jedes verbundene iPhone und iPad mit dem letzten Kontakt und ob Mitteilungen an sind. „Trennen“ sperrt ein Gerät sofort aus; ein neues Passwort oder „Überall sonst abmelden“ trennt alle."
       },
       {
@@ -106,7 +106,7 @@
       },
       {
         "title": "Erinnerungen, Ort und Anhänge",
-        "where": "Einen Termin öffnen; Einstellungen › Erinnerungen",
+        "where": "Einen Termin öffnen; Einstellungen › Benachrichtigungen",
         "body": "Erinnerungen gehören dir allein und lassen sich je Gerät regeln. Ein Ort bekommt Vorschläge für die Adresse und eine kleine Karte, Notizen dürfen Links enthalten, und ein Termin nimmt Anhänge auf. Zu einer Videokonferenz kommst du mit „Beitreten“."
       },
       {
