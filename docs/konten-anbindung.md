@@ -53,12 +53,12 @@ Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege 
 |---|---|---|
 | nextasks | Gast (`tasks.read`, `tasks.complete`) | V18: Klick-Verbindung bekommt die Zeile in `nextasks_connections` ohne Schlüssel, Zugang aus `nexverbinden.access`; Abgleich, Listenwahl (offen in der Karte, V23), Abhaken wie über den Schlüssel; Test `test_v18_guest.py` je Weg |
 | nexpaper | Gast (`deadlines.read`) | V18 ebenso (`nexpaper_connections`), Test je Weg |
-| nexfolk | Gast (`birthdays.read`, `contacts.read`) | Geburtstage in „Heute“ (`GET /api/birthdays`, Entwurf); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
+| nexfolk | Gast (`birthdays.read`, `contacts.read`) | Runde 3: „Mit nexfolk verbinden“ legt das Geburtstags-Abo selbst an (`GET /api/v1/birthdays.ics` mit dem Zugang der Verbindung, `subscriptions.subscribe_by_connection`, Takt und Zustand wie jedes Abo, Kalender geht mit der Verbindung); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
 | nexnotes | Gast (`notes.add`) | „Notiz in nexnotes“ im Seitenteil (`POST /api/events/{id}/nexnotes`, Entwurf) |
 | nexmail | Gastgeber (drei Zwecke) | `/api/v1` mit Verbindungs-Token (Stufe 1), Vertragstests |
 | nexdiary | Gastgeber (`calendars.read`) | `/api/v1` lesend, Schreiben 403, Test `test_verbinden_host.py` |
 
-MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
+Runde 3: ein 401 über eine Klick-Verbindung fragt einmal mit erneuertem Zugang neu (`access(force=True)`), erst dann „refused“ (nextasks, nexpaper, Abo nexfolk). MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
 keinen Verlauf, nichts gebaut. Fragen 10 bis 15 in `einst-fragen/nextime-module.md`.
 
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
