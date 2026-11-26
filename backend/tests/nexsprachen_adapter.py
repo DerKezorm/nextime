@@ -30,9 +30,9 @@ class Adapter(StandardAdapter):
     built_in: ClassVar[dict[str, str]] = {"de": "Deutsch", "en": "English"}
     public_read = True
     has_template = False
-    # The names of before (``routers/locales.py``). nextime serves its description only with ``NEXTIME_API_DOCS``
-    # (``/api/openapi.json``, off in the tests): the adapter hands out the same description under a path of its own.
-    openapi_path = "/api/test-only/openapi.json"
+    # The names of before (``routers/locales.py``). nextime publishes its description only with ``NEXTIME_API_DOCS``
+    # (``/api/openapi.json``, off in the tests): ``description`` hands over nextime's own.
+    openapi_path = "/api/openapi.json"
     operation_ids: ClassVar[dict[str, str]] = OPERATION_IDS
     summaries: ClassVar[dict[str, str]] = SUMMARIES
     schema_names: ClassVar[dict[str, str]] = SCHEMA_NAMES
@@ -51,7 +51,6 @@ class Adapter(StandardAdapter):
         locales.forget()
         self._main = TestClient(app, base_url="http://testserver", headers=TAB)
         self._main.__enter__()
-        app.add_api_route(self.openapi_path, lambda: app.openapi(), include_in_schema=False)
 
     def restart(self) -> None:
         """nextime stopped and started again on the same data, as in production: the lifespan runs once more
@@ -66,9 +65,6 @@ class Adapter(StandardAdapter):
         self._main.__enter__()
 
     def stop(self) -> None:
-        from app.main import app
-
-        app.router.routes[:] = [route for route in app.router.routes if getattr(route, "path", "") != self.openapi_path]
         from app.services import locales
 
         for client in self._clients:
@@ -77,6 +73,12 @@ class Adapter(StandardAdapter):
         self._empty(locales.locales_dir())
         locales.configure()
         locales.forget()
+
+    def description(self) -> dict[str, Any]:
+        """nextime's own description of its interface (``app.openapi()``); never published only for the tests."""
+        from app.main import app
+
+        return app.openapi()
 
     def client(self, role: str) -> Any:
         from app.models import MEMBER, OPERATOR
