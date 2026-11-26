@@ -121,3 +121,49 @@ def test_time18_ac12_the_suggestions_come_from_nexfolk_s_people(client: TestClie
     found = client.get("/api/people", params={"q": "kim"}).json()
     assert found == {"connected": True, "people": [{"id": "c1", "name": "Kim Muster", "emails": ["kim@example.com"]}]}
     assert calls == [{"q": "kim", "limit": "10"}]
+
+
+def test_time18_ac9_attendees_go_to_the_google_event_and_someone_else_s_invitation_stays(
+        client: TestClient, account: Account, remote: Remote, monkeypatch: pytest.MonkeyPatch,
+        dav_server: str) -> None:
+    """The same with a Google calendar (the fake Google of TIME-16, its CalDAV side in a thread): the organizer is the
+    Google account, an attendee who stays keeps the answer, and someone else's invitation is not changed (409)."""
+    from app.services import google
+
+    from .remote_helpers import SWITCHES, FakeGoogle, event_text
+    from .test_time16 import _connected, _google_calendar
+
+    fake = FakeGoogle()
+    monkeypatch.setattr(google, "transport", httpx.MockTransport(fake.handler))
+    monkeypatch.setattr(google, "CALDAV_URL", dav_server + f"/dav/calendars/{remote.account.name}/{{id}}/")
+    SWITCHES.bearer[fake.access] = (remote.account.name, remote.password)
+    beirat = _google_calendar(remote, fake, "Elternbeirat")
+    invitation = (f"ORGANIZER;CN=Chris:mailto:chris@example.com\r\n"
+                  f"ATTENDEE;CN=Chris;PARTSTAT=ACCEPTED:mailto:chris@example.com\r\n"
+                  f"ATTENDEE;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:{fake.email}\r\n")
+    remote.put(beirat, "invite.ics", event_text("invite@google", "Elternabend", extra=invitation))
+    source = _connected(client, fake)
+    round_now(source)
+    target = mirrored(source)[0].id
+    made = make_event(client, "Basar", calendar_id=target, attendees=INVITED)
+    sync.run_due()
+    organizer, people = _people(remote, beirat, made["id"])
+    assert organizer == f"mailto:{fake.email}"
+    assert people == {fake.email: "ACCEPTED", "kim@example.com": "NEEDS-ACTION", "sam@example.com": "NEEDS-ACTION"}
+    with SessionLocal() as db:
+        row = db.get(Event, made["id"])
+        parsed = icalendar.Calendar.from_ical(row.ical)
+        for item in next(iter(parsed.walk("VEVENT"))).get("ATTENDEE"):
+            if str(item).endswith("sam@example.com"):
+                item.params["PARTSTAT"] = "TENTATIVE"
+        row.ical = parsed.to_ical().decode()
+        db.commit()
+    changed = client.patch(f"/api/events/{made['id']}", json={"attendees": [{"email": "sam@example.com"}]})
+    assert changed.status_code == 200, changed.text
+    sync.run_due()
+    _organizer, people = _people(remote, beirat, made["id"])
+    assert people == {fake.email: "ACCEPTED", "sam@example.com": "TENTATIVE"}
+    with SessionLocal() as db:
+        foreign = db.query(Event).filter(Event.uid == "invite@google", Event.calendar_id == target).one()
+    refused = client.patch(f"/api/events/{foreign.id}", json={"attendees": [{"email": "kim@example.com"}]})
+    assert refused.status_code == 409 and refused.json()["detail"]["code"] == "attendees_not_yours"
