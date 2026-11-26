@@ -150,6 +150,9 @@ class Adapter(StandardAdapter):
         return [
             *(Secret(f"Token used {prefix}{made}", hidden=made, kept=[f"{prefix}…"])
               for prefix in ("nt_api_", "ntd_", "nxc_")),
+            # After "Bearer" the known start of the key stays visible (log 1.0.0, a374e3c), not "Bearer ……".
+            *(Secret(f"Authorization: Bearer {prefix}{made}", hidden=made, kept=[f"Bearer {prefix}…"])
+              for prefix in ("nt_api_", "ntd_")),
             Secret(f"GET /api/invite/{made}x -> 200", hidden=made, kept=["/api/invite/…"]),
             Secret(f"GET /abo/{made}x.ics -> 200", hidden=made, kept=["/abo/…"]),
             Secret(f"GET /api/guest/{made}x -> 200", hidden=made, kept=["/api/guest/…"]),
