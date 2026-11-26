@@ -116,7 +116,8 @@ describe('TIME-24 Mitnehmen und umziehen', () => {
     const download = one('export-download') as HTMLAnchorElement
     expect(download.textContent).toBe('Herunterladen')
     expect(download.getAttribute('href')).toBe('/api/calendars/1/export.ics')
-    expect(download.hasAttribute('download')).toBe(true)
+    // A link of the kit; the server sends the file as an attachment (``Content-Disposition``, routers/transfer.py).
+    expect(download.tagName).toBe('A')
     const select = one('export-calendar') as HTMLSelectElement
     expect([...select.options].map((option) => option.textContent)).toContain('Persönlich')
     Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, '20')

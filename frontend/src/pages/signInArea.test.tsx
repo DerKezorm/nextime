@@ -1,6 +1,7 @@
-// Settings, Server, Sign-in as the shared sign-in blueprint lays it out: three cards, the provider form with
-// its fields in their order, the confirmations with their numbers, the authentik steps by name with the reason of a
-// failure in words, and what a coupling to the directory service locks. The step keys come from the shared
+// Settings, Server, Sign-in as nextime shows it (plan "Einstellungen", Anmeldung): konten's page ("Ready for the
+// internet?", the card "Sign-in") and the module oidc's cards after it, through nextime' own calls. The provider form
+// with its fields in their order, the confirmations with their numbers, the authentik steps by name with the reason of
+// a failure in words, the second factor for everybody with the module's rules. The step keys come from the shared
 // module's own list (`STEP_KEYS` in backend/app/vendor/nexoidc/authentik.py), so a name the language files spell
 // differently shows up here instead of on the operator's screen.
 import { act } from 'react'
@@ -8,12 +9,14 @@ import { createRoot, type Root } from 'react-dom/client'
 
 import type { OidcProvider } from '../api/client'
 import i18n from '../i18n'
-import { useServerSettings } from './settings/ServerCards'
-import { SignInPart } from './settings/SignInCards'
+import { SignInArea } from './settings/SignInArea'
 
-/** Whether the operator has an own second factor; the requirement switch shows another hint without one. */
+/** Whether the operator has an own second factor; the requirement switch is locked without one. */
 const viewer = vi.hoisted(() => ({ two_factor: true }))
-vi.mock('../state/auth', () => ({ useAuth: () => ({ me: { id: 1, name: 'operator', role: 'operator', sign_in: 'password', two_factor: viewer.two_factor } }) }))
+vi.mock('../state/auth', () => ({
+  useAuth: () => ({ me: { id: 1, name: 'operator', role: 'operator', sign_in: 'password', two_factor: viewer.two_factor } }),
+  useAccountId: () => 1,
+}))
 
 type Files = { readFileSync: (file: string, encoding: string) => string }
 const fsName = 'node:fs'
@@ -39,7 +42,7 @@ function entry(change: Partial<OidcProvider> = {}): OidcProvider {
     trusts_second_factor: true,
     managed: '',
     position: 0,
-    redirect_uri: 'https://notes.example.com/api/oidc/sso/callback',
+    redirect_uri: 'https://time.example.com/api/oidc/sso/callback',
     links: 2,
     editable: true,
     ...change,
@@ -52,16 +55,32 @@ let answer: Step[] = []
 let count: number | undefined
 let afterConfirm: Step[] | null = null
 let list: OidcProvider[] = []
-let settings = { password_login: true, two_factor_required: false, public_url: 'https://notes.example.com' }
+let settings = { password_login: true, factor_required: false, passkeys_allowed: true, public_url: 'https://time.example.com' }
+/** The answer of `GET /api/server/sign-in`: the switches, what may change (from the list and the viewer). */
+const view = () => ({
+  ...settings,
+  password_may_go_off: list.some((entry) => entry.enabled),
+  factor_may_go_on: viewer.two_factor,
+  second_factor_off: false,
+  operator_has_password: true,
+})
+const READY = {
+  state: 'bad',
+  open: 1,
+  points: [
+    { key: 'address', state: 'ok', title: 'account.ready.address.title', text: 'account.ready.address.ok', values: { address: 'https://time.example.com', app: 'nextime' } },
+    { key: 'ownAccount', state: 'bad', title: 'account.ready.ownAccount.title', text: 'account.ready.ownAccount.bad', values: {} },
+  ],
+}
 /** What `GET /api/oidc/authentik/address` says; the browser of the test is at http://localhost:3000. */
 const ADDRESS = {
-  public_url: 'https://notes.example.com',
-  seen: 'https://notes.example.com',
+  public_url: 'https://time.example.com',
+  seen: 'https://time.example.com',
   forwarded_proto: '',
   forwarded_host: '',
   proxy_ignored: false,
   callback_path: '/api/oidc/authentik/callback',
-  redirect_uri: 'https://notes.example.com/api/oidc/authentik/callback',
+  redirect_uri: 'https://time.example.com/api/oidc/authentik/callback',
   registered_redirect_uri: '',
   stale: false,
 }
@@ -80,7 +99,7 @@ beforeEach(() => {
   count = undefined
   afterConfirm = null
   list = []
-  settings = { password_login: true, two_factor_required: false, public_url: 'https://notes.example.com' }
+  settings = { password_login: true, factor_required: false, passkeys_allowed: true, public_url: 'https://time.example.com' }
   addressView = ADDRESS
   refusal = null
   gate = Promise.resolve()
@@ -98,6 +117,14 @@ beforeEach(() => {
         return json(settings)
       }
       if (path === '/api/settings') return json(settings)
+      if (path === '/api/server/sign-in/readiness') return json(READY)
+      if (path === '/api/server/sign-in' && method === 'PUT') {
+        const { current_password: password, ...change } = JSON.parse(String(init?.body ?? '{}')) as Record<string, unknown>
+        if (change.factor_required === false && password !== 'secret') return json({ detail: { code: 'wrong_password', message: 'x' } }, 401)
+        settings = { ...settings, ...change }
+        return json(view())
+      }
+      if (path === '/api/server/sign-in') return json(view())
       if (path === '/api/oidc/authentik/address' && method === 'GET') return json(addressView)
       if (path === '/api/oidc/authentik/address' && method === 'POST') {
         const sent = JSON.parse(String(init?.body ?? '{}')) as { public_url: string; confirm?: boolean }
@@ -130,8 +157,7 @@ afterEach(async () => {
 })
 
 function SignIn() {
-  const server = useServerSettings()
-  return <SignInPart server={server} />
+  return <SignInArea />
 }
 
 const settle = () => act(async () => new Promise((resolve) => setTimeout(resolve, 0)))
@@ -146,7 +172,8 @@ function type(input: Element | null | undefined, value: string) {
 
 const authentikCard = () => document.getElementById('sign-in-authentik')!
 const tokenField = () => [...authentikCard().querySelectorAll<HTMLInputElement>('input[type="password"]')].at(-1)!
-const rows = () => [...document.querySelectorAll('[data-testid="authentik-steps"] li')].map((row) => row.textContent)
+/** Each step as before the module's cards: ✓ or ✗ (the symbol, `data-ok`), then its name and the reason. */
+const rows = () => [...document.querySelectorAll<HTMLElement>('[data-testid="authentik-steps"] li')].map((row) => `${row.dataset.ok === 'true' ? '✓' : '✗'}${row.textContent}`)
 const button = (scope: ParentNode, text: string) => [...scope.querySelectorAll('button')].find((found) => found.textContent === text)
 
 async function press(scope: ParentNode, text: string) {
@@ -170,21 +197,40 @@ async function card(language: 'en' | 'de') {
   type(tokenField(), 'token')
 }
 
-describe('the three cards', () => {
-  it('stand in the blueprint order with its titles, and the password switch stays on while no provider is active', async () => {
+const passwordBox = () => box.querySelector<HTMLInputElement>('[data-testid="sign-in-password"]')!
+
+describe('the cards', () => {
+  it('stand in the blueprint order with their titles, and the password switch stays on while no provider is active', async () => {
     list = [entry({ enabled: false })]
     await page()
+    expect([...box.querySelectorAll('[data-card]')].map((card) => card.getAttribute('data-card'))).toEqual(['sign-in-ready', 'sign-in', 'sign-in-providers', 'sign-in-authentik'])
     const titles = [...box.querySelectorAll('section h2')].map((title) => title.textContent)
-    expect(titles).toEqual([i18n.t('oidc.admin.signInTitle'), i18n.t('oidc.admin.providersTitle'), i18n.t('oidc.authentik.title')])
-    const password = box.querySelector<HTMLInputElement>(`input[type="checkbox"][aria-label="${i18n.t('oidc.admin.password')}"]`)!
-    expect(password.checked).toBe(true)
-    expect(password.disabled).toBe(true)
+    expect(titles).toEqual([i18n.t('account.ready.title'), i18n.t('oidc.admin.signInTitle'), i18n.t('oidc.admin.providersTitle'), i18n.t('oidc.authentik.title')])
+    // The label names the box.
+    expect(box.querySelector(`label[for="${passwordBox().id}"]`)!.textContent).toBe(i18n.t('oidc.admin.password'))
+    expect(passwordBox().checked).toBe(true)
+    expect(passwordBox().disabled).toBe(true)
   })
 
-  it('lets the password switch go once a provider is active', async () => {
+  it('lets the password switch go once a provider is active, and sends it to the sign-in route', async () => {
     list = [entry()]
     await page()
-    expect(box.querySelector<HTMLInputElement>(`input[type="checkbox"][aria-label="${i18n.t('oidc.admin.password')}"]`)!.disabled).toBe(false)
+    expect(passwordBox().disabled).toBe(false)
+    await act(async () => passwordBox().click())
+    await settle()
+    expect(calls.filter((call) => call.method === 'PUT' && call.path === '/api/server/sign-in').map((call) => call.body)).toEqual([
+      { password_login: false, current_password: '' },
+    ])
+    expect(passwordBox().checked).toBe(false)
+  })
+
+  it('shows "Ready for the internet?" with its open points, every one closed at first', async () => {
+    await page()
+    const ready = box.querySelector('[data-card="sign-in-ready"]')!
+    expect(ready.querySelector('[data-testid="ready-summary"]')!.textContent).toBe(i18n.t('account.ready.open', { count: 1 }))
+    const heads = [...ready.querySelectorAll('[aria-expanded]')]
+    expect(heads.map((head) => head.textContent)).toEqual([i18n.t('account.ready.address.title', { app: 'nextime' }), i18n.t('account.ready.ownAccount.title')].map((title) => expect.stringContaining(title)))
+    expect(heads.map((head) => head.getAttribute('aria-expanded'))).toEqual(['false', 'false'])
   })
 
   it('lists each entry with its issuer, marks, buttons and a handle to drag; empty, it says how to begin', async () => {
@@ -200,7 +246,7 @@ describe('the three cards', () => {
     expect(items[0].textContent).toContain(i18n.t('oidc.admin.active'))
     expect(items[0].textContent).toContain(i18n.t('oidc.admin.managed'))
     expect(items[1].textContent).toContain(i18n.t('oidc.admin.inactive'))
-    expect(items[0].querySelector(`button[aria-label="${i18n.t('server.providers.order', { name: 'authentik' })}"] svg`)).not.toBeNull()
+    expect(items[0].querySelector(`button[aria-label="${i18n.t('oidc.admin.order', { name: 'authentik' })}"] svg`)).not.toBeNull()
     expect(button(items[1], i18n.t('oidc.admin.edit'))).toBeDefined()
     expect(button(items[1], i18n.t('oidc.admin.remove'))).toBeDefined()
   })
@@ -209,9 +255,8 @@ describe('the three cards', () => {
     await page()
     await press(box, i18n.t('oidc.admin.add'))
     const form = document.querySelector('[data-testid="provider-form"]')!
-    const labels = [...form.querySelectorAll('span.text-xs.font-medium, input[type="checkbox"]')].map((node) =>
-      node.tagName === 'INPUT' ? node.getAttribute('aria-label') : node.textContent,
-    )
+    // Every field by its label (the boxes too), the return address by its heading.
+    const labels = [...form.querySelectorAll('label, span[aria-hidden="true"]')].map((node) => node.textContent)
     expect(labels.filter((label) => label !== i18n.t('oidc.admin.scopes'))).toEqual([
       i18n.t('oidc.admin.label'),
       i18n.t('oidc.admin.slug'),
@@ -226,7 +271,7 @@ describe('the three cards', () => {
     type(form.querySelector('input'), 'Größe Firma')
     const fields = [...form.querySelectorAll<HTMLInputElement>('input')]
     expect(fields[1].value).toBe('groesse-firma')
-    expect(fields.find((field) => field.readOnly)!.value).toBe('https://notes.example.com/api/oidc/groesse-firma/callback')
+    expect(fields.find((field) => field.readOnly)!.value).toBe('https://time.example.com/api/oidc/groesse-firma/callback')
     const switches = [...form.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].map((field) => field.checked)
     expect(switches).toEqual([true, false, true])
   })
@@ -243,21 +288,54 @@ describe('the three cards', () => {
 })
 
 describe('the second factor requirement', () => {
+  const factorBox = () => box.querySelector<HTMLInputElement>('[data-testid="sign-in-factor"]')!
+  const hint = () => document.getElementById(factorBox().getAttribute('aria-describedby') ?? '')?.textContent
+
   for (const language of ['de', 'en'] as const) {
-    for (const own of [true, false]) {
-      it(`names the provider switch that exempts a sign-in (${language}, ${own ? 'with' : 'without'} an own factor)`, async () => {
-        viewer.two_factor = own
-        await page(language)
-        const hint = i18n.t(own ? 'server.twoFactorRequiredHint' : 'server.ownSecondFactorFirst', {
-          trusts: i18n.t('oidc.admin.trustsSecondFactor'),
-        })
-        expect(box.textContent).toContain(hint)
-        // The words of the switch itself, between the quotes of the sentence: not a gap.
-        const [open, close] = language === 'de' ? ['„', '“'] : ['“', '”']
-        expect(box.textContent).toContain(`${open}${i18n.t('oidc.admin.trustsSecondFactor')}${close}`)
-      })
-    }
+    it(`goes on only with an own second factor, and says so (${language})`, async () => {
+      viewer.two_factor = false
+      await page(language)
+      expect(factorBox().disabled).toBe(true)
+      expect(hint()).toBe(i18n.t('account.ownSecondFactorFirst'))
+      act(() => root.unmount())
+      root = createRoot(box)
+      viewer.two_factor = true
+      await page(language)
+      expect(factorBox().disabled).toBe(false)
+      expect(hint()).toBe(i18n.t('account.factorRequiredSwitchHint'))
+      await act(async () => factorBox().click())
+      await settle()
+      expect(calls.filter((call) => call.method === 'PUT' && call.path === '/api/server/sign-in').map((call) => call.body)).toEqual([
+        { factor_required: true, current_password: '' },
+      ])
+    })
   }
+
+  it('goes off only with the own password: a wrong one changes nothing, the right one turns it off', async () => {
+    settings = { ...settings, factor_required: true }
+    await page()
+    expect(factorBox().checked).toBe(true)
+    await act(async () => factorBox().click())
+    const dialog = () => document.querySelector('[data-testid="sign-in-factor-off"]')
+    expect(dialog()!.textContent).toContain(i18n.t('account.factorRequiredOffText'))
+    expect(calls.some((call) => call.method === 'PUT')).toBe(false)
+    const confirm = () => button(dialog()!, i18n.t('account.factorRequiredOff'))!
+    expect(confirm().disabled).toBe(true)
+    type(dialog()!.querySelector('input[type="password"]'), 'wrong')
+    await act(async () => confirm().click())
+    await settle()
+    expect(dialog()!.textContent).toContain(i18n.t('account.error.wrong_password'))
+    expect(settings.factor_required).toBe(true)
+    type(dialog()!.querySelector('input[type="password"]'), 'secret')
+    await act(async () => confirm().click())
+    await settle()
+    expect(dialog()).toBeNull()
+    expect(factorBox().checked).toBe(false)
+    expect(calls.filter((call) => call.method === 'PUT').map((call) => call.body)).toEqual([
+      { factor_required: false, current_password: 'wrong' },
+      { factor_required: false, current_password: 'secret' },
+    ])
+  })
 })
 
 describe('the authentik steps', () => {
@@ -354,7 +432,7 @@ describe('the authentik steps', () => {
       await card('en')
       await press(authentikCard(), i18n.t('oidc.authentik.run'))
       await settle()
-      await press(dialog()!, i18n.t('common.cancel'))
+      await press(dialog()!, i18n.t('oidc.admin.cancel'))
       await settle()
       expect(dialog()).toBeNull()
       expect(calls.filter((call) => call.path === '/api/oidc/authentik/setup')).toHaveLength(1)
@@ -461,21 +539,21 @@ describe('the authentik steps', () => {
       await page()
       await press(authentikCard(), i18n.t('oidc.authentik.adoptOnly'))
       await settle()
-      expect(authentikCard().querySelector('[data-testid="authentik-unusable"]')!.textContent).toBe(i18n.t('oidc.authentik.why.unusable'))
+      expect(authentikCard().querySelector('[role="alert"]')!.textContent).toBe(i18n.t('oidc.authentik.why.unusable'))
       expect(dialog()).toBeNull()
     })
 
     it('asks in card 1 as well before the address is saved, and sends the confirmation on yes', async () => {
-      refusal = { status: 409, detail: { code: 'public_url_change', message: 'x', count: 1, hand: 0, address: 'https://notes.example.com/cb' } }
+      refusal = { status: 409, detail: { code: 'public_url_change', message: 'x', count: 1, hand: 0, address: 'https://time.example.com/cb' } }
       await page()
       const card1 = document.getElementById('sign-in')!
       type(card1.querySelector(`input[placeholder="https://time.example.com"]`), 'https://new.example.com')
       await act(async () => card1.querySelector('form')!.requestSubmit())
       await settle()
-      expect(dialog()!.textContent).toContain(i18n.t('oidc.admin.addressChangeConfirm', { address: 'https://notes.example.com/cb' }))
+      expect(dialog()!.textContent).toContain(i18n.t('oidc.admin.addressChangeConfirm', { address: 'https://time.example.com/cb' }))
       const puts = () => calls.filter((call) => call.method === 'PUT' && call.path === '/api/settings').map((call) => call.body)
       expect(puts()).toEqual([{ public_url: 'https://new.example.com', confirm_address: false }])
-      await press(dialog()!, i18n.t('common.save'))
+      await press(dialog()!, i18n.t('account.save'))
       await settle()
       expect(puts()).toEqual([
         { public_url: 'https://new.example.com', confirm_address: false },

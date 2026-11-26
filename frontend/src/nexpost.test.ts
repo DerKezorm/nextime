@@ -26,16 +26,17 @@ function leaves(tree: Tree, prefix = ''): [string, string][] {
   })
 }
 
-// TODO post 1.1.0: the template of this file gives the new count ("Wartende Mails: {{count}}") no value yet.
+// Every value a text of the module asks for (`count` since 1.1.0: mail.waiting). The module's own test
+// tests/test_template_values.py turns red when a text asks for one this line does not give.
 const values = { email: 'kim@example.com', when: 'today', error: 'mail_unreachable', count: 3 }
-const fill: Record<string, string> = { ...postVariables(APP_NAME), ...values, count: '3' }
+const fill: Record<string, string | number> = { ...postVariables(APP_NAME), ...values }
 
 describe('the post texts', () => {
   for (const [language, tree] of [['de', de], ['en', en]] as const) {
     it(`are all in the app in ${language}, word for word`, async () => {
       await i18n.changeLanguage(language)
       for (const [key, text] of leaves(tree as Tree)) {
-        const expected = text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => fill[name] ?? '')
+        const expected = text.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(fill[name] ?? ''))
         expect(i18n.t(key, values), key).toBe(expected)
       }
     })

@@ -380,7 +380,7 @@ describe('TIME-19 "Freigaben" under Settings', () => {
     expect(box.querySelectorAll('[data-testid="shares-with-me-row"]')[1].textContent).toContain('von Anna · ganz zeigen')
     // Taking back asks first.
     await click(box.querySelector('[data-testid="shares-take-back"]'))
-    expect(document.querySelector('[role="dialog"]')!.getAttribute('aria-label')).toBe('Freigabe für Anna zurücknehmen?')
+    expect(dialogName()).toBe('Freigabe für Anna zurücknehmen?')
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false)
     await click(byText('Zurücknehmen', document.querySelector('[role="dialog"]')!))
     expect(calls.some((call) => call.method === 'DELETE' && call.path === '/api/calendars/5/sharing/2')).toBe(true)
@@ -491,3 +491,10 @@ describe('TIME-19 the guest page', () => {
     expect(box.textContent).toContain('all day')
   })
 })
+
+/** The name of the open dialog: the kit's dialog is named by its heading (`aria-labelledby`). */
+function dialogName(): string | null | undefined {
+  const dialog = document.querySelector('[role="dialog"]')
+  const by = dialog?.getAttribute('aria-labelledby')
+  return by ? document.getElementById(by)?.textContent : dialog?.getAttribute('aria-label')
+}

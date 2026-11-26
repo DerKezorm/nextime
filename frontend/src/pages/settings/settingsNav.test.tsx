@@ -1,9 +1,9 @@
 /**
- * TIME-2 AC-7, the settings in areas as in nexnotes: the navigation with the groups "Mein Konto" and "Server", each
- * area at its own address, `/settings` as the profile, the addresses of before (`/account/<tab>`, `/server/<page>`)
- * leading to their area with the query kept (the answer of a provider after linking lands in Security), a member sent
- * from a server area to the profile, the current area marked with `aria-current`, the choice for a narrow page, every
- * card in one area, the areas that come later, and "Über nextime".
+ * TIME-2 AC-7, the settings in areas (plan "Einstellungen", in the frame of the ui kit): the navigation with the groups
+ * "Mein Konto" and "Server", each area at its own address, `/settings` as the profile (on a phone the list), the
+ * addresses of before (`/account/<tab>`, `/server/<page>`, `/settings/reminders`) leading to their area with the query
+ * kept (the answer of a provider after linking lands in Security), a member sent from a server area to the profile, the
+ * current area marked with `aria-current`, the way back on a phone, every card in one area, and "Über nextime".
  */
 import { useLocation } from 'react-router-dom'
 
@@ -11,7 +11,7 @@ import App from '../../App'
 import type { Me } from '../../api/client'
 import i18n from '../../i18n'
 import { AuthProvider } from '../../state/auth'
-import { box, byText, calls, choose, click, me, ok, render, serve, signedIn, start, stop } from '../../testing'
+import { box, byText, calls, click, KEYS_LISTING, me, ok, render, serve, signedIn, start, stop } from '../../testing'
 import { formerPath, resolveArea } from './areas'
 
 const OPERATOR = me({ id: 1, name: 'tester', display_name: 'Tester', role: 'operator' })
@@ -25,6 +25,11 @@ const SETTINGS = {
 }
 const ABOUT = { version: '0.1.0', license: 'AGPL-3.0', repo_url: 'https://example.com/nextime', releases_url: 'https://example.com/nextime/releases', project_url: 'https://example.com/nextime' }
 const UPDATES = { update_check: true, checked: true, latest: 'v0.2.0', newer: true, checked_at: '2026-11-22T08:00:00Z', release_url: 'https://example.com/nextime/releases/tag/v0.2.0' }
+
+const SIGN_IN = { password_login: true, factor_required: false, passkeys_allowed: true, password_may_go_off: false, factor_may_go_on: false, public_url: '', operator_has_password: true }
+const MAIL = { host: '', port: 587, security: 'starttls', user: '', password_set: false, sender: '', sender_name: '', sender_name_default: 'nextime', configured: false, last_ok_at: null, last_error: '', last_error_at: null, waiting: 0 }
+const STORAGE = { app: 'nextime', used: 10, parts: [{ key: 'database', bytes: 10, within: '', complete: true }], complete: true, total: 1000, disk_used: 100, free: 900, nearly_full: false, where: {}, network: [] }
+const BACKUPS = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: null, count: 0, kept: 0, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [] }
 
 const REMINDERS = {
   not_double: true,
@@ -48,6 +53,20 @@ function server(account: Me = OPERATOR) {
     if (path === '/api/about/updates') return ok(UPDATES)
     if (path === '/api/devices') return ok({ devices: [], https: true, address: 'https://nextime.example.com/dav/', user: 'tester', calendars: [], minutes: 10 })
     if (path === '/api/reminders') return ok(REMINDERS)
+    if (path === '/api/notify/webpush') return ok({ key: 'k', subscribed: false, reminders: true })
+    if (path === '/api/app/devices') return ok([])
+    if (path === '/api/connections/keys') return ok(KEYS_LISTING)
+    if (path === '/api/connections/interfaces') return ok({ api: true, mcp: true })
+    if (path === '/api/connections/admin/keys') return ok({ keys: [] })
+    if (path === '/api/accounts') return ok([])
+    if (path === '/api/invites') return ok([])
+    if (path === '/api/server/sign-in') return ok(SIGN_IN)
+    if (path === '/api/server/sign-in/readiness') return ok({ state: 'ok', open: 0, points: [] })
+    if (path === '/api/oidc/admin/providers') return ok([])
+    if (path === '/api/server/mail') return ok(MAIL)
+    if (path === '/api/server/storage') return ok(STORAGE)
+    if (path === '/api/server/storage/backups') return ok(BACKUPS)
+    if (path === '/api/locales') return ok([])
     return undefined
   })
 }
@@ -71,9 +90,9 @@ const where = () => box.querySelector('[data-testid="where"]')!.textContent
 const $ = (testId: string) => box.querySelector<HTMLElement>(`[data-testid="${testId}"]`)
 const current = () => [...box.querySelectorAll('[data-testid="settings-nav"] [aria-current="page"]')].map((entry) => entry.getAttribute('data-testid'))
 const heading = () => box.querySelector('h1')!.textContent
-const cards = () => [...box.querySelectorAll('main section[id]')].map((card) => card.id)
+const cards = () => [...box.querySelectorAll('[data-part="settings-main"] [data-card]')].filter((card) => !card.parentElement?.closest('[data-card]')).map((card) => card.getAttribute('data-card'))
 
-const ACCOUNT_AREAS = ['profile', 'security', 'appearance', 'calendars', 'shares', 'devices', 'connections', 'reminders', 'move']
+const ACCOUNT_AREAS = ['profile', 'security', 'appearance', 'calendars', 'shares', 'devices', 'move', 'notifications', 'connections']
 const SERVER_AREAS = ['general', 'sign-in', 'mail', 'storage', 'google', 'accounts', 'log']
 
 beforeEach(async () => {
@@ -103,7 +122,10 @@ describe('the addresses of the settings (TIME-2 AC-7)', () => {
     expect(formerPath('/account', '')).toBe('/settings/profile')
     expect(formerPath('/account/', '')).toBe('/settings/profile')
     expect(formerPath('/account/general', '')).toBe('/settings/profile')
-    for (const tab of ['calendars', 'shares', 'devices', 'connections', 'reminders']) expect(formerPath(`/account/${tab}`, '')).toBe(`/settings/${tab}`)
+    for (const tab of ['calendars', 'shares', 'devices', 'connections']) expect(formerPath(`/account/${tab}`, '')).toBe(`/settings/${tab}`)
+    // "Erinnerungen" is "Benachrichtigungen" now (plan "Einstellungen", E1).
+    expect(formerPath('/account/reminders', '')).toBe('/settings/notifications')
+    expect(resolveArea('reminders', 'member', '?x=1')).toEqual({ redirect: '/settings/notifications?x=1' })
     expect(formerPath('/server', '')).toBe('/settings/general')
     for (const page of ['accounts', 'google', 'log']) expect(formerPath(`/server/${page}`, '')).toBe(`/settings/${page}`)
     expect(formerPath('/server/accounts', '?invite=1')).toBe('/settings/accounts?invite=1')
@@ -121,7 +143,8 @@ describe('the addresses of the settings (TIME-2 AC-7)', () => {
     ['/account/shares', '/settings/shares', 'shares'],
     ['/account/devices', '/settings/devices', 'devices'],
     ['/account/connections', '/settings/connections', 'connections'],
-    ['/account/reminders', '/settings/reminders', 'reminders'],
+    ['/account/reminders', '/settings/notifications', 'notifications'],
+    ['/settings/reminders', '/settings/notifications', 'notifications'],
     ['/server', '/settings/general', 'general'],
     ['/server/accounts', '/settings/accounts', 'accounts'],
     ['/server/google', '/settings/google', 'google'],
@@ -184,7 +207,8 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
     expect(nav.textContent).toContain('Betreiber')
     const groups = [...nav.querySelectorAll('ul')].map((list) => box.querySelector(`#${list.getAttribute('aria-labelledby')}`)!.textContent)
     expect(groups).toEqual(['Mein Konto', 'Server'])
-    expect([...nav.querySelectorAll('ul')][1].textContent).toBe('AllgemeinAnmeldungMailSpeicher und SicherungenGoogle einrichtenKontenLog')
+    expect([...nav.querySelectorAll('ul')][0].textContent).toBe('ProfilSicherheitDarstellungKalender und KontenFreigabenAuf iPhone und CoMitnehmen und umziehenBenachrichtigungenVerbindungen')
+    expect([...nav.querySelectorAll('ul')][1].textContent).toBe('AllgemeinAnmeldungMailSpeicher und SicherungGoogle einrichtenKontenLog')
     const entries = [...nav.querySelectorAll('a')]
     expect(entries.at(-1)!.getAttribute('href')).toBe('/settings/about')
     expect(entries.at(-1)!.textContent).toBe('Über nextime')
@@ -197,13 +221,13 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([...ACCOUNT_AREAS, ...SERVER_AREAS, 'about'].map((slug) => `/settings/${slug}`))
     for (const link of links) expect(link.tabIndex).toBe(0)
     expect(current()).toEqual(['settings-nav-sign-in'])
-    expect($('settings-nav-sign-in')!.className).toContain('nt-chosen')
-    expect($('settings-nav-mail')!.className).not.toContain('nt-chosen')
+    expect($('settings-nav-sign-in')!.className).toContain('--nexui-accent')
+    expect($('settings-nav-mail')!.className).not.toContain('--nexui-accent)_14%')
     await click($('settings-nav-mail'))
     expect(where()).toBe('/settings/mail')
     expect(current()).toEqual(['settings-nav-mail'])
     expect(heading()).toBe('Mail')
-    expect($('settings-area-mail')!.textContent).toContain(i18n.t('settings.areas.mail.text'))
+    expect($('settings-area-mail')!.textContent).toContain('Der Mailserver, über den nextime Einladungen, Links und Benachrichtigungen verschickt.')
   })
 
   it('TIME-2 AC-7 the sidebar ends with picture, name and the gear, named "<name> · Einstellungen", marked only in the settings', async () => {
@@ -233,56 +257,48 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
     const top = nav.firstElementChild!
     expect(top.querySelector('[data-testid="avatar-initial"], img')).not.toBeNull()
     expect(top.textContent).toBe('TTesterBetreiber') // the initial, the name, the role
+    expect(top.getAttribute('data-part')).toBe('settings-account')
     for (const group of ['account', 'server']) expect(box.querySelector(`#settings-group-${group}`)!.className).toContain('uppercase')
     for (const entry of nav.querySelectorAll('a')) expect(entry.querySelector('svg'), entry.textContent!).not.toBeNull()
     expect($('settings-nav-about')!.parentElement!.className).toContain('border-t')
   })
 
-  it('TIME-2 AC-7 every card of the settings has its head: a symbol in an accent box, title and, where given, a line', async () => {
+  it('TIME-2 AC-7 every card of the settings has its head: a symbol or the mark of an app in an accent box, and a title', async () => {
     serve(server())
     for (const slug of [...ACCOUNT_AREAS, ...SERVER_AREAS, 'about']) {
       await open(`/settings/${slug}`)
-      for (const card of box.querySelectorAll<HTMLElement>('main section')) {
-        if (card.getAttribute('aria-labelledby') === 'about-facts-title') continue
-        // A box inside a card (the shared kit's `Box`, `ButtonGroup`) is part of that card, not a card of its own.
-        if (card.parentElement?.closest('main section')) continue
-        const head = card.firstElementChild!
-        // The connection to another app shows that app's mark instead of the symbol (as nexnotes).
-        if (head.querySelector('[data-testid="card-logo"]')) {
-          expect(head.querySelector('h2')?.textContent, `${slug} ${card.id}`).toBeTruthy()
-          continue
-        }
-        expect(head.querySelector('span svg'), `${slug} ${card.id}`).not.toBeNull()
-        // The app's own cards and those of the shared kit (bauplaene/ui) tint the box with the accent alike.
-        expect(head.querySelector('span')!.className, `${slug} ${card.id}`).toMatch(/bg-\[var\(--color-accent-wash\)\]|bg-\[color-mix\(in_srgb,var\(--nexui-accent\)/)
-        expect(head.querySelector('h2')?.textContent, `${slug} ${card.id}`).toBeTruthy()
+      for (const card of box.querySelectorAll<HTMLElement>('[data-part="settings-main"] [data-card]')) {
+        // A box inside a card is part of that card, not a card of its own.
+        if (card.parentElement?.closest('[data-card]')) continue
+        expect(card.querySelector('h2')?.textContent, `${slug} ${card.dataset.card}`).toBeTruthy()
+        // The kit's tile: a symbol on the accent at 14 %, or the mark of another app (nextasks, nexpaper) or nextime's.
+        expect(card.querySelector('svg, img'), `${slug} ${card.dataset.card}`).not.toBeNull()
       }
     }
   })
 
-  it('TIME-2 AC-7 a narrow page has a choice instead, which goes to the area chosen', async () => {
+  it('TIME-2 AC-7 a narrow page shows the list at /settings and the area with a way back elsewhere', async () => {
     serve(server(me()))
+    await open('/settings')
+    expect($('settings')!.dataset.list).toBe('true')
     await open('/settings/appearance')
-    // The page's own width decides: the navigation shows from 700 px, the choice below.
-    expect($('settings-nav')!.className).toMatch(/(^| )hidden( |$)/)
-    expect($('settings-nav')!.className).toContain('@min-[700px]:block')
-    expect($('settings-jump-row')!.className).toContain('@min-[700px]:hidden')
-    const select = $('settings-jump') as HTMLSelectElement
-    expect(select.value).toBe('appearance')
-    expect([...select.querySelectorAll('optgroup')].map((group) => group.label)).toEqual(['Mein Konto'])
-    expect([...select.options].map((option) => option.value)).toEqual([...ACCOUNT_AREAS, 'about'])
-    expect(select.closest('label')!.querySelector('.sr-only')!.textContent).toBe('Seite der Einstellungen')
-    await choose(select, 'security')
-    expect(where()).toBe('/settings/security')
-    expect(heading()).toBe('Sicherheit')
+    // The page's own width decides: the navigation shows beside the area from 700 px, below only the area.
+    expect(box.querySelector('[data-part="settings-side"]')!.className).toMatch(/(^| )hidden( |$)/)
+    expect(box.querySelector('[data-part="settings-side"]')!.className).toContain('@min-[700px]:block')
+    const back = $('settings-back')!
+    expect(back.getAttribute('href')).toBe('/settings')
+    expect(back.textContent).toBe('Einstellungen')
+    await click(back)
+    expect(where()).toBe('/settings')
   })
 
-  it('TIME-2 AC-7 the choice of the operator has both groups', async () => {
+  it('TIME-2 AC-7 the list of a member has its group only, the operator\'s both', async () => {
+    serve(server(me()))
+    await open('/settings')
+    expect([...$('settings-nav')!.querySelectorAll('[data-group]')].map((group) => group.getAttribute('data-group'))).toEqual(['account'])
     serve(server())
-    await open('/settings/log')
-    const select = $('settings-jump') as HTMLSelectElement
-    expect([...select.querySelectorAll('optgroup')].map((group) => group.label)).toEqual(['Mein Konto', 'Server'])
-    expect([...select.options].map((option) => option.value)).toEqual([...ACCOUNT_AREAS, ...SERVER_AREAS, 'about'])
+    await open('/settings')
+    expect([...$('settings-nav')!.querySelectorAll('[data-group]')].map((group) => group.getAttribute('data-group'))).toEqual(['account', 'server'])
   })
 })
 
@@ -290,16 +306,21 @@ describe('every card in its area (TIME-2 AC-7)', () => {
   it.each([
     ['profile', ['profile', 'sign-out']],
     ['security', ['security']],
-    ['appearance', ['looks']],
-    ['general', ['limits', 'switches', 'languages', 'state']],
-    ['sign-in', ['sign-in', 'sign-in-providers', 'sign-in-authentik']],
+    // "Aussehen" of the account module first, then nextime's own (plan "Einstellungen", Darstellung).
+    ['appearance', ['appearance', 'week-start', 'week-numbers', 'clock', 'duplicates', 'month-style']],
+    ['notifications', ['notify-ways', 'reminders', 'reminder-defaults', 'reminder-devices']],
+    ['connections', ['devices', 'install', 'nextasks', 'nexpaper', 'api-keys', 'ai-tools']],
+    ['general', ['limits', 'features', 'interfaces', 'languages']],
+    ['sign-in', ['sign-in-ready', 'sign-in', 'sign-in-providers', 'sign-in-authentik']],
     ['mail', ['mail']],
-    ['storage', ['backups']],
+    ['storage', ['storage', 'backups']],
     ['google', ['google']],
-    ['devices', ['app-devices', 'devices-new', 'devices-list']],
-    // The module's list (konten 0.3.9), then nextime's own card with the sentence on what the operator sees.
-    ['accounts', ['accounts', 'accounts-privacy-card']],
+    // "Auf iPhone und Co" is the calendar account alone; the iPhone app is under Connections (E4).
+    ['devices', ['devices-new', 'devices-list']],
+    // The module's list, open invitations only when there are, "Was du siehst", the key module's overview.
+    ['accounts', ['accounts', 'accounts-what-you-see', 'all-api-keys']],
     ['log', ['log']],
+    ['about', ['about', 'about-updates', 'about-built-with']],
   ])('TIME-2 AC-7 %s shows its cards and no others', async (slug, ids) => {
     serve(server())
     await open(`/settings/${slug}`)
@@ -310,11 +331,16 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     serve(server(me()))
     await open('/settings/appearance')
     expect($('display-fields')).not.toBeNull()
-    for (const id of ['#display-week-start', '#display-clock', '#display-zone', '#display-duplicates']) expect(box.querySelector(id)).not.toBeNull()
+    for (const id of ['display-week-start', 'display-week-numbers', 'display-clock', 'display-duplicates', 'display-month-style']) expect($(id), id).not.toBeNull()
     expect(box.textContent).toContain('Hell oder dunkel')
     expect($('language-select')).toBeNull()
+    // The time zone is the profile's now, under the language (plan "Einstellungen", E14).
+    expect($('display-zone')).toBeNull()
     await open('/settings/profile')
     expect($('display-fields')).toBeNull()
+    expect($('language-select')!.compareDocumentPosition($('display-zone')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    // "Anmeldung mit Passwort / über …" is gone from the profile: Security says it.
+    expect($('sign-in-way')).toBeNull()
     expect($('profile-picture')).not.toBeNull()
     // As the shared account module lays it out (konten 0.3.7): picture, then display name, username and address one
     // under the other with one "Speichern", the language, the role small at the end.
@@ -330,7 +356,7 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     expect($('language-select')!.compareDocumentPosition(role) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     // Below it a card of its own: "Abmelden" with its line and button.
     expect(cards()).toEqual(['profile', 'sign-out'])
-    expect(box.querySelector('#sign-out')!.textContent).toContain(i18n.t('me.signOut.text'))
+    expect(box.querySelector('#sign-out')!.textContent).toContain('Beendet deine Sitzung in diesem Browser. Deine Kalender bleiben, wie sie sind.')
     expect(byText('Abmelden', box.querySelector<HTMLElement>('#sign-out')!)).toBeDefined()
   })
 
@@ -339,7 +365,8 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     await open('/settings/connections')
     expect(heading()).toBe(i18n.t('settings.areas.connections.title'))
     expect($('later')).toBeNull()
-    expect(box.querySelector('#keys')).not.toBeNull()
+    expect(box.querySelector('[data-card="api-keys"]')).not.toBeNull()
+    expect(box.querySelector('[data-card="ai-tools"]')).not.toBeNull()
   })
 
   it('TIME-2 AC-7 "Kalender und Konten" is an area of its own', async () => {
@@ -356,9 +383,8 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     await open('/settings/google')
     const area = $('google-area')!
     const toggle = area.querySelector<HTMLInputElement>('input[type="checkbox"]')!
-    expect(toggle.getAttribute('aria-label')).toBe('Google-Anbindung')
+    expect(box.querySelector(`label[for="${toggle.id}"]`)!.textContent).toBe('Google-Anbindung (nicht eingerichtet)')
     expect(toggle.disabled).toBe(true)
-    expect(area.textContent).toContain('(nicht eingerichtet)')
   })
 })
 
@@ -368,26 +394,25 @@ describe('"Über nextime" in the settings', () => {
     await open('/settings/about')
     expect(where()).toBe('/settings/about')
     expect(current()).toEqual(['settings-nav-about'])
-    expect($('settings-nav-about')!.className).toContain('nt-chosen')
+    expect($('settings-nav-about')!.getAttribute('aria-current')).toBe('page')
     expect(heading()).toBe('Über nextime')
-    expect($('settings-area-about')!.textContent).toContain(i18n.t('settings.areas.about.text'))
+    expect($('settings-area-about')!.textContent).toContain('Version, Lizenz, Herkunft und ob es eine neuere Version gibt.')
     expect($('about-version')!.textContent).toBe('0.1.0')
-    expect($('about-newer')!.textContent).toBe('Version 0.2.0 ist erschienen')
+    expect($('about-facts')!.textContent).toContain('Version 0.2.0 ist erschienen')
     expect($('about-update-state')!.textContent).toContain('Version 0.2.0 ist erschienen')
-    expect(cards()).toEqual(['about-updates'])
+    expect(cards()).toEqual(['about', 'about-updates', 'about-built-with'])
     expect(box.textContent).toContain('Gebaut mit')
-    expect(($('settings-jump') as HTMLSelectElement).value).toBe('about')
   })
 
   it('TIME-1 AC-11 the operator may ask now and switches the daily check here, as in nexnotes', async () => {
     serve(server())
     await open('/settings/about')
-    await click(byText('Jetzt nachsehen', box))
+    await click($('about-check'))
     expect(calls.some((call) => call.method === 'POST' && call.path === '/api/about/updates/check')).toBe(true)
-    const toggle = box.querySelector<HTMLInputElement>('#about-updates input[type="checkbox"]')!
-    expect(toggle.getAttribute('aria-label')).toBe('Einmal am Tag nachsehen')
+    const toggle = box.querySelector<HTMLInputElement>('[data-card="about-updates"] input[type="checkbox"]')!
+    expect(box.querySelector(`label[for="${toggle.id}"]`)!.textContent).toBe('Einmal am Tag nachsehen')
     expect(toggle.checked).toBe(true)
-    await click(toggle.closest('label')!)
+    await click(toggle)
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/about/updates')?.body).toEqual({ update_check: false })
   })
 
@@ -397,8 +422,8 @@ describe('"Über nextime" in the settings', () => {
     expect(where()).toBe('/settings/about')
     expect(current()).toEqual(['settings-nav-about'])
     expect($('about-version')!.textContent).toBe('0.1.0')
-    expect($('about-newer')).not.toBeNull()
-    expect(byText('Jetzt nachsehen', box)).toBeUndefined()
-    expect(box.querySelector('#about-updates input[type="checkbox"]')).toBeNull()
+    expect($('about-facts')!.textContent).toContain('Version 0.2.0 ist erschienen')
+    expect($('about-check')).toBeNull()
+    expect(box.querySelector('[data-card="about-updates"] input[type="checkbox"]')).toBeNull()
   })
 })

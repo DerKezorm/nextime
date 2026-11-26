@@ -2,12 +2,6 @@
   "accounts": {
     "countShared_one": "{{count}} geteilten Kalender",
     "countShared_other": "{{count}} geteilte Kalender",
-    "limitField": "Grenze in GB",
-    "limitRemove": "Grenze entfernen",
-    "limitSet": "Setzen",
-    "limitText": "Ist sie erreicht, geht Schreiben weiter, neue Anhänge nicht.",
-    "limitTitle": "Speichergrenze für {{name}}",
-    "limitUsed": "Belegt: {{used}}",
     "storage": "Speicher",
     "usedNoLimit": "{{used}} · ohne Grenze",
     "usedOf": "{{used}} von {{limit}}",
@@ -17,9 +11,7 @@
     "countCalendars_other": "{{count}} Kalender",
     "countEvents_one": "{{count}} Termin",
     "countEvents_other": "{{count}} Termine",
-    "storageLimit": "Speichergrenze",
-    "removeNumbers": "Es hat {{calendars}} mit {{events}} und {{shared}}. Was es geteilt hat, verschwindet bei den anderen mit Hinweis.",
-    "privacyTitle": "Was du siehst"
+    "removeNumbers": "Es hat {{calendars}} mit {{events}} und {{shared}}. Was es geteilt hat, verschwindet bei den anderen mit Hinweis."
   },
   "app": {
     "home": "Zu Heute",
@@ -314,13 +306,10 @@
     "emailTaken": "Adresse übernommen.",
     "linked": "Dein Konto ist mit {{name}} verknüpft.",
     "looks": {
-      "appearance": "Hell oder dunkel",
-      "appearanceHint": "(nur auf diesem Gerät)",
       "browser": "Wie der Browser",
       "byOperator": "(vom Betreiber)",
       "language": "Sprache",
-      "languageHint": "(gilt auf allen deinen Geräten)",
-      "title": "Darstellung"
+      "languageHint": "(gilt auf allen deinen Geräten)"
     },
     "password": {
       "current": "Jetziges Passwort",
@@ -329,22 +318,12 @@
       "submit": "Passwort ändern"
     },
     "profile": {
-      "saved": "Profil gespeichert.",
-      "viaPassword": "Anmeldung mit Passwort",
-      "viaProvider": "Anmeldung über {{name}}",
-      "provider": "einen Anbieter"
+      "saved": "Profil gespeichert."
     },
-    "security": {},
     "sessions": {
       "done": "Alle anderen Browser sind abgemeldet."
     },
     "setupFirst": "Der Betreiber verlangt einen zweiten Faktor. Richte ihn hier ein, dann geht es weiter.",
-    "signOut": {
-      "button": "Abmelden",
-      "provider": "Bei deinem Anmeldeanbieter bleibst du angemeldet; nur nextime meldet dich ab.",
-      "text": "Beendet deine Sitzung in diesem Browser. Deine Kalender bleiben, wie sie sind.",
-      "title": "Abmelden"
-    },
     "unlinked": "Nicht mehr mit {{name}} verknüpft.",
     "picture": {
       "remove": "Bild entfernen",
@@ -407,100 +386,31 @@
     "operator": "Betreiber"
   },
   "server": {
-    "backupMade": "Sicherung erstellt.",
-    "backupNow": "Jetzt sichern",
     "builtIn": "eingebaut",
-    "check": "Prüfen",
-    "checkBad": "Beschädigt: Diese Sicherung lässt sich nicht wiederherstellen.",
-    "confirm": {
-      "backup_restore": {
-        "text": "Erst wird der jetzige Stand gesichert, dann startet nextime neu und stellt das Backup wieder her. Alle melden sich danach neu an.",
-        "title": "Diese Sicherung wiederherstellen?",
-        "button": "Wiederherstellen"
-      },
-      "backup_download": {
-        "title": "Diese Sicherung herunterladen?",
-        "text": "Sie enthält jeden Kalender, jeden Termin, jeden Anhang und jedes Konto. Sie ist nicht verschlüsselt.",
-        "button": "Herunterladen"
-      },
-      "backup_delete": {
-        "title": "Diese Sicherung löschen?",
-        "text": "Sie lässt sich nicht zurückholen.",
-        "button": "Löschen"
-      },
-      "backup_upload": {
-        "title": "Sicherung hochladen?",
-        "text": "Die Datei kommt in die Liste der Sicherungen. Wiederhergestellt wird erst, wenn du es dort bestätigst.",
-        "button": "Hochladen"
-      }
-    },
     "countFiles_one": "{{count}} Datei",
     "countFiles_other": "{{count}} Dateien",
-    "daily": "täglich",
     "days_one": "{{count}} Tag",
     "days_other": "{{count}} Tagen",
-    "deleteBackup": "Löschen",
-    "download": "Herunterladen",
     "features": "Funktionen für alle Konten",
-    "forBackup": "{{action}}: Backup vom {{name}}",
-    "keep": "Behalten",
-    "kinds": {
-      "manual": "von Hand",
-      "scheduled": "geplant",
-      "update": "vor einer Änderung"
-    },
     "languageAdded": "Sprache hinzugefügt. Sie erscheint nach dem Neuladen im Kontomenü.",
     "languageCode": "Sprachcode",
     "languages": "Sprachen",
     "languagesHint": "Deutsch und Englisch sind eingebaut. Weitere als JSON-Datei hinzufügen, fehlende Texte fallen auf Englisch zurück.",
     "limits": "Grenzen",
     "mail": "Mail",
-    "mailHint": "Für Einladungen und Links zum Zurücksetzen. Ohne Server reicht der Link zum Kopieren.",
-    "mailSent": "Die Testmail ist raus.",
-    "mailTest": "Testmail an",
-    "mcp": "MCP-Zugang",
-    "mcpHint": "Mitglieder dürfen Schlüssel für KI-Werkzeuge anlegen.",
-    "noBackups": "Noch keine Sicherungen.",
-    "none": "keine",
-    "off": "aus",
-    "ownSecondFactorFirst": "Richte zuerst deinen eigenen zweiten Faktor ein (Mein Konto, Sicherheit), sonst wärst du der Erste, der nicht mehr weiterkommt. Nicht betroffen ist, wer sich über einen Anbieter anmeldet, bei dem „{{trusts}}“ an ist.",
-    "providers": {
-      "more": "Mehr",
-      "order": "{{name}} verschieben: ziehen oder die Pfeiltasten"
-    },
-    "proxyUnknown": "Anfragen kommen über einen Proxy, aber NEXTIME_TRUSTED_PROXIES ist nicht gesetzt. Dann sieht nextime alle als einen Absender: Wer oft falsch rät, bremst jeden aus, der sich in einem hier noch nie benutzten Browser anmeldet. Trag die Adresse des Proxys in NEXTIME_TRUSTED_PROXIES ein. Steht kein Proxy davor, kannst du das ignorieren.",
-    "remove": "Entfernen",
-    "restarting": "nextime startet mit der Sicherung neu. Die Seite lädt gleich neu.",
     "restore": "Wiederherstellen",
     "restoreChanges": "Beim Wiederherstellen kommen {{add}} dazu, {{change}} ändern sich, {{remove}} fallen weg.",
-    "schedule": "Automatisch",
-    "secretKept": "Bleibt; nur zum Ändern tippen.",
-    "send": "Senden",
     "shareLinks": "Teilen per Link",
     "shareLinksHint": "Mitglieder dürfen Lese-Links zu eigenen Kalendern für Personen ohne Konto anlegen.",
-    "smtpFrom": "Absender",
-    "smtpHost": "Server",
-    "smtpPort": "Port",
-    "smtpSecurity": "Verschlüsselung",
-    "smtpUser": "Benutzer",
-    "storage": "Speicher und Backups",
     "template": "Vorlage herunterladen",
     "texts_one": "ein Text",
     "texts_other": "{{count}} Texte",
     "trash": "Papierkorb leeren nach",
-    "twoFactorRequired": "Zweiten Faktor verlangen",
-    "twoFactorRequiredHint": "Konten von einem Anmeldeanbieter bringen dessen eigenen mit. Ein Konto mit Passwort ist ebenfalls nicht betroffen, wenn es über einen Anbieter kommt, bei dem „{{trusts}}“ an ist.",
     "upload": "Sprache hochladen",
-    "uploadBackup": "Sicherung hochladen",
     "uploadMax": "Größte Datei je Anhang",
-    "uploaded": "hochgeladen",
-    "uploadedHint": "Hochgeladen. Sie steht jetzt in der Liste: erst prüfen, dann wiederherstellen.",
     "localNetwork": "Verbindungen ins eigene Netz",
     "localNetworkHint": "Mitglieder dürfen ihr nextasks auch unter einer Adresse im eigenen Netz (LAN, VPN) verbinden. Dann kann jedes Mitglied nextime Adressen dort ansprechen lassen.",
-    "api": "Programmschnittstelle (API) für Mitglieder",
-    "apiHint": "Mitglieder legen API-Schlüssel an, Programme und die nexdeck-Karte lesen damit. Aus: jede Anfrage unter /api/v1/ wird abgewiesen, die Schlüssel bleiben.",
     "backupHolds": "Eine Sicherung enthält die eigenen Kalender mit ihren Terminen, alle Anhänge, die Konten mit ihren Freigaben, die Einstellungen, die verschlüsselten Zugänge und den Schlüssel des Servers. Nicht dabei: Log und eigene Sprachdateien, auch kein über NEXTIME_SECRET_KEY gesetzter Schlüssel.",
-    "nextimeUses": "nextime belegt",
     "part": "{{name}} {{size}}",
     "parts": {
       "database": "Datenbank",
@@ -509,10 +419,6 @@
       "exports": "Exporte",
       "other": "Log und Sonstiges"
     },
-    "diskBar": "nextime belegt {{own}}, auf dem Datenträger sind {{used}} von {{total}} belegt",
-    "diskFree": "Auf dem Datenträger noch {{free}} von {{total}} frei",
-    "version": "Version {{version}}",
-    "newer": "Neue Version {{version}}",
     "google": "Google-Anbindung",
     "googleSet": "(eingerichtet)",
     "googleNotSet": "(nicht eingerichtet)",
@@ -527,33 +433,9 @@
     "uploadSaved_other": "Neue Anhänge höchstens {{count}} MB; vorhandene bleiben.",
     "trashSaved_one": "Neu Gelöschtes bleibt {{count}} Tag; schon Gelöschtes behält seine Restzeit.",
     "trashSaved_other": "Neu Gelöschtes bleibt {{count}} Tage; schon Gelöschtes behält seine Restzeit.",
-    "backupDaily": "Täglich {{time}} ({{zone}})",
-    "backupOff": "Automatisch aus",
-    "backupLast": "zuletzt {{when}}, {{size}}",
-    "todayAt": "heute {{time}}",
-    "backupKept_one": "{{count}} Stück aufbewahrt",
-    "backupKept_other": "{{count}} Stück aufbewahrt",
-    "backupRunning": "Sicherung läuft …",
-    "backupPlan": "Zeitplan",
-    "backupTime": "Uhrzeit",
-    "pieces": "Stück",
-    "timeInvalid": "Bitte eine Uhrzeit wie 03:00.",
-    "backupFailed": "Die Sicherung am {{when}} ist gescheitert: {{reason}}. Die älteren Sicherungen bleiben.",
-    "backupReasons": {
-      "disk_full": "Der Datenträger ist voll",
-      "write_failed": "Sie ließ sich nicht schreiben"
-    },
-    "restoreOpen": "Einspielen …",
-    "restoreLead": "Vor dem Einspielen prüft nextime die Sicherung und zeigt, was dazukommt, sich ändert und wegfällt.",
     "restoreEvents": "Termine: {{add}} kommen dazu, {{change}} ändern sich, {{remove}} fallen weg.",
     "restoreAccounts": "Konten: {{add}} kommen dazu, {{remove}} fallen weg.",
-    "state": "Zustand",
-    "httpsOk": "HTTPS aktiv, iPhones können sich verbinden",
-    "httpsBad": "Kein HTTPS: Kalender auf iPhones und Android verbinden sich erst mit HTTPS.",
-    "internetOk": "Internet erreichbar, Abgleich läuft",
-    "internetBad": "Internet nicht erreichbar: der Abgleich mit iCloud, Google und Abos pausiert.",
     "httpsMissing": "nextime ist nicht über HTTPS erreichbar. Kalender auf iPhones und Android verbinden sich erst mit HTTPS.",
-    "showLog": "Log ansehen",
     "mailSubtitle": "Der Mailserver, über den nextime Einladungen, Links für ein neues Passwort, Links zum Bestätigen einer Adresse und den Hinweis bei einer neuen Anmeldung verschickt."
   },
   "session": {
@@ -566,14 +448,8 @@
     "waitingText_other": "{{count}} Änderungen sind noch nicht gespeichert. Meldest du dich jetzt ab, gehen sie verloren."
   },
   "settings": {
-    "ownPassword": "Dein Passwort",
     "saved": "Gespeichert.",
     "title": "Einstellungen",
-    "jump": "Seite der Einstellungen",
-    "groups": {
-      "account": "Mein Konto",
-      "server": "Server"
-    },
     "areas": {
       "profile": {
         "title": "Profil",
@@ -645,7 +521,8 @@
       }
     },
     "later": "Kommt in einer späteren Version.",
-    "things": "Kalendern"
+    "things": "Kalendern",
+    "thingsKept": "Kalender"
   },
   "setup": {
     "folder": "Datenordner {{path}}",
@@ -798,8 +675,6 @@
   "display": {
     "weekStart": "Erster Wochentag",
     "weekNumbers": "Kalenderwochen",
-    "show": "zeigen",
-    "hide": "ausblenden",
     "clock": "Uhrzeit",
     "clockAuto": "wie die Sprache",
     "clock24": "24 Stunden",
@@ -814,7 +689,8 @@
     "duplicatesHint": "Steht derselbe Termin in zwei deiner Kalender, erscheint er einmal mit „in 2 Kalendern“.",
     "monthStyle": "Termine im Monat",
     "monthStyleDot": "mit Punkt",
-    "monthStyleTint": "farbig hinterlegt"
+    "monthStyleTint": "farbig hinterlegt",
+    "weekNumbersShow": "Kalenderwochen zeigen"
   },
   "calendars": {
     "groups": {
@@ -1181,31 +1057,12 @@
     }
   },
   "about": {
-    "builtWith": "Gebaut mit",
-    "licence": "Lizenz",
-    "newer": "Version {{version}} ist erschienen",
     "project": "Projektseite",
     "releases": "Veröffentlichungen",
-    "releasesLink": "Alle Versionen und was sich geändert hat",
-    "report": "Einen Fehler gefunden?",
-    "reportLink": "Auf GitHub melden",
-    "source": "Quelltext",
     "subtitle": "Kalender für Familien und kleine Gruppen, selbst gehostet.",
     "version": "Version",
-    "whatsNew": "Was ist neu",
     "updates": {
-      "checkedAt": "zuletzt nachgesehen {{when}}",
-      "current": "Das ist die neueste Version.",
-      "none": "Noch keine Veröffentlichung gefunden.",
-      "notYet": "Noch nicht nachgesehen.",
-      "now": "Jetzt nachsehen",
-      "off": "Das tägliche Nachsehen ist aus.",
-      "text": "Ob es eine neuere Version von nextime gibt.",
-      "title": "Aktualisierungen",
-      "toRelease": "Was neu ist",
-      "whatGoesOut": "Hinaus geht dafür nur die Frage: eine Anfrage an api.github.com nach der neuesten Veröffentlichung von nextime, ohne Namen, Kalender oder Einstellungen.",
-      "daily": "Einmal am Tag nachsehen",
-      "dailyHint": "Fragt GitHub nach der neuesten Veröffentlichung. Aus: nur, wenn du den Knopf drückst."
+      "whatGoesOut": "Hinaus geht dafür nur die Frage: eine Anfrage an api.github.com nach der neuesten Veröffentlichung von nextime, ohne Namen, Kalender oder Einstellungen."
     }
   },
   "sources": {
@@ -2149,67 +2006,19 @@
     "search": "Symbol suchen, etwa Einkauf oder Hund"
   },
   "keys": {
-    "title": "Schlüssel für Programme",
-    "text": "Ein Schlüssel lässt ein Programm deine Kalender lesen und, wenn du willst, Termine eintragen: n8n, Kurzbefehle, ein Skript, die nexdeck-Karte oder ein KI-Werkzeug über MCP. Er darf nie mehr als dein Konto.",
-    "none": "Noch kein Schlüssel. Mit einem Schlüssel lesen Programme und KI-Werkzeuge deine Kalender und tragen, wenn du willst, Termine ein.",
-    "new": "Neuer Schlüssel …",
-    "made": "Neuer Schlüssel „{{name}}“, nur jetzt sichtbar:",
-    "off": "Der Betreiber hat die Programmschnittstelle abgeschaltet. Bestehende Schlüssel funktionieren wieder, sobald er sie einschaltet.",
     "below": "Programmschnittstelle unter /api/v1. Zugangsdaten zu iCloud und Google gibt sie nie heraus.",
-    "address": "Adresse für Programme",
-    "mcpAddress": "KI-Werkzeuge verbinden sich mit {{address}}.",
-    "docs": "Beschreibung der Schnittstelle",
-    "calendarsAll": "alle",
-    "lastUsed": "zuletzt benutzt {{when}}",
-    "neverUsed": "noch nie",
-    "revoke": "Widerrufen",
-    "remove": "Entfernen",
-    "revokeTitle": "Schlüssel „{{name}}“ widerrufen?",
-    "revokeText": "Programme mit diesem Schlüssel kommen sofort nicht mehr an deine Kalender.",
-    "removeTitle": "Schlüssel „{{name}}“ entfernen?",
-    "removeText": "Der Schlüssel ist abgelaufen; er verschwindet aus der Liste.",
-    "count": "{{count}} von {{max}} Schlüsseln",
-    "level": {
-      "read": "lesen",
-      "write": "lesen, schreiben"
-    },
-    "expiry": {
-      "on": "läuft am {{date}} ab",
-      "expired": "abgelaufen",
-      "never": "läuft nie ab"
-    },
     "dialog": {
-      "title": "Neuer Schlüssel",
-      "name": "Name",
-      "namePlaceholder": "z. B. nexdeck Eingang",
-      "right": "Rechte",
       "read": "Nur lesen",
       "readHint": "Kalender und Termine lesen, suchen, freie Zeiten finden.",
       "write": "Lesen und schreiben",
       "writeHint": "Dazu Termine anlegen, ändern und in den Papierkorb legen.",
       "mcp": "Auch für MCP",
-      "mcpHint": "Der Schlüssel gilt dann auch unter …/api/mcp für KI-Werkzeuge.",
-      "mcpOff": "Der Betreiber hat MCP abgeschaltet.",
       "calendars": "Kalender",
       "calendarsAll": "Alle Kalender, auch später angelegte",
       "calendarsSome": "Nur diese …",
-      "expiry": "Ablauf",
-      "days_30": "30 Tage",
-      "days_90": "90 Tage",
-      "days_365": "1 Jahr",
-      "never": "Nie",
-      "make": "Anlegen",
       "mcpWriteHint": "Ein KI-Werkzeug liest auch Texte aus Einladungen fremder Leute. Solche Texte könnten es zu Änderungen verleiten; Gelöschtes liegt dann im Papierkorb.",
       "hiddenNote": "„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst."
-    },
-    "admin": {
-      "title": "Schlüssel aller Konten",
-      "text": "Wie viele Schlüssel jedes Konto hat, davon für MCP. Nie die Schlüssel, ihre Namen oder Kalender.",
-      "none": "Noch kein Konto hat einen Schlüssel.",
-      "row_one": "{{count}} Schlüssel · davon {{mcp}} für MCP",
-      "row_other": "{{count}} Schlüssel · davon {{mcp}} für MCP"
-    },
-    "copyFailed": "Kopieren ging nicht. Markiere den Schlüssel oben und kopiere ihn von Hand; er ist nur jetzt sichtbar."
+    }
   },
   "tasks": {
     "block": "Aufgaben aus nextasks",

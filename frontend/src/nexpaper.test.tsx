@@ -111,18 +111,18 @@ describe('nexpaper deadlines', () => {
   it('nexpaper: a connected card is folded from the start with "verbunden" and the address in its head, opens and stays open on this device', async () => {
     server([])
     await open('/settings/connections')
-    const card = () => document.getElementById('nexpaper')!
-    expect(card().dataset.folded).toBe('true')
+    const card = () => document.querySelector<HTMLElement>('[data-card="nexpaper"]')!
+    expect(card().dataset.open).toBe('false')
     expect(card().querySelector('[data-testid="nexpaper-connected"]')).toBeNull()
     expect(card().querySelector('[data-testid="nexpaper-summary"]')!.textContent).toBe('verbundenpaper.example.com')
-    await click(card().querySelector<HTMLElement>('[data-testid="card-fold"]'))
+    await click(card().querySelector<HTMLElement>('[data-part="collapsible-head"]'))
     expect(card().querySelector('[data-testid="nexpaper-connected"]')).not.toBeNull()
-    expect(card().querySelector('[data-testid="card-fold"]')!.getAttribute('aria-expanded')).toBe('true')
+    expect(card().querySelector('[data-part="collapsible-head"]')!.getAttribute('aria-expanded')).toBe('true')
     stop()
     start()
     forgetPrefs()
     server([])
     await open('/settings/connections')
-    expect(card().dataset.folded).toBe('false')
+    expect(card().dataset.open).toBe('true')
   })
 })

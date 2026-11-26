@@ -2,12 +2,6 @@
   "accounts": {
     "countShared_one": "{{count}} shared calendar",
     "countShared_other": "{{count}} shared calendars",
-    "limitField": "Limit in GB",
-    "limitRemove": "Remove the limit",
-    "limitSet": "Set",
-    "limitText": "Once reached, writing goes on, new attachments do not.",
-    "limitTitle": "Storage limit for {{name}}",
-    "limitUsed": "In use: {{used}}",
     "storage": "Storage",
     "usedNoLimit": "{{used}} · no limit",
     "usedOf": "{{used}} of {{limit}}",
@@ -17,9 +11,7 @@
     "countCalendars_other": "{{count}} calendars",
     "countEvents_one": "{{count}} event",
     "countEvents_other": "{{count}} events",
-    "storageLimit": "Storage limit",
-    "removeNumbers": "It has {{calendars}} with {{events}} and {{shared}}. What it shared disappears for the others with a notice.",
-    "privacyTitle": "What you see"
+    "removeNumbers": "It has {{calendars}} with {{events}} and {{shared}}. What it shared disappears for the others with a notice."
   },
   "app": {
     "home": "Go to Today",
@@ -314,13 +306,10 @@
     "emailTaken": "Address taken.",
     "linked": "Your account is linked to {{name}}.",
     "looks": {
-      "appearance": "Light or dark",
-      "appearanceHint": "(on this device only)",
       "browser": "As the browser",
       "byOperator": "(by the operator)",
       "language": "Language",
-      "languageHint": "(on all your devices)",
-      "title": "Appearance"
+      "languageHint": "(on all your devices)"
     },
     "password": {
       "current": "Current password",
@@ -329,22 +318,12 @@
       "submit": "Change password"
     },
     "profile": {
-      "saved": "Profile saved.",
-      "viaPassword": "Signs in with a password",
-      "viaProvider": "Signs in through {{name}}",
-      "provider": "a provider"
+      "saved": "Profile saved."
     },
-    "security": {},
     "sessions": {
       "done": "Every other browser is signed out."
     },
     "setupFirst": "The operator requires a second factor. Set it up here, then you can go on.",
-    "signOut": {
-      "button": "Sign out",
-      "provider": "You stay signed in with your sign-in provider; only nextime signs you out.",
-      "text": "Ends your session in this browser. Your calendars stay as they are.",
-      "title": "Sign out"
-    },
     "unlinked": "No longer linked to {{name}}.",
     "picture": {
       "remove": "Remove picture",
@@ -407,100 +386,31 @@
     "operator": "Operator"
   },
   "server": {
-    "backupMade": "Backup created.",
-    "backupNow": "Back up now",
     "builtIn": "built in",
-    "check": "Check",
-    "checkBad": "Damaged: this backup cannot be restored.",
-    "confirm": {
-      "backup_restore": {
-        "text": "First the current state is backed up, then nextime restarts and restores the backup. Everybody signs in again afterwards.",
-        "title": "Restore this backup?",
-        "button": "Restore"
-      },
-      "backup_download": {
-        "title": "Download this backup?",
-        "text": "It contains every calendar, every event, every attachment and every account. It is not encrypted.",
-        "button": "Download"
-      },
-      "backup_delete": {
-        "title": "Delete this backup?",
-        "text": "It cannot be brought back.",
-        "button": "Delete"
-      },
-      "backup_upload": {
-        "title": "Upload a backup?",
-        "text": "The file joins the list of backups. Nothing is restored until you confirm it there.",
-        "button": "Upload"
-      }
-    },
     "countFiles_one": "{{count}} file",
     "countFiles_other": "{{count}} files",
-    "daily": "daily",
     "days_one": "{{count}} day",
     "days_other": "{{count}} days",
-    "deleteBackup": "Delete",
-    "download": "Download",
     "features": "Features for every account",
-    "forBackup": "{{action}}: backup of {{name}}",
-    "keep": "Keep",
-    "kinds": {
-      "manual": "by hand",
-      "scheduled": "scheduled",
-      "update": "before a change"
-    },
     "languageAdded": "Language added. It shows in the account menu after reloading.",
     "languageCode": "Language code",
     "languages": "Languages",
     "languagesHint": "German and English are built in. Add more as a JSON file; missing texts fall back to English.",
     "limits": "Limits",
     "mail": "Mail",
-    "mailHint": "For invitations and reset links. Without a server, the link to copy is enough.",
-    "mailSent": "The test mail went out.",
-    "mailTest": "Test mail to",
-    "mcp": "MCP access",
-    "mcpHint": "Members may make keys for AI tools.",
-    "noBackups": "No backups yet.",
-    "none": "none",
-    "off": "off",
-    "ownSecondFactorFirst": "Set up your own second factor first (My account, Security), or you would be the first one who cannot go on. Not affected is whoever signs in through a provider for which “{{trusts}}” is on.",
-    "providers": {
-      "more": "More",
-      "order": "Move {{name}}: drag, or the arrow keys"
-    },
-    "proxyUnknown": "Requests come through a proxy, but NEXTIME_TRUSTED_PROXIES is not set. nextime then sees everybody as one sender: whoever guesses wrong often slows down everyone signing in from a browser not used here before. Put the proxy's address into NEXTIME_TRUSTED_PROXIES. If no proxy stands in front of nextime, you can ignore this.",
-    "remove": "Remove",
-    "restarting": "nextime restarts with the backup. The page reloads in a moment.",
     "restore": "Restore",
     "restoreChanges": "Restoring adds {{add}}, changes {{change}} and removes {{remove}}.",
-    "schedule": "Automatically",
-    "secretKept": "Kept; type only to change it.",
-    "send": "Send",
     "shareLinks": "Sharing by link",
     "shareLinksHint": "Members may make read links to their own calendars for people without an account.",
-    "smtpFrom": "Sender",
-    "smtpHost": "Server",
-    "smtpPort": "Port",
-    "smtpSecurity": "Encryption",
-    "smtpUser": "User",
-    "storage": "Storage and backups",
     "template": "Download template",
     "texts_one": "one text",
     "texts_other": "{{count}} texts",
     "trash": "Empty the trash after",
-    "twoFactorRequired": "Require a second factor",
-    "twoFactorRequiredHint": "Accounts from a sign-in provider bring the provider's. An account with a password is not affected either when it comes in through a provider for which “{{trusts}}” is on.",
     "upload": "Upload language",
-    "uploadBackup": "Upload a backup",
     "uploadMax": "Largest file per attachment",
-    "uploaded": "uploaded",
-    "uploadedHint": "Uploaded. It is in the list now: check it first, then restore.",
     "localNetwork": "Connections into the local network",
     "localNetworkHint": "Members may connect their nextasks at an address in the local network (LAN, VPN) too. Then every member can have nextime ask addresses there.",
-    "api": "API for members",
-    "apiHint": "Members make API keys; programs and the nexdeck card read with them. Off: every request under /api/v1/ is refused, the keys stay.",
     "backupHolds": "A backup contains the calendars kept on this server with their events, all attachments, the accounts with their shares, the settings, the encrypted access data and the key of the server. Not in it: the log and added language files, nor a key set through NEXTIME_SECRET_KEY.",
-    "nextimeUses": "nextime uses",
     "part": "{{name}} {{size}}",
     "parts": {
       "database": "Database",
@@ -509,10 +419,6 @@
       "exports": "Exports",
       "other": "Log and other"
     },
-    "diskBar": "nextime uses {{own}}; {{used}} of {{total}} on the disk are in use",
-    "diskFree": "{{free}} of {{total}} still free on the disk",
-    "version": "Version {{version}}",
-    "newer": "New version {{version}}",
     "google": "Google connection",
     "googleSet": "(set up)",
     "googleNotSet": "(not set up)",
@@ -527,33 +433,9 @@
     "uploadSaved_other": "New attachments at most {{count}} MB; existing ones stay.",
     "trashSaved_one": "Newly deleted things stay {{count}} day; things deleted before keep their time.",
     "trashSaved_other": "Newly deleted things stay {{count}} days; things deleted before keep their time.",
-    "backupDaily": "Daily {{time}} ({{zone}})",
-    "backupOff": "Automatic off",
-    "backupLast": "last {{when}}, {{size}}",
-    "todayAt": "today {{time}}",
-    "backupKept_one": "{{count}} kept",
-    "backupKept_other": "{{count}} kept",
-    "backupRunning": "Backup running …",
-    "backupPlan": "Schedule",
-    "backupTime": "Time",
-    "pieces": "pieces",
-    "timeInvalid": "Please a time such as 03:00.",
-    "backupFailed": "The backup at {{when}} failed: {{reason}}. The older backups stay.",
-    "backupReasons": {
-      "disk_full": "The disk is full",
-      "write_failed": "It could not be written"
-    },
-    "restoreOpen": "Restore …",
-    "restoreLead": "Before restoring, nextime checks the backup and shows what comes, changes and goes.",
     "restoreEvents": "Events: {{add}} come, {{change}} change, {{remove}} go.",
     "restoreAccounts": "Accounts: {{add}} come, {{remove}} go.",
-    "state": "State",
-    "httpsOk": "HTTPS active, iPhones can connect",
-    "httpsBad": "No HTTPS: calendars on iPhones and Android connect only with HTTPS.",
-    "internetOk": "Internet reachable, sync running",
-    "internetBad": "Internet not reachable: syncing with iCloud, Google and subscriptions pauses.",
     "httpsMissing": "nextime is not reachable over HTTPS. Calendars on iPhones and Android connect only with HTTPS.",
-    "showLog": "Show log",
     "mailSubtitle": "The mail server through which nextime sends invitations, links for a new password, links to confirm an address and the notice of a new sign-in."
   },
   "session": {
@@ -566,14 +448,8 @@
     "waitingText_other": "{{count}} changes are not saved yet. If you sign out now, they are lost."
   },
   "settings": {
-    "ownPassword": "Your password",
     "saved": "Saved.",
     "title": "Settings",
-    "jump": "Settings page",
-    "groups": {
-      "account": "My account",
-      "server": "Server"
-    },
     "areas": {
       "profile": {
         "title": "Profile",
@@ -645,7 +521,8 @@
       }
     },
     "later": "Comes in a later version.",
-    "things": "calendars"
+    "things": "calendars",
+    "thingsKept": "calendars"
   },
   "setup": {
     "folder": "Data folder {{path}}",
@@ -798,8 +675,6 @@
   "display": {
     "weekStart": "First day of the week",
     "weekNumbers": "Week numbers",
-    "show": "show",
-    "hide": "hide",
     "clock": "Time of day",
     "clockAuto": "as the language",
     "clock24": "24 hours",
@@ -814,7 +689,8 @@
     "duplicatesHint": "When the same event is in two of your calendars, it shows once with “in 2 calendars”.",
     "monthStyle": "Events in the month",
     "monthStyleDot": "with a dot",
-    "monthStyleTint": "tinted"
+    "monthStyleTint": "tinted",
+    "weekNumbersShow": "Show week numbers"
   },
   "calendars": {
     "groups": {
@@ -1181,31 +1057,12 @@
     }
   },
   "about": {
-    "builtWith": "Built with",
-    "licence": "Licence",
-    "newer": "Version {{version}} is out",
     "project": "Project page",
     "releases": "Releases",
-    "releasesLink": "All versions and what changed",
-    "report": "Found a problem?",
-    "reportLink": "Report it on GitHub",
-    "source": "Source code",
     "subtitle": "Calendars for families and small groups, self-hosted.",
     "version": "Version",
-    "whatsNew": "What's new",
     "updates": {
-      "checkedAt": "last checked {{when}}",
-      "current": "This is the newest version.",
-      "none": "No release found yet.",
-      "notYet": "Not checked yet.",
-      "now": "Check now",
-      "off": "The daily check is off.",
-      "text": "Whether a newer version of nextime is out.",
-      "title": "Updates",
-      "toRelease": "What is new",
-      "whatGoesOut": "Only the question goes out for this: a request to api.github.com for the newest release of nextime, with no names, calendars or settings.",
-      "daily": "Check once a day",
-      "dailyHint": "Asks GitHub for the newest release. Off: only when you press the button."
+      "whatGoesOut": "Only the question goes out for this: a request to api.github.com for the newest release of nextime, with no names, calendars or settings."
     }
   },
   "sources": {
@@ -2149,67 +2006,19 @@
     "search": "Search symbols, such as shopping or dog"
   },
   "keys": {
-    "title": "Keys for programs",
-    "text": "A key lets a program read your calendars and, if you want, enter events: n8n, Shortcuts, a script, the nexdeck card or an AI tool over MCP. It never may more than your account.",
-    "none": "No key yet. With a key, programs and AI tools read your calendars and, if you want, enter events.",
-    "new": "New key …",
-    "made": "New key “{{name}}”, visible only now:",
-    "off": "The operator has switched the API off. Existing keys work again once it is switched on.",
     "below": "API under /api/v1. It never gives out access data for iCloud and Google.",
-    "address": "Address for programs",
-    "mcpAddress": "AI tools connect to {{address}}.",
-    "docs": "Description of the API",
-    "calendarsAll": "all",
-    "lastUsed": "last used {{when}}",
-    "neverUsed": "never",
-    "revoke": "Revoke",
-    "remove": "Remove",
-    "revokeTitle": "Revoke key “{{name}}”?",
-    "revokeText": "Programs with this key lose access to your calendars at once.",
-    "removeTitle": "Remove key “{{name}}”?",
-    "removeText": "The key has expired; it disappears from the list.",
-    "count": "{{count}} of {{max}} keys",
-    "level": {
-      "read": "read",
-      "write": "read, write"
-    },
-    "expiry": {
-      "on": "expires on {{date}}",
-      "expired": "expired",
-      "never": "never expires"
-    },
     "dialog": {
-      "title": "New key",
-      "name": "Name",
-      "namePlaceholder": "e.g. nexdeck hallway",
-      "right": "Rights",
       "read": "Read only",
       "readHint": "Read calendars and events, search, find free times.",
       "write": "Read and write",
       "writeHint": "Also create, change and move events to the trash.",
       "mcp": "Also for MCP",
-      "mcpHint": "The key then works at …/api/mcp for AI tools too.",
-      "mcpOff": "The operator has switched MCP off.",
       "calendars": "Calendars",
       "calendarsAll": "All calendars, later ones too",
       "calendarsSome": "Only these …",
-      "expiry": "Expires",
-      "days_30": "30 days",
-      "days_90": "90 days",
-      "days_365": "1 year",
-      "never": "Never",
-      "make": "Create",
       "mcpWriteHint": "An AI tool also reads texts from invitations by other people. Such texts could lead it to make changes; anything deleted then lies in the trash.",
       "hiddenNote": "“All calendars” means all you show. A key reads hidden calendars only when you choose them under “Only these …”."
-    },
-    "admin": {
-      "title": "Keys of all accounts",
-      "text": "How many keys each account has, of them for MCP. Never the keys, their names or calendars.",
-      "none": "No account has a key yet.",
-      "row_one": "{{count}} key · {{mcp}} of them for MCP",
-      "row_other": "{{count}} keys · {{mcp}} of them for MCP"
-    },
-    "copyFailed": "Copying did not work. Select the key above and copy it by hand; it is only shown now."
+    }
   },
   "tasks": {
     "block": "Tasks from nextasks",

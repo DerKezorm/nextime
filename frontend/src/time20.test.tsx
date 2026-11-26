@@ -117,7 +117,7 @@ describe('TIME-20 on iPhone and co', () => {
     expect(lines).toEqual(['Apple Calendar · zuletzt vor 3 Minuten', 'noch nie abgeglichen'])
     expect(box.querySelector('[data-testid="device-list"]')?.textContent).toContain('Ein ausgesperrtes Gerät bekommt sofort keine Termine mehr. Die anderen laufen weiter.')
     await click(box.querySelectorAll('[data-testid="lock-out"]')[1])
-    expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('„Altes Handy“ aussperren?')
+    expect(dialogName()).toBe('„Altes Handy“ aussperren?')
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false)
     await click(byText('Aussperren', document.querySelector<HTMLElement>('[data-testid="lock-out-question"]')!))
     expect(calls.find((call) => call.method === 'DELETE')?.path).toBe('/api/devices/2')
@@ -277,3 +277,10 @@ describe('TIME-20 changes show at once', () => {
     expect(revision()).toBe(reopened)
   })
 })
+
+/** The name of the open dialog: the kit's dialog is named by its heading (`aria-labelledby`). */
+function dialogName(): string | null | undefined {
+  const dialog = document.querySelector('[role="dialog"]')
+  const by = dialog?.getAttribute('aria-labelledby')
+  return by ? document.getElementById(by)?.textContent : dialog?.getAttribute('aria-label')
+}

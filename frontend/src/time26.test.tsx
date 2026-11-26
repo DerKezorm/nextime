@@ -1,13 +1,14 @@
-/** TIME-26 in the interface: Settings › My account › Connections with the keys for programs (built like nexnotes'
- * "API-Token"): the key shown once with "Kopieren", the list with right, MCP mark, calendars, run-out and last use,
- * "Widerrufen", the sentence under the list, the dialog with 90 days chosen, a hint while the operator has the API off;
- * and the operator's overview of how many keys there are. */
+/** TIME-26 in the interface: Settings › My account › Connections with the card "API-Schlüssel" of the shared key module
+ * (schluessel 1.0.0, plan "Einstellungen", E3): the key shown once to copy, the table with right, MCP mark, calendars,
+ * run-out and last use, "Widerrufen" after asking, the address for programs, the dialog with 90 days chosen, nextime's
+ * notes on hidden calendars and on AI tools that write, a hint while the operator has the API off; and the operator's
+ * "API-Schlüssel aller Konten" with "Sperren". */
 import App from './App'
 import { calendar, calendarList } from './calendarFakes'
-import type { KeyEntry, KeyList, KeyOverview } from './features/keys/api'
 import i18n from './i18n'
 import { AuthProvider } from './state/auth'
-import { box, calls, choose, click, me, ok, render, serve, settle, signedIn, start, stop, type } from './testing'
+import { box, calls, choose, click, KEYS_LISTING, me, ok, render, serve, settle, signedIn, start, stop, type } from './testing'
+import type { AdminKey, KeyEntry, KeyListing } from './vendor/nexschluessel/schluessel'
 
 const SHOWN_ONCE = ['nt_api', 'GEHEIM-nur-einmal'].join('_')
 const anna = me({ role: 'operator' })
@@ -23,28 +24,30 @@ afterEach(() => {
 })
 
 const key = (id: number, name: string, more: Partial<KeyEntry> = {}): KeyEntry => ({
-  id, name, level: 'read', mcp: false, calendars: null, prefix: 'nt_api_abcd', created_at: '2026-11-20T10:00:00Z',
-  expires_at: '2027-02-18T10:00:00Z', expired: false, last_used_at: null, ...more,
+  id, kind: 'api', name, right: 'read', options: { mcp: false }, areas: null, prefix: 'nt_api_abcd', created_at: '2026-11-20T10:00:00Z',
+  last_used_at: null, expires_at: '2027-02-18T10:00:00Z', expired: false, expiring: false, blocked: false, legacy: null, program: false, ...more,
 })
 
-function server(keys: KeyEntry[] = [], change: Partial<KeyList> = {}, overview: KeyOverview = { accounts: [], keys: 0, mcp: 0 }) {
-  let list: KeyList = { api_allowed: true, mcp_allowed: true, address: 'https://time.example.com', max_keys: 20, expiry_days: [30, 90, 365, null], default_days: 90, keys, ...change }
+function server(keys: KeyEntry[] = [], change: Partial<KeyListing> = {}, admin: AdminKey[] = []) {
+  let list = { ...KEYS_LISTING, ...change, keys } as unknown as KeyListing
+  const counted = () => ({ ...list, kinds: list.kinds.map((kind) => ({ ...kind, count: list.keys.length })) })
   serve(
     signedIn(anna, (method, path, body) => {
       if (path.startsWith('/api/calendars')) return ok(LISTS)
-      if (path === '/api/keys' && method === 'GET') return ok(list)
-      if (path === '/api/keys' && method === 'POST') {
-        const sent = body as { name: string; mcp: boolean; level: 'read' | 'write' }
-        const made = key(9, sent.name, { mcp: sent.mcp, level: sent.level })
-        list = { ...list, keys: [...list.keys, made] }
-        return { status: 201, body: { made, token: SHOWN_ONCE } }
+      if (path === '/api/connections/keys' && method === 'GET') return ok(counted())
+      if (path === '/api/connections/keys' && method === 'POST') {
+        const sent = body as { name: string; right: string; options: Record<string, boolean> }
+        const made = key(9, sent.name, { right: sent.right, options: sent.options })
+        list = { ...list, keys: [made, ...list.keys] }
+        return { status: 201, body: { key: made, secret: SHOWN_ONCE } }
       }
-      if (path.startsWith('/api/keys/') && method === 'DELETE') {
-        list = { ...list, keys: list.keys.filter((entry) => `/api/keys/${entry.id}` !== path) }
+      if (path.startsWith('/api/connections/keys/') && method === 'DELETE') {
+        list = { ...list, keys: list.keys.filter((entry) => `/api/connections/keys/${entry.id}` !== path) }
         // The server answers 204; the stand-in of `fetch` cannot make a 204 with a body.
         return { status: 200, body: null }
       }
-      if (path === '/api/admin/keys') return ok(overview)
+      if (path === '/api/connections/admin/keys') return ok({ keys: admin })
+      if (path.startsWith('/api/connections/admin/keys/') && method === 'POST') return ok({ ...admin[0], blocked: true })
       return undefined
     }),
   )
@@ -61,100 +64,108 @@ async function open(where = '/settings/connections'): Promise<void> {
 
 const one = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
 const all = (id: string) => [...document.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)]
+const rows = () => [...document.querySelectorAll<HTMLElement>('[data-testid="api-keys-table"] [data-part="table-row"]')]
 
 describe('TIME-26 keys', () => {
-  it('TIME-26 EC-17 AC-7 without a key a sentence what keys are for, "Neuer Schlüssel …" and the sentence under the list', async () => {
+  it('TIME-26 EC-17 AC-7 without a key: what keys are for, "Neuer API-Schlüssel", the address and nextime\'s notes', async () => {
     server()
     await open()
-    expect(one('keys-none')?.textContent).toContain('Mit einem Schlüssel lesen Programme')
-    expect(one('keys-new')?.textContent).toBe('Neuer Schlüssel …')
-    expect(one('keys-below')?.textContent).toBe('Programmschnittstelle unter /api/v1. Zugangsdaten zu iCloud und Google gibt sie nie heraus.')
-    expect(one('keys-address')?.textContent).toBe('https://time.example.com/api/v1')
+    const card = box.querySelector<HTMLElement>('[data-card="api-keys"]')!
+    expect(card.textContent).toContain('Ein API-Schlüssel lässt ein Programm mit deinen Kalendern arbeiten')
+    expect(one('api-keys-new')!.textContent).toBe('Neuer API-Schlüssel')
+    expect((one('api-keys-address')!.querySelector('input') as HTMLInputElement).value).toBe('https://time.example.com/api/v1')
+    expect(one('keys-hidden-note')!.textContent).toBe('„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst.')
   })
 
-  it('TIME-26 AC-1 AC-11 the dialog with name, right, calendars, run-out (90 days chosen) and "für MCP"; the key once above the list', async () => {
+  it('TIME-26 AC-1 AC-11 the dialog with name, right, calendars, run-out (90 days chosen) and MCP; the key once to copy', async () => {
     server()
     await open()
-    await click(one('keys-new'))
+    await click(one('api-keys-new'))
     const dialog = one('key-dialog')!
-    expect((dialog.querySelector('[data-testid="key-days"]') as HTMLSelectElement).value).toBe('90')
-    expect([...(dialog.querySelector('[data-testid="key-days"]') as HTMLSelectElement).options].map((option) => option.textContent)).toEqual(['30 Tage', '90 Tage', '1 Jahr', 'Nie'])
-    expect(dialog.textContent).toContain('Auch für MCP')
-    type(dialog.querySelector<HTMLInputElement>('input[type="text"], input:not([type])')!, 'Planer am Laptop')
-    // MCP first: ticking it chooses "lesen" (after the review); writing is chosen on purpose afterwards.
-    await click(one('key-mcp-choice'))
-    await click(one('key-level-write'))
-    await click(one('key-scope-some'))
-    await click(document.querySelector('[data-testid="key-calendar"][data-calendar="2"]'))
-    await choose(one('key-days') as HTMLSelectElement, 'never')
-    await click(one('key-make'))
-    const sent = calls.find((call) => call.method === 'POST' && call.path === '/api/keys')!.body as Record<string, unknown>
-    expect(sent).toMatchObject({ name: 'Planer am Laptop', level: 'write', mcp: true, calendar_ids: [2], days: null })
-    expect(String(sent.client_ref)).toMatch(/^ref-/)
-    expect(one('keys-made')?.textContent).toContain('Neuer Schlüssel „Planer am Laptop“, nur jetzt sichtbar:')
-    expect(one('keys-secret')?.textContent).toBe(SHOWN_ONCE)
-    expect(one('keys-copy')?.textContent).toBe('Kopieren')
+    const expiry = dialog.querySelector<HTMLSelectElement>('[data-testid="key-expiry"]')!
+    expect(expiry.value).toBe('90')
+    expect([...expiry.options].map((option) => option.value)).toEqual(['30', '90', '365', 'never'])
+    // nextime's words for its rights and its calendars (TIME-26).
+    expect(dialog.textContent).toContain('Lesen und schreiben')
+    expect(dialog.textContent).toContain('Alle Kalender, auch später angelegte')
+    type(one('key-name') as HTMLInputElement, 'Planer am Laptop')
+    await click(one('key-right-write'))
+    await click(one('key-areas-some'))
+    await click(one('key-area-2'))
+    await click(one('key-option-mcp'))
+    await choose(expiry, 'never')
+    await click(one('key-submit'))
+    const sent = calls.find((call) => call.method === 'POST' && call.path === '/api/connections/keys')!.body as Record<string, unknown>
+    expect(sent).toMatchObject({ kind: 'api', name: 'Planer am Laptop', right: 'write', areas: [2], options: { mcp: true }, days: null })
+    expect(String(sent.client_ref)).not.toBe('')
+    expect((one('key-secret')!.querySelector('input') as HTMLInputElement).value).toBe(SHOWN_ONCE)
     // Never again: opened anew, the key is gone from the page.
     await open()
     expect(box.textContent).not.toContain(SHOWN_ONCE)
   })
 
-  it('TIME-26 AC-4 EC-1 each row: name with the MCP mark, right, calendars, run-out, last use and "Widerrufen"', async () => {
+  it('TIME-26 AC-4 EC-1 each row: name with the MCP mark, right, calendars, run-out, last use and "Widerrufen" after asking', async () => {
     server([
-      key(1, 'nexdeck Eingang', { calendars: [{ id: 2, name: 'Familie' }], last_used_at: new Date(Date.now() - 120_000).toISOString() }),
-      key(2, 'Planer', { level: 'write', mcp: true, expires_at: null }),
+      key(1, 'nexdeck Eingang', { areas: [{ id: 2, name: 'Familie' }], last_used_at: new Date(Date.now() - 120_000).toISOString() }),
+      key(2, 'Planer', { right: 'write', options: { mcp: true }, expires_at: null }),
       key(3, 'Alt', { expired: true, expires_at: '2026-11-01T10:00:00Z' }),
     ])
     await open()
-    const rows = all('key-row')
-    expect(rows[0].querySelector('[data-testid="key-mcp"]')).toBeNull()
-    expect(rows[0].querySelector('[data-testid="key-meta"]')?.textContent).toBe('lesen · Familie')
-    expect(rows[0].querySelector('[data-testid="key-used"]')?.textContent).toBe('zuletzt benutzt vor 2 Minuten')
-    expect(rows[1].querySelector('[data-testid="key-mcp"]')?.textContent).toBe('MCP')
-    expect(rows[1].querySelector('[data-testid="key-meta"]')?.textContent).toBe('lesen, schreiben · alle')
-    expect(rows[1].querySelector('[data-testid="key-expiry"]')?.textContent).toBe('läuft nie ab')
-    expect(rows[1].querySelector('[data-testid="key-used"]')?.textContent).toBe('zuletzt benutzt noch nie')
-    expect(rows[2].querySelector('[data-testid="key-expiry"]')?.textContent).toBe('abgelaufen')
-    expect(rows[2].querySelector('[data-testid="key-revoke"]')?.textContent).toBe('Entfernen')
-    await click(rows[1].querySelector('[data-testid="key-revoke"]'))
-    expect(document.querySelector('[role="dialog"]')?.getAttribute('aria-label')).toBe('Schlüssel „Planer“ widerrufen?')
-    await click(one('keys-revoke-confirm'))
+    const found = rows()
+    expect(found).toHaveLength(3)
+    expect(found[0].textContent).toContain('nexdeck Eingang')
+    expect(found[0].textContent).toContain('Familie')
+    expect(found[1].textContent).toContain('MCP')
+    expect(found[1].textContent).toContain('Lesen und schreiben')
+    expect(found[2].textContent).toContain('Alt')
+    const revoke = found[1].querySelector<HTMLElement>('[data-testid="key-revoke"]')!
+    expect([revoke.dataset.kind, revoke.dataset.size]).toEqual(['danger', 'sm'])
+    await click(revoke)
+    expect(one('key-revoke-dialog')!.textContent).toContain('Planer')
+    expect(calls.some((call) => call.method === 'DELETE')).toBe(false)
+    await click(one('key-revoke-dialog')!.querySelector<HTMLElement>('[data-kind="danger"]'))
     await settle()
-    expect(calls.some((call) => call.method === 'DELETE' && call.path === '/api/keys/2')).toBe(true)
-    expect(all('key-row').map((row) => row.querySelector('[data-testid="key-name"]')?.textContent)).toEqual(['nexdeck Eingang', 'Alt'])
+    expect(calls.some((call) => call.method === 'DELETE' && call.path === '/api/connections/keys/2')).toBe(true)
+    expect(rows().map((row) => row.textContent?.includes('Planer'))).toEqual([false, false])
   })
 
   it('TIME-26 AC-5 EC-15 switched off: a hint and nothing new; with 20 keys nothing new either', async () => {
-    server([], { api_allowed: false, mcp_allowed: false })
+    server([], { api: false, mcp: false })
     await open()
-    expect(one('keys-off')?.textContent).toContain('Der Betreiber hat die Programmschnittstelle abgeschaltet.')
-    expect((one('keys-new') as HTMLButtonElement).disabled).toBe(true)
+    expect(one('api-keys-off')!.textContent).toContain('Der Betreiber hat die Programmschnittstelle abgeschaltet.')
+    expect((one('api-keys-new') as HTMLButtonElement).disabled).toBe(true)
     stop()
     start()
     server(Array.from({ length: 20 }, (_, index) => key(index + 1, `K${index}`)))
     await open()
-    expect((one('keys-new') as HTMLButtonElement).disabled).toBe(true)
-    expect(box.textContent).toContain('20 von 20 Schlüsseln')
+    expect((one('api-keys-new') as HTMLButtonElement).disabled).toBe(true)
+    expect(one('api-keys-count')!.textContent).toBe('20 von 20 Schlüsseln')
   })
 
-  it('TIME-26 EC-16 a second click on "Anlegen" sends the same reference, and the button waits', async () => {
+  it('TIME-26 EC-16 a second click on "Anlegen" sends the same reference', async () => {
     server()
     await open()
-    await click(one('keys-new'))
-    type(one('key-dialog')!.querySelector<HTMLInputElement>('input')!, 'Doppelt')
-    const make = one('key-make') as HTMLButtonElement
+    await click(one('api-keys-new'))
+    type(one('key-name') as HTMLInputElement, 'Doppelt')
+    const make = one('key-submit') as HTMLButtonElement
     make.click()
     make.click()
     await click(document.body)
-    const refs = calls.filter((call) => call.method === 'POST' && call.path === '/api/keys').map((call) => (call.body as { client_ref: string }).client_ref)
+    const refs = calls.filter((call) => call.method === 'POST' && call.path === '/api/connections/keys').map((call) => (call.body as { client_ref: string }).client_ref)
     expect(refs.length).toBeGreaterThanOrEqual(1)
     expect(new Set(refs).size).toBe(1)
   })
 
-  it('TIME-26 AC-5 the operator sees how many keys each account holds', async () => {
-    server([], {}, { accounts: [{ account: { id: 1, name: 'Anna' }, keys: 3, mcp: 1 }], keys: 3, mcp: 1 })
+  it('TIME-26 AC-5 the operator sees every key of every account and locks one after asking (E27)', async () => {
+    const admin = [{ ...key(5, 'Skript'), account: { id: 3, name: 'anna', display_name: 'Anna', out: false } }] as unknown as AdminKey[]
+    server([], {}, admin)
     await open('/settings/accounts')
-    expect(one('all-keys-row')?.textContent).toBe('Anna3 Schlüssel · davon 1 für MCP')
+    const row = all('all-keys-row')[0] ?? document.querySelector<HTMLElement>('[data-testid="all-keys-table"] [data-part="table-row"]')!
+    expect(row.textContent).toContain('Anna')
+    expect(row.textContent).toContain('Skript')
+    await click(row.querySelector<HTMLElement>('[data-testid="all-keys-block"]'))
+    await click(one('all-keys-block-dialog')!.querySelector<HTMLElement>('[data-kind="danger"]'))
+    expect(calls.some((call) => call.method === 'POST' && call.path === '/api/connections/admin/keys/5/block')).toBe(true)
   })
 })
 
@@ -174,38 +185,22 @@ describe('TIME-26 author', () => {
 })
 
 describe('TIME-26 after the review', () => {
-  it('TIME-26 AC-3 a key for MCP reads from the start; with writing, a hint about texts of invitations', async () => {
+  it('TIME-26 AC-3 a key that writes for MCP: the hint about texts of invitations stands beside the dialog', async () => {
     server()
     await open()
-    await click(one('keys-new'))
-    await click(one('key-level-write'))
-    await click(one('key-mcp-choice'))
-    expect((one('key-level-read') as HTMLInputElement).checked).toBe(true)
-    expect(one('key-mcp-write-hint')).toBeNull()
-    await click(one('key-level-write'))
-    expect(one('key-mcp-write-hint')!.textContent).toContain('Texte aus Einladungen fremder Leute')
-    expect(one('key-mcp-write-hint')!.textContent).toContain('Papierkorb')
+    expect(one('keys-mcp-write')!.textContent).toContain('Texte aus Einladungen fremder Leute')
+    expect(one('keys-mcp-write')!.textContent).toContain('Papierkorb')
   })
 
-  it('TIME-26 EC-4 the dialog says that "all calendars" leaves hidden ones out', async () => {
+  it('TIME-26 AC-1 EC-18 the new key stands whole, to copy', async () => {
     server()
     await open()
-    await click(one('keys-new'))
-    expect(one('key-hidden-note')!.textContent).toBe('„Alle Kalender“ heißt: alle, die du einblendest. Ausgeblendete liest ein Schlüssel nur, wenn du sie unter „Nur diese …“ ausdrücklich wählst.')
-  })
-
-  it('TIME-26 AC-1 EC-18 the new key stands whole and wraps; a copy that fails says so', async () => {
-    server()
-    await open()
-    await click(one('keys-new'))
-    type(one('key-dialog')!.querySelector<HTMLInputElement>('input')!, 'Telefon')
-    await click(one('key-make'))
-    const secret = one('keys-secret')!
-    expect(secret.className).not.toContain('truncate')
-    expect(secret.className).toContain('break-all')
-    Object.defineProperty(document, 'execCommand', { value: () => false, configurable: true })
-    await click(one('keys-copy'))
-    await settle()
-    expect(one('keys-copy-failed')!.textContent).toContain('Kopieren ging nicht')
+    await click(one('api-keys-new'))
+    type(one('key-name') as HTMLInputElement, 'Telefon')
+    await click(one('key-submit'))
+    const secret = one('key-secret')!.querySelector('input') as HTMLInputElement
+    expect(secret.value).toBe(SHOWN_ONCE)
+    expect(secret.readOnly).toBe(true)
+    expect(one('key-secret')!.querySelector('[data-icon="Copy"]')).not.toBeNull()
   })
 })

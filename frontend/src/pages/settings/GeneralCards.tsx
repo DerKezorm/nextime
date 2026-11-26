@@ -125,7 +125,7 @@ export function FeaturesCard({ server }: { server: Server }) {
           testId="feature-local-network"
         />
         <CheckboxRow
-          label={`${t('server.google')} (${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')})`}
+          label={`${t('server.google')} ${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')}`}
           hint={t('server.googleHint')}
           checked={s.google_enabled}
           disabled={!s.google_configured}

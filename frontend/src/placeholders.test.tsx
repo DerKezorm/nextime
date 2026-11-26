@@ -192,8 +192,9 @@ describe.each(['en', 'de'])('no raw placeholder in a refusal (%s)', (language) =
   })
 
   it.each(Object.keys(VALUES))('the settings\' cards show %s with its number', async (code) => {
-    const { Feedback } = await import('./pages/settings/ui')
-    await render(<Feedback problem={new ApiError(422, code, VALUES[code])} />)
+    // The cards' line of what came of a change, in the kit's box (`Outcome`, plan "Einstellungen").
+    const { Outcome } = await import('./pages/settings/Outcome')
+    await render(<Outcome problem={new ApiError(422, code, VALUES[code])} />)
     shows(code)
   })
 })

@@ -129,8 +129,13 @@ describe('TIME-29 devices in Settings, On iPhone and co', () => {
     await render(<AppDevicesSection />)
     expect($$('app-device-name').map((element) => element.textContent)).toEqual(['iPhone von Mika', 'Mac mini'])
     const [phone, mac] = $$('app-device-meta').map((element) => element.textContent)
-    expect(phone).toBe('iOS-App · zuletzt vor 2 Minuten · Mitteilungen an')
-    expect(mac).toBe('iPad-App auf dem Mac · noch nicht gemeldet · Mitteilungen aus')
+    expect(phone).toBe('iOS-App · zuletzt vor 2 Minuten')
+    expect(mac).toBe('iPad-App auf dem Mac · noch nicht gemeldet')
+    // Notifications on or off as the kit's badge beside the name (plan "Einstellungen", Verbindungen 1).
+    const badges = $$('app-device-row').map((row) => row.querySelector('[data-tone]'))
+    expect(badges.map((badge) => [badge?.textContent, badge?.getAttribute('data-tone')])).toEqual([['Mitteilungen an', 'on'], ['Mitteilungen aus', 'off']])
+    const disconnect = $$('app-device-disconnect')[0]
+    expect([disconnect.dataset.kind, disconnect.dataset.size]).toEqual(['danger', 'sm'])
   })
 
   it('TIME-29 AC-7 disconnects a device after asking', async () => {
@@ -138,7 +143,8 @@ describe('TIME-29 devices in Settings, On iPhone and co', () => {
     await click($$('app-device-disconnect')[0])
     expect(document.body.textContent).toContain('„iPhone von Mika“ trennen?')
     expect(calls.some((call) => call.method === 'DELETE')).toBe(false)
-    await click($('app-device-disconnect-confirm'))
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!
+    await click([...dialog.querySelectorAll<HTMLElement>('button')].find((button) => button.textContent === 'Trennen') ?? null)
     expect(calls).toContainEqual({ method: 'DELETE', path: '/api/app-devices/1', body: undefined })
     expect($$('app-device-name').map((element) => element.textContent)).toEqual(['Mac mini'])
   })
@@ -208,11 +214,18 @@ describe('TIME-29 connecting an iPhone or iPad', () => {
   })
 })
 
-describe('TIME-29 the card stands in On iPhone and co', () => {
-  it('TIME-29 AC-7 the area shows the devices before the calendar account', async () => {
+describe('TIME-29 the card stands first under Connections (plan "Einstellungen", E4)', () => {
+  it('TIME-29 AC-7 Connections begins with "Geräte"', async () => {
+    const { ConnectionsArea } = await import('./features/keys/ConnectionsArea')
+    await render(<ConnectionsArea />)
+    expect(document.body.querySelector('[data-card]')!.getAttribute('data-card')).toBe('devices')
+    expect($('app-devices-connect')?.textContent).toBe('iPhone oder iPad verbinden')
+  })
+
+  it('TIME-29 AC-7 "Auf iPhone und Co" keeps the calendar account alone', async () => {
     const { AreaContent } = await import('./pages/settings/SettingsAreas')
     await render(<AreaContent area="devices" />)
-    expect($('app-devices-connect')?.textContent).toBe('iPhone oder iPad verbinden')
+    expect($('app-devices-connect')).toBeNull()
   })
 })
 

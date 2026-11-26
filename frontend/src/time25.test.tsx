@@ -12,7 +12,7 @@ import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs, setPref } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
-import { box, calls, click, render, settle, start, stop, type } from './testing'
+import { box, byText, calls, click, render, settle, start, stop, type } from './testing'
 import { NOW, theWeek, views } from './viewFakes'
 
 const CONNECTED: NextasksStatus = { connected: true, local_allowed: false, url: 'https://tasks.example.com', host: 'tasks.example.com', name: 'Robin', level: 'write', hidden: false, problem: null }
@@ -115,8 +115,9 @@ const ticks = () => calls.filter((call) => call.method === 'POST' && /\/tick$/.t
 
 /** The card of a connection is folded from the start: open it, as a person would. */
 async function unfold(id: string): Promise<void> {
-  const card = document.getElementById(id)
-  if (card?.dataset.folded === 'true') await click(card.querySelector<HTMLElement>('[data-testid="card-fold"]'))
+  // The kit's Collapsible card (plan "Einstellungen", Verbindungen 3): folded while `data-open` is false.
+  const card = document.querySelector<HTMLElement>(`[data-card="${id}"]`)
+  if (card?.dataset.open === 'false') await click(card.querySelector<HTMLElement>('[data-part="collapsible-head"]'))
 }
 
 describe('TIME-25 the connection', () => {
@@ -194,7 +195,7 @@ describe('TIME-25 the connection', () => {
     await unfold('nextasks')
     await click(one('nextasks-disconnect'))
     expect(document.querySelector('[role="dialog"]')!.textContent).toContain('In nextasks bleibt alles, wie es ist.')
-    await click(one('nextasks-disconnect-confirm'))
+    await click(byText('Trennen', document.querySelector<HTMLElement>('[data-testid="nextasks-disconnect-dialog"]')!))
     await settle()
     expect(calls.some((call) => call.method === 'DELETE' && call.path === '/api/nextasks')).toBe(true)
     expect(one('nextasks-form')).not.toBeNull()

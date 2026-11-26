@@ -1,5 +1,6 @@
 /** The two shipped languages have the same keys, the same placeholders, and no dashes as pauses. */
 
+import { NEXUI_TEXTS } from '../vendor/nexui'
 import de from './de.json'
 import en from './en.json'
 
@@ -39,15 +40,17 @@ describe('shipped languages', () => {
   })
 
   it('count with figures throughout the backup line, never a figure next to a word', () => {
-    for (const key of ['server.backupKept_one', 'server.countFiles_one']) {
+    // The line of the backups is the module sicherung's now; nextime's own count of files in a restore stays.
+    for (const key of ['server.countFiles_one']) {
       expect(german.get(key), key).toContain('{{count}}')
       expect(english.get(key), key).toContain('{{count}}')
     }
   })
 
   it('call the program version Version in German', () => {
-    expect(german.get('server.version')).toBe('Version {{version}}')
-    expect(german.get('server.newer')).toBe('Neue Version {{version}}')
+    // "Über nextime" speaks with the ui kit's words (AboutPage, plan "Einstellungen"); nextime's own say the same.
+    expect(NEXUI_TEXTS.de.aboutVersion).toBe('Version')
+    expect(NEXUI_TEXTS.de.updatesCurrent).toBe('Das ist die neueste Version.')
   })
 
   it('never speak of boards, spaces or another app', () => {

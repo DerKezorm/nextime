@@ -28,7 +28,7 @@ export function GoogleArea() {
       {s && (
         <Card id="google" icon={Cloud} title={t('server.google')} subtitle={t('server.googleHint')}>
           <CheckboxRow
-            label={`${t('server.google')} (${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')})`}
+            label={`${t('server.google')} ${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')}`}
             checked={s.google_enabled}
             disabled={!s.google_configured}
             onChange={(google_enabled) => void server.save({ google_enabled })}

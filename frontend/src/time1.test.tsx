@@ -1,14 +1,14 @@
 /** TIME-1 in the interface: the setup page, the HTTPS hint for the operator, and the settings' group "Server" with its
- * switches, limits and state under General and the backups under Storage and backups; a member never reaches it. */
+ * switches and limits under General, "Ready for the internet?" under Sign-in, the backups under Storage and backups (the
+ * module sicherung) and the version under "Über nextime" (plan "Einstellungen"); a member never reaches it. */
 import { Route, Routes } from 'react-router-dom'
 
 import App from './App'
 import i18n from './i18n'
 import { AuthProvider } from './state/auth'
 import { box, byText, calls, click, me, ok, render, serve, settle, signedIn, start, stop, type } from './testing'
-import { wholeNumber } from './pages/settings/ServerCards'
-import { backupLine } from './pages/settings/ServerCards'
-import type { BackupSummary, ServerState } from './api/client'
+import { wholeNumber } from './pages/settings/GeneralCards'
+import type { ServerState } from './api/client'
 
 const OPERATOR = me({ id: 1, name: 'tester', display_name: 'Tester', role: 'operator' })
 
@@ -19,16 +19,26 @@ const SETTINGS = {
   mcp_enabled: true, address_suggestions: true, update_check: true, data_total: 1000, data_used: 100, data_free: 900,
   nextime_used: 10, nextime_parts: { database: 10 }, data_on_share: false,
 }
-const SUMMARY: BackupSummary = { schedule: 'daily', time: '03:00', zone: 'Europe/Berlin', keep: 14, kept: 14, count: 14, last: null, failure: null, running: false }
+type Backups = { schedule: { every: string; time: string; keep: number }; zone: string; last: { created: string; size: number; kind: string } | null; count: number; kept: number; failure: { at: string; reason: string } | null; running: boolean; restore_failure: null; restored: null; restore: string; download_password: boolean; backups: unknown[] }
+const BACKUPS: Backups = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: null, count: 0, kept: 0, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [] }
+const STORAGE = { app: 'nextime', used: 10, parts: [{ key: 'database', bytes: 10, within: '', complete: true }], complete: true, total: 1000, disk_used: 100, free: 900, nearly_full: false, where: {}, network: [] }
+const READY = (https: boolean) => ({ state: https ? 'ok' : 'bad', open: https ? 0 : 1, points: [{ key: 'address', state: https ? 'ok' : 'bad', title: 'account.ready.address.title', text: https ? 'account.ready.address.ok' : 'account.ready.address.bad', values: { address: https ? 'https://time.example.com' : 'http://time.example.com', app: 'nextime' } }] })
 const STATE: ServerState = { version: '0.1.0', newer: '0.2.0', https: true, internet: true, zone: 'Europe/Berlin' }
 
-function server(state = STATE, settings = SETTINGS, summary = SUMMARY) {
+function server(state = STATE, settings = SETTINGS, backups = BACKUPS) {
   return signedIn(OPERATOR, (method, path, body) => {
     if (path === '/api/settings' && method === 'GET') return ok(settings)
     if (path === '/api/settings' && method === 'PUT') return ok({ ...settings, ...(body as object) })
     if (path === '/api/server/state') return ok(state)
-    if (path === '/api/backups/summary') return ok(summary)
-    if (path === '/api/backups') return ok([])
+    if (path === '/api/server/storage') return ok(STORAGE)
+    if (path === '/api/server/storage/backups') return ok(backups)
+    if (path === '/api/connections/interfaces' && method === 'GET') return ok({ api: settings.api_enabled, mcp: settings.mcp_enabled })
+    if (path === '/api/connections/interfaces' && method === 'PUT') return ok({ api: settings.api_enabled, mcp: settings.mcp_enabled, ...(body as object) })
+    if (path === '/api/locales') return ok([])
+    if (path === '/api/about') return ok({ version: state.version, license: 'AGPL-3.0', repo_url: 'https://example.com/nextime', releases_url: 'https://example.com/nextime/releases', project_url: '' })
+    if (path === '/api/about/updates') return ok({ update_check: true, checked: true, latest: state.newer, newer: !!state.newer, checked_at: null, release_url: null })
+    if (path === '/api/server/sign-in') return ok({ password_login: true, factor_required: false, passkeys_allowed: true, password_may_go_off: false, factor_may_go_on: false, public_url: '', operator_has_password: true })
+    if (path === '/api/server/sign-in/readiness') return ok(READY(state.https))
     if (path.startsWith('/api/oidc/admin/providers')) return ok([])
     if (path === '/api/oidc/authentik/address') return ok({ public_url: '', seen: 'http://localhost', stale: null })
     return undefined
@@ -108,50 +118,61 @@ describe('TIME-1 the setup', () => {
 })
 
 describe('TIME-1 the group "Server" of the settings', () => {
-  it('TIME-1 AC-7 shows the running version and "Neue Version" beside it', async () => {
+  it('TIME-1 AC-7 "Über nextime" shows the running version and the newer one beside it; General has no version line', async () => {
     serve(server())
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/about')
+    expect(box.querySelector('[data-testid="about-version"]')!.textContent).toBe('0.1.0')
+    expect(box.querySelector('[data-testid="about-facts"]')!.textContent).toContain('Version 0.2.0 ist erschienen')
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    expect(box.querySelector('[data-testid="server-version"]')!.textContent).toBe('Version 0.1.0')
-    expect(box.querySelector('[data-testid="server-newer"]')!.textContent).toBe('Neue Version 0.2.0')
+    expect(box.querySelector('[data-testid="server-version"]')).toBeNull()
+    expect(box.querySelector('[data-testid="server-newer"]')).toBeNull()
   })
 
   it('TIME-1 EC-13 without an answer about a newer version only the hint is missing', async () => {
     serve(server({ ...STATE, newer: null }))
-    await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    expect(box.querySelector('[data-testid="server-newer"]')).toBeNull()
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/about')
+    expect(box.querySelector('[data-testid="about-version"]')!.textContent).toBe('0.1.0')
+    expect(box.querySelector('[data-testid="about-facts"]')!.textContent).not.toContain('ist erschienen')
     expect(box.querySelector('[role="alert"]')).toBeNull()
   })
 
-  it('TIME-1 AC-5 has the switches; Google says whether it is set up and cannot be switched before', async () => {
+  it('TIME-1 AC-5 has the switches; Google says whether it is set up and cannot be switched before; API and MCP are "Schnittstellen"', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    expect(box.querySelector('#switches h2')!.textContent).toBe('Funktionen für alle Konten')
+    expect(box.querySelector('[data-card="features"] h2')!.textContent).toBe('Funktionen für alle Konten')
+    const label = (item: HTMLInputElement) => box.querySelector(`label[for="${item.id}"]`)!.textContent
     const switches = [...box.querySelectorAll<HTMLInputElement>('[data-testid="switches"] input[type="checkbox"]')]
     // "Verbindungen ins eigene Netz" for nextasks (TIME-25), off from the start, as nexnotes.
-    expect(switches.map((item) => item.getAttribute('aria-label'))).toEqual(['Teilen per Link', 'MCP-Zugang', 'Programmschnittstelle (API) für Mitglieder', 'Verbindungen ins eigene Netz', 'Google-Anbindung', 'Adressvorschläge'])
-    expect(switches.map((item) => item.checked)).toEqual([true, true, true, false, false, true])
-    expect(switches[4].disabled).toBe(true)
-    expect(box.textContent).toContain('(nicht eingerichtet)')
-    // A click on the row switches it, as in nexnotes: the whole row is the label.
-    await click(switches[5].closest('label')!)
+    expect(switches.map(label)).toEqual(['Teilen per Link', 'Verbindungen ins eigene Netz', 'Google-Anbindung (nicht eingerichtet)', 'Adressvorschläge'])
+    expect(switches.map((item) => item.checked)).toEqual([true, false, false, true])
+    expect(switches[2].disabled).toBe(true)
+    await click(switches[3])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/settings')?.body).toEqual({ address_suggestions: false })
+    // "MCP-Zugang" and the API for members: the card "Schnittstellen" of the key module, right after.
+    const interfaces = [...box.querySelectorAll<HTMLInputElement>('[data-card="interfaces"] input[type="checkbox"]')]
+    expect(interfaces.map(label)).toEqual(['Programmschnittstelle (API) für Mitglieder', 'MCP-Zugang'])
+    expect(interfaces.map((item) => item.checked)).toEqual([true, true])
+    await click(interfaces[1])
+    expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/connections/interfaces')?.body).toEqual({ mcp: false })
   })
 
-  it('TIME-1 AC-9 the state shows HTTPS and the internet, green when right, a warning otherwise; "Log ansehen" leads to the log', async () => {
+  it('TIME-1 AC-9 General has no box "Zustand" any more: HTTPS stands in "Bereit fürs Internet?" under Sign-in', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    expect(box.querySelector('[data-testid="state-https"]')!.textContent).toBe('HTTPS aktiv, iPhones können sich verbinden')
-    expect(box.querySelector('[data-testid="state-internet"]')!.textContent).toBe('Internet erreichbar, Abgleich läuft')
+    expect(box.querySelector('[data-testid="state-https"]')).toBeNull()
     expect(box.querySelector('[data-testid="https-hint"]')).toBeNull()
-    expect([...box.querySelectorAll('a')].find((link) => link.textContent === 'Log ansehen')!.getAttribute('href')).toBe('/settings/log')
+    expect(box.querySelector('[data-card="state"]')).toBeNull()
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/sign-in')
+    const ready = box.querySelector<HTMLElement>('[data-card="sign-in-ready"]')!
+    expect(ready.textContent).toContain('Öffentliche Adresse mit https')
   })
 
-  it('TIME-1 AC-6 AC-9 without HTTPS and internet the operator sees the hint and both warnings', async () => {
+  it('TIME-1 AC-6 AC-9 without HTTPS the operator sees "Bereit fürs Internet?" in red with the address open', async () => {
     serve(server({ ...STATE, https: false, internet: false }))
-    await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    expect(box.querySelector('[data-testid="https-hint"]')!.textContent).toBe('nextime ist nicht über HTTPS erreichbar. Kalender auf iPhones und Android verbinden sich erst mit HTTPS.')
-    expect(box.querySelector('[data-testid="state-https"]')!.getAttribute('data-ok')).toBe('false')
-    expect(box.querySelector('[data-testid="state-internet"]')!.getAttribute('data-ok')).toBe('false')
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/sign-in')
+    const ready = box.querySelector<HTMLElement>('[data-card="sign-in-ready"]')!
+    expect(ready.textContent).toContain('Öffentliche Adresse mit https')
+    expect(ready.textContent).toContain('1 Punkt offen')
   })
 
   it('TIME-1 AC-4 EC-11 a wrong limit is said at the field, nothing is sent, the old value stays', async () => {
@@ -174,35 +195,35 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(wholeNumber(' ', 1, 3650)).toEqual({ problem: 'empty' })
   })
 
-  it('TIME-1 AC-8 the box says rhythm with zone, last backup with time and size, how many are kept', () => {
-    const t = i18n.getFixedT('de')
-    const now = new Date('2026-11-22T10:00:00')
-    const line = backupLine({ ...SUMMARY, last: { created: new Date('2026-11-22T03:00:00').toISOString(), size: 14 * 1024 * 1024 } }, t, 'de', now)
-    expect(line).toBe('Täglich 03:00 (Europe/Berlin) · zuletzt heute 03:00, 14 MB · 14 Stück aufbewahrt')
-    expect(backupLine({ ...SUMMARY, kept: 1 }, i18n.getFixedT('en'), 'en', now)).toBe('Daily 03:00 (Europe/Berlin) · No backups yet. · 1 kept')
+  it('TIME-1 AC-8 the card says rhythm with zone, last backup with time and size, how many are kept', async () => {
+    serve(server(STATE, SETTINGS, { ...BACKUPS, last: { created: '2026-11-22T03:00:00+00:00', size: 14 * 1024 * 1024, kind: 'scheduled' } }))
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
+    expect(box.querySelector('[data-testid="backup-every-daily"]')!.getAttribute('aria-checked')).toBe('true')
+    expect(box.querySelector('[data-card="backups"]')!.textContent).toContain('In der Zeitzone des Servers (Europe/Berlin).')
+    expect(box.querySelector('[data-testid="backup-last"]')!.textContent).toMatch(/^Zuletzt: .+, 14,0 MB$/)
+    const keep = [...box.querySelectorAll<HTMLInputElement>('[data-card="backups"] input')].find((input) => input.value === '14')
+    expect(keep).toBeDefined()
   })
 
   it('TIME-1 EC-15 the button shows that a backup is running and does not start a second one', async () => {
-    serve(server(STATE, SETTINGS, { ...SUMMARY, running: true }))
+    serve(server(STATE, SETTINGS, { ...BACKUPS, running: true }))
     await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
-    const button = byText('Sicherung läuft …', box) as HTMLButtonElement
-    expect(button).toBeDefined()
-    expect(button.disabled).toBe(true)
+    expect(box.querySelector('[data-testid="backup-last"]')!.textContent).toBe('Sicherung läuft …')
+    expect((box.querySelector('[data-testid="backup-now"]') as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('TIME-1 EC-7 a failed backup is shown with its reason', async () => {
-    serve(server(STATE, SETTINGS, { ...SUMMARY, failure: { at: '2026-11-22T02:00:00Z', reason: 'disk_full' } }))
+    serve(server(STATE, SETTINGS, { ...BACKUPS, failure: { at: '2026-11-22T02:00:00Z', reason: 'disk_full' } }))
     await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
     expect(box.querySelector('[data-testid="backup-failure"]')!.textContent).toContain('Der Datenträger ist voll')
   })
 
-  it('TIME-1 AC-8 "Einspielen …" checks first and shows what comes, changes and goes before asking', async () => {
-    const entry = { name: 'nextime-2026-11-22-030000.zip', size: 1000, created: '2026-11-22T03:00:00+00:00', kind: 'scheduled', note: '', events: 0, files: 0, version: '0.1.0', uploaded: false }
-    const brief = { name: entry.name, version: '0.1.0', created: entry.created, kind: 'scheduled', events: 0, files: 0, database_ok: true, files_ok: true, damaged: [], would_add: 0, would_change: 0, would_remove: 0, events_add: 3, events_change: 1, events_remove: 2, accounts_add: 0, accounts_remove: 1, usable: true }
-    serve((method, path, body) => (path === '/api/backups' ? ok([entry]) : path.endsWith('/check') ? ok(brief) : server()(method, path, body)))
+  it('TIME-1 AC-8 "Wiederherstellen" checks first and shows what comes, changes and goes before asking', async () => {
+    const entry = { name: 'nextime-2026-11-22-030000.zip', size: 1000, created: '2026-11-22T03:00:00+00:00', kind: 'scheduled', note: '', version: '0.1.0', uploaded: false, locked: false, readable: true, facts: { events: 0, files: 0 } }
+    const brief = { name: entry.name, created: entry.created, kind: 'scheduled', note: '', version: '0.1.0', uploaded: false, database_ok: true, files_ok: true, damaged: [], too_new: false, blocked: '', blocked_text: '', usable: true, facts: { events: 0, files: 0 }, details: { would_add: 0, would_change: 0, would_remove: 0, events_add: 3, events_change: 1, events_remove: 2, accounts_add: 0, accounts_remove: 1 } }
+    serve((method, path, body) => (path === '/api/server/storage/backups' ? ok({ ...BACKUPS, count: 1, backups: [entry] }) : path.endsWith('/check') ? ok(brief) : server()(method, path, body)))
     await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
-    await click(byText('Einspielen …', box))
-    await click(byText('Wiederherstellen', box))
+    await click(byText('Wiederherstellen', box.querySelector<HTMLElement>('[data-testid="backup-list"]')!))
     const dialog = document.querySelector('[role="dialog"]')!
     expect(dialog.textContent).toContain('Termine: 3 kommen dazu, 1 ändern sich, 2 fallen weg.')
     expect(dialog.textContent).toContain('Konten: 0 kommen dazu, 1 fallen weg.')
@@ -214,12 +235,12 @@ describe('TIME-1 AC-11 looking for new versions', () => {
   it('TIME-1 AC-11 the switch stands under "Über nextime" as in nexnotes, not under Server › Allgemein', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
-    const labels = [...box.querySelectorAll('input[type="checkbox"]')].map((item) => item.getAttribute('aria-label'))
+    const labels = [...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].map((item) => box.querySelector(`label[for="${item.id}"]`)?.textContent)
     expect(labels).not.toContain('Einmal am Tag nachsehen')
     expect(labels).not.toContain('Nach neuen Versionen suchen')
-    // The order of General as in nexnotes: limits, the features for every account, the languages.
-    const cards = [...box.querySelectorAll('[data-testid="server-general"] section[id]')].map((card) => card.id)
-    expect(cards.slice(0, 3)).toEqual(['limits', 'switches', 'languages'])
+    // The order of General (plan "Einstellungen"): limits, the features for every account, interfaces, the languages.
+    const cards = [...box.querySelectorAll('[data-testid="server-general"] [data-card]')].map((card) => card.getAttribute('data-card'))
+    expect(cards).toEqual(['limits', 'features', 'interfaces', 'languages'])
   })
 })
 

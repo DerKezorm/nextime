@@ -5,7 +5,7 @@ import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
-import { box, calls, choose, me, ok, render, settle, start, stop } from './testing'
+import { box, calls, click, me, ok, render, settle, start, stop } from './testing'
 import { at, BERLIN, NOW, robin, views } from './viewFakes'
 
 const fsName = 'node:fs'
@@ -49,10 +49,11 @@ const events = () => [...box.querySelectorAll<HTMLElement>('[data-testid="month-
 describe('events in the month: dot or tinted', () => {
   it('the choice stands under Darstellung, with a dot from the start, and is saved with the account', async () => {
     await open('/settings/appearance')
-    const select = box.querySelector<HTMLSelectElement>('#display-month-style')!
-    expect([...select.options].map((option) => option.textContent)).toEqual(['mit Punkt', 'farbig hinterlegt'])
-    expect(select.value).toBe('dot')
-    await choose(select, 'tint')
+    // The kit's Segment (plan "Einstellungen"): one choice of two, the chosen one checked.
+    const options = [...box.querySelectorAll<HTMLElement>('[data-testid="display-month-style"] [role="radio"]')]
+    expect(options.map((option) => option.textContent)).toEqual(['mit Punkt', 'farbig hinterlegt'])
+    expect(options.map((option) => option.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+    await click(options[1])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/me/display')!.body).toEqual({ month_style: 'tint' })
   })
 

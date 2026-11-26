@@ -255,7 +255,11 @@ function areaServer(first: ReminderSettings, subscribed = true) {
   )
 }
 
-const toggle = (label: string) => document.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!
+/** A row with a tick of the ui kit (`CheckboxRow`): its box, found by exactly its label. */
+const toggle = (label: string) => {
+  const named = [...document.querySelectorAll<HTMLLabelElement>('label[for]')].find((element) => element.textContent === label)
+  return (named ? document.getElementById(named.htmlFor) : null) as HTMLInputElement
+}
 
 describe('TIME-7 the area "Erinnerungen"', () => {
   it('TIME-7 AC-8 both switches, the default per calendar with color, name and choice, and the preview', async () => {
@@ -306,7 +310,8 @@ describe('TIME-7 the area "Erinnerungen"', () => {
     await open('/settings/reminders')
     expect(toggle('Auf diesem Gerät erinnern').disabled).toBe(true)
     expect(field('reminders-allow-hint').textContent).toContain('Dieser Browser zeigt noch keine Mitteilungen von nextime.')
-    await click(field('reminders-allow'))
+    // "Auf welchem Weg" of the ui kit (plan "Einstellungen", E1): "Mitteilungen einschalten" for this browser.
+    await click(field('notify-browser-on'))
     expect((globalThis as unknown as { Notification: { requestPermission: () => void } }).Notification.requestPermission).toHaveBeenCalled()
     const sent = calls.find((call) => call.method === 'PUT' && call.path === '/api/notify/webpush')!.body as Record<string, unknown>
     expect(sent.reminders).toBe(true)

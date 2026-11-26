@@ -11,7 +11,7 @@ import i18n from './i18n'
 import { forgetPrefs } from './lib/devicePref'
 import { googleSetup, row, sources } from './sourceFakes'
 import { AuthProvider } from './state/auth'
-import { box, calls, click, me, ok, render, serve, settle, signedIn, start, stop, type, type Answer } from './testing'
+import { box, byText, calls, click, me, ok, render, serve, settle, signedIn, start, stop, type, type Answer } from './testing'
 import { NOW, robin } from './viewFakes'
 
 type More = (method: string, path: string, body: unknown) => Answer | undefined
@@ -266,7 +266,11 @@ describe('TIME-16 "Google einrichten" for the operator', () => {
     type(one('google-client-id') as HTMLInputElement, 'falsch')
     type(one('google-secret') as HTMLInputElement, 'geheim')
     await click(one('google-save'))
-    expect(one('google-client-id-problem')!.textContent).toBe('Google kennt diese Client-ID nicht.')
+    // The kit's field names its problem and is marked invalid.
+    const field = one('google-client-id') as HTMLInputElement
+    expect(field.getAttribute('aria-invalid')).toBe('true')
+    const said = (field.getAttribute('aria-describedby') ?? '').split(' ').map((id) => document.getElementById(id)?.textContent)
+    expect(said).toContain('Google kennt diese Client-ID nicht.')
     expect(one('google-ready')).toBeNull()
   })
 
@@ -285,7 +289,7 @@ describe('TIME-16 "Google einrichten" for the operator', () => {
     await click(one('google-save'))
     expect(one('google-confirm')!.textContent).toContain('Werden die Werte geändert, müssen alle Mitglieder Google neu verbinden.')
     expect(asked).toBe(1)
-    await click(one('google-confirm-go'))
+    await click(byText(i18n.t('googleSetup.confirmSaveGo'), one('google-confirm')!))
     expect(posted('/api/server/google').map((call) => (call.body as { confirm: boolean }).confirm)).toEqual([false, true])
     expect(one('google-confirm')).toBeNull()
   })
@@ -298,7 +302,7 @@ describe('TIME-16 "Google einrichten" for the operator', () => {
     await click(one('google-remove'))
     expect(one('google-confirm')).not.toBeNull()
     expect(calls.filter((call) => call.method === 'DELETE')).toEqual([])
-    await click(one('google-confirm-go'))
+    await click(byText(i18n.t('googleSetup.remove'), one('google-confirm')!))
     expect(calls.filter((call) => call.method === 'DELETE').map((call) => call.path)).toEqual(['/api/server/google?confirm=true'])
   })
 

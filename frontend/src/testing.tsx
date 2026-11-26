@@ -46,6 +46,15 @@ export function me(change: Partial<Me> = {}): Me {
 }
 
 /** The answers of a server that is set up, with `account` signed in. */
+/** What the shared key module's routes answer an account without keys (schluessel 1.0.0, `/api/connections/keys`):
+ * every page with the cards "API-Schlüssel" and "KI-Werkzeuge (MCP)" reads it. */
+export const KEYS_LISTING = {
+  app: 'nextime', api: true, mcp: true, programs: false, api_path: '/api/v1', mcp_path: '/api/mcp', keys_wait: false, warn_days: 7,
+  address: 'https://time.example.com',
+  kinds: [{ id: 'api', prefix: 'nt_api_', creatable: true, editable: true, rights: ['read', 'write'], default_right: 'read', options: ['mcp'], areas: [{ id: 1, name: 'Persönlich' }, { id: 2, name: 'Familie' }], areas_required: false, expiry_days: [30, 90, 365, null], default_days: 90, default_days_by_right: {}, max_keys: 20, count: 0, name_max: 100 }],
+  keys: [],
+}
+
 export function signedIn(account: Me, more: Handler = () => undefined): Handler {
   return (method, path, body) =>
     more(method, path, body) ??
@@ -59,7 +68,13 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
             ? ok([])
             : path.startsWith('/api/locales')
               ? ok([])
-              : undefined)
+              : path === '/api/connections/keys'
+                ? ok(KEYS_LISTING)
+                : path === '/api/connections/admin/keys'
+                  ? ok({ keys: [] })
+                  : path === '/api/connections/interfaces'
+                    ? ok({ api: true, mcp: true })
+                    : undefined)
 }
 
 export function start(): void {

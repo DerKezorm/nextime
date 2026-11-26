@@ -10,7 +10,7 @@ import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
-import { box, calls, choose, click, ok, render, settle, start, stop, type } from './testing'
+import { box, calls, click, ok, render, settle, start, stop, type } from './testing'
 import { anna, at, ben, robin, NOW, theWeek, views, type Fake } from './viewFakes'
 
 /** The style sheet, read as a file (`node:fs` through a name, as `i18n/used.test.ts` does it). */
@@ -204,9 +204,9 @@ describe('TIME-14 one event in two calendars', () => {
 
   it('TIME-14 AC-4 merging can be switched off in the settings; on from the start', async () => {
     await open('/settings/appearance', { rows: [], more: (method, path) => (method === 'PUT' && path === '/api/me/display' ? ok(robin) : undefined) })
-    const select = one('display-fields')!.querySelector<HTMLSelectElement>('#display-duplicates')!
-    expect(select.value).toBe('once')
-    await choose(select, 'each')
+    const options = [...one('display-fields')!.querySelectorAll<HTMLElement>('[data-testid="display-duplicates"] [role="radio"]')]
+    expect(options.map((option) => option.getAttribute('aria-checked'))).toEqual(['true', 'false'])
+    await click(options[1])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/me/display')!.body).toEqual({ merge_duplicates: false })
   })
 })

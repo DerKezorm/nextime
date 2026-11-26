@@ -47,6 +47,9 @@ export function ConnectionsArea() {
       <ApiKeysCard request={keyRequest} things={t('settings.things')} words={words} docsHref="/api/v1/docs" operator={me?.role === 'operator'} when={when}>
         {/* What nextime's dialog said beside the choices (TIME-26 AC-1, EC-6): which calendars "all" means, what an AI
             tool that writes may do. */}
+        <p className="m-0 text-xs leading-4 text-[var(--nexui-text-muted)]" data-testid="keys-below">
+          {t('keys.below')}
+        </p>
         <p className="m-0 text-xs leading-4 text-[var(--nexui-text-muted)]" data-testid="keys-hidden-note">
           {t('keys.dialog.hiddenNote')}
         </p>
