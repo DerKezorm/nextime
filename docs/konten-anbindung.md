@@ -62,6 +62,8 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**sicherung `6edff85` (26.11.2026):** neuer Vertragstest fürs Anlegen einer Sicherung, grün ohne Änderung an nextime.
+
 **sicherung `155621a` (26.11.2026):** die alten Sicherungswege prüfen `{name}` wieder mit Muster und Länge von
 konten (über `former_names`), Adapter `name_pattern`. Lauf: pytest 1836 grün, 11 übersprungen; `-m timing` 8; vitest 1316 grün; ruff, lint, build sauber.
 
