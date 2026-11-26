@@ -62,6 +62,10 @@ hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E2
 `tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
 Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
 
+**E49 Passkeys (`1ce1a8f`, 26.11.2026, `a7aa4a2`):** `passkeys_can_add` in der Antwort des Kontos, im Kasten
+„Passkeys“ `PasskeyAddition` des Moduls. Lauf `reihe.sh nextime ende`: ruff sauber; pytest 1754 grün, 11
+übersprungen; `-m timing` 8 grün; lint sauber; vitest 1300 grün, keins übersprungen, 74 Dateien; build grün.
+
 **Gemeinsame Runde `86a0cce` (E45 bis E49, 26.11.2026, `664a919`):** Module neu gezogen; neue Konten mit Theme
 `system`, das Frontend schickt nur den wirklich gespeicherten Browserwert; Ortsangaben „Gruppe › Bereich“ mit Wächter
 in `i18n/places.test.ts`; „Kalender und Konten“ und „Auf iPhone und Co“ nur aus Karten und Bausatz-Knöpfen; Galerie-
