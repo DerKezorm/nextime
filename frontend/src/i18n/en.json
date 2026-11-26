@@ -314,9 +314,7 @@
       "languageHint": "(on all your devices)"
     },
     "password": {
-      "current": "Current password",
       "done": "Password changed. Other browsers have to sign in again.",
-      "new": "New password",
       "submit": "Change password"
     },
     "profile": {

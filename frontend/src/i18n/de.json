@@ -314,9 +314,7 @@
       "languageHint": "(gilt auf allen deinen Geräten)"
     },
     "password": {
-      "current": "Jetziges Passwort",
       "done": "Passwort geändert. Andere Browser müssen sich neu anmelden.",
-      "new": "Neues Passwort",
       "submit": "Passwort ändern"
     },
     "profile": {

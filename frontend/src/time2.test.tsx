@@ -88,6 +88,14 @@ describe('TIME-2 My account', () => {
     }
   })
 
+  it('E59 "Passwort ändern" names its fields as the module: Aktuelles Passwort, Neues Passwort, Passwort wiederholen', async () => {
+    serve(signedIn(me()))
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/security')
+    await click(byText('Passwort ändern', box))
+    const dialog = document.querySelector<HTMLElement>('[role="dialog"]')!
+    expect([...dialog.querySelectorAll('label')].map((label) => label.textContent?.trim())).toEqual(['Aktuelles Passwort', 'Neues Passwort', 'Passwort wiederholen'])
+  })
+
   it('TIME-2 AC-8 the profile changes the name; Security shows the second factor (the line on the way in is gone)', async () => {
     let saved: unknown = null
     serve(signedIn(me({ two_factor: true }), (method, path, body) => {
