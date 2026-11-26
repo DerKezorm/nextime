@@ -1,6 +1,5 @@
-"""Birthdays from nexfolk over a connection made by a click (V1 8a, V18): ``GET /api/birthdays`` asks nexfolk's
-``/api/v1/birthdays`` with the connection's token, through the module's way out (``nexverbinden.call``); nothing
-without a connection; a refusal is a quiet problem, never an error of the page."""
+"""nexfolk over a connection made by a click: the birthdays as a subscribed calendar (V1 8a), the names of attendees
+from nexfolk's people (V29)."""
 
 from __future__ import annotations
 
@@ -11,57 +10,104 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.models import Account
+from app.services import internet
 from app.vendor.nexverbinden import reach
 
 from .test_v18_guest import ACCESS, click_connection
 
-OCCASIONS = [
-    {"date": "2026-11-28", "contact": "c2", "book": "b1", "name": "Mara", "kind": "anniversary", "label": "Hochzeitstag",
-     "years": 5},
-    {"date": "2026-11-27", "contact": "c1", "book": "b1", "name": "Kim", "kind": "birthday", "label": "", "years": 40},
-    {"date": "kaputt", "name": "Niemand"},
-]
+ICS = """BEGIN:VCALENDAR\r
+VERSION:2.0\r
+PRODID:-//nexfolk//EN\r
+X-WR-CALNAME:Geburtstage\r
+BEGIN:VEVENT\r
+UID:kim-birthday@example.com\r
+DTSTART;VALUE=DATE:20261127\r
+RRULE:FREQ=YEARLY\r
+SUMMARY:Kim (40)\r
+END:VEVENT\r
+END:VCALENDAR\r
+"""
 
 
 @pytest.fixture
 def folk(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
+    """nexfolk's calendar of birthdays, open only with the connection's access (``/api/v1/birthdays.ics``)."""
+    from app.services import subscriptions
+
     seen: dict[str, Any] = {"calls": [], "token": ACCESS}
 
     def handle(request: httpx.Request) -> httpx.Response:
-        seen["calls"].append((request.method, request.url.path, dict(request.url.params)))
+        seen["calls"].append((request.url.path, request.headers.get("authorization", "")))
         if request.headers.get("authorization") != f"Bearer {seen['token']}":
             return httpx.Response(401, json={"detail": {"code": "token_invalid", "message": "No."}})
-        return httpx.Response(200, json={"from": "2026-11-26", "to": "2026-12-09", "occasions": OCCASIONS})
+        return httpx.Response(200, text=ICS, headers={"Content-Type": "text/calendar"})
 
-    monkeypatch.setattr(reach, "TRANSPORT", httpx.MockTransport(handle))
-    monkeypatch.setattr(reach, "RESOLVER", lambda host, port: ["93.184.216.34"])
+    monkeypatch.setattr(subscriptions, "transport", httpx.MockTransport(handle))
+    monkeypatch.setattr(subscriptions, "resolve", lambda host: ["93.184.216.34"])
+    # The rounds of subscriptions wait while the internet is away; here it is there.
+    monkeypatch.setattr(internet, "probe_override", lambda: True)
     return seen
 
 
-def test_without_a_connection_there_are_no_birthdays(client: TestClient, account: Account, folk: dict) -> None:
-    assert client.get("/api/birthdays").json() == {"connected": False, "birthdays": [], "problem": None}
-    assert folk["calls"] == []
+def _calendars(client: TestClient) -> list[dict[str, Any]]:
+    answer = client.get("/api/calendars").json()
+    return answer["calendars"] if isinstance(answer, dict) else answer
 
 
-def test_the_birthdays_come_over_the_connection_soonest_first(client: TestClient, account: Account,
-                                                               folk: dict) -> None:
+def test_connecting_with_nexfolk_makes_the_birthday_calendar_as_a_subscription(client: TestClient, account: Account,
+                                                                                folk: dict) -> None:
+    """V1 8a: "Mit nexfolk verbinden" subscribes the birthdays itself, with the connection's access, a calendar read
+    only like any subscription; once per connection; the round fetches with the access again; the connection ends,
+    the calendar goes."""
+    from app.db import SessionLocal
+    from app.services import subscriptions, sync, verbinden_store
+
     click_connection(account.id, "nexfolk", "https://folk.example.com")
-    found = client.get("/api/birthdays").json()
-    assert found["connected"] is True and found["problem"] is None
-    assert [(one["day"], one["name"], one["kind"], one["years"]) for one in found["birthdays"]] == [
-        ("2026-11-27", "Kim", "birthday", 40), ("2026-11-28", "Mara", "anniversary", 5)]
-    assert folk["calls"] == [("GET", "/api/v1/birthdays", {"days": "14"})]
-    # One answer serves a minute.
-    client.get("/api/birthdays")
-    assert len(folk["calls"]) == 1
+    with SessionLocal() as db:
+        assert verbinden_store.calendars_due(db) == 1
+        assert verbinden_store.calendars_due(db) == 0
+        source = subscriptions.by_connection(db, account.id, "nexfolk")
+        assert source is not None and source.kind == "subscription"
+        source_id = source.id
+    assert folk["calls"] == [("/api/v1/birthdays.ics", f"Bearer {ACCESS}")]
+    named = [calendar for calendar in _calendars(client) if calendar.get("name") == "Geburtstage"]
+    assert len(named) == 1 and named[0].get("read_only", True)
+    assert sync.run_source(source_id, force=True)
+    assert len(folk["calls"]) == 2
+    with SessionLocal() as db:
+        store = verbinden_store.Store(db)
+        store.remove(store.connection(account.id, "nexfolk").id)
+        store.commit()
+    sync.run_source(source_id, force=True)
+    with SessionLocal() as db:
+        assert subscriptions.by_connection(db, account.id, "nexfolk") is None
+    assert not [calendar for calendar in _calendars(client) if calendar.get("name") == "Geburtstage"]
 
 
-def test_a_refused_connection_is_a_quiet_problem(client: TestClient, account: Account, folk: dict) -> None:
+def test_a_401_of_nexfolk_renews_the_access_once_then_the_subscription_says_so(client: TestClient, account: Account,
+                                                                               folk: dict,
+                                                                               monkeypatch: pytest.MonkeyPatch) -> None:
+    from app.db import SessionLocal
+    from app.models import Source
+    from app.services import subscriptions, sync, verbinden_store
+
+    click_connection(account.id, "nexfolk", "https://folk.example.com")
+    with SessionLocal() as db:
+        verbinden_store.calendars_due(db)
+        source_id = subscriptions.by_connection(db, account.id, "nexfolk").id
+    renewed = "ntc_" + "n" * 40
+    monkeypatch.setattr(reach, "TRANSPORT", httpx.MockTransport(lambda request: httpx.Response(200, json={
+        "access_token": renewed, "refresh_token": "ntcr_" + "m" * 40, "expires_in": 3600})))
+    monkeypatch.setattr(reach, "RESOLVER", lambda host, port: ["93.184.216.34"])
+    folk["token"] = renewed
+    sync.run_source(source_id, force=True)
+    with SessionLocal() as db:
+        assert db.get(Source, source_id).state == "ok"
+    assert folk["calls"][-1] == ("/api/v1/birthdays.ics", f"Bearer {renewed}")
     folk["token"] = "ntc_" + "z" * 40
-    click_connection(account.id, "nexfolk", "https://folk.example.com")
-    found = client.get("/api/birthdays")
-    assert found.status_code == 200 and found.json()["birthdays"] == []
-    assert found.json()["problem"] == "nexfolk_refused"
+    sync.run_source(source_id, force=True)
+    with SessionLocal() as db:
+        assert db.get(Source, source_id).state == "expired"
 
 
 PEOPLE = {"people": [{"id": "c1", "name": "Kim Muster", "emails": ["Kim@Example.com", "kim.privat@example.com"]},

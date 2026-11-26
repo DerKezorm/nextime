@@ -2141,20 +2141,6 @@
     "openInNexpaper": "In nexpaper öffnen",
     "close": "Schließen"
   },
-  "birthdays": {
-    "block": "Geburtstage aus nexfolk",
-    "today": "heute",
-    "tomorrow": "morgen",
-    "birthday": "{{name}} hat Geburtstag",
-    "birthdayYears_one": "{{name}} wird {{count}} Jahr alt",
-    "birthdayYears_other": "{{name}} wird {{count}} Jahre alt",
-    "anniversary": "{{name}}: {{label}}",
-    "anniversaryWord": "Jahrestag",
-    "problem": "nexfolk antwortet gerade nicht.",
-    "more_one": "+{{count}} weiterer",
-    "more_other": "+{{count}} weitere",
-    "less": "Weniger"
-  },
   "nexnotes": {
     "note": "Notiz in nexnotes",
     "made": "In nexnotes angelegt, im Eingang.",

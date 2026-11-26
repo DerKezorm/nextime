@@ -28,7 +28,6 @@ import { DatePicker } from './DatePicker'
 import { CalendarColumn, scopeKeyOf, scopeOf } from './CalendarColumn'
 import { useTasks } from '../nextasks/hooks'
 import { TasksBlock } from '../nextasks/TasksBlock'
-import { BirthdaysBlock } from '../nexfolk/BirthdaysBlock'
 import { DeadlinesBlock } from '../nexpaper/DeadlinesBlock'
 import { useDeadlines } from '../nexpaper/hooks'
 import { WeekJump } from './ViewHead'
@@ -131,8 +130,6 @@ export function TodayView() {
             <TasksBlock tasks={(tasks.tasks ?? []).filter((task) => task.day <= today)} today={today} problem={tasks.problem} notices={tasks.notices} onSeen={tasks.reload} phone={narrow} />
             {/* Deadlines of nexpaper of today or overdue, as the tasks. */}
             <DeadlinesBlock deadlines={(deadlines.deadlines ?? []).filter((one) => one.day <= today)} today={today} problem={deadlines.problem} phone={narrow} />
-            {/* Birthdays of the next days from nexfolk, over a connection made by a click (draft, V1 8a). */}
-            <BirthdaysBlock today={today} phone={narrow} />
           </div>
           <CalendarColumn key={`${scopeKeyOf(shown)}-${today}`} scope={scopeOf(shown)} now={now} mode="next" />
         </div>

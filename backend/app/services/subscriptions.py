@@ -127,9 +127,10 @@ def check_host(url: str) -> None:
         raise FetchError("subscription_address_blocked")
 
 
-def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", modified: str = "") -> Fetched:
+def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", modified: str = "",
+          bearer: str = "") -> Fetched:
     """The feed, within ``FETCH_SECONDS`` altogether, redirects followed by hand (each hop checked), at most
-    ``MAX_REDIRECTS``. The login goes to the host of the link only."""
+    ``MAX_REDIRECTS``. The login (or the access of a connection, ``bearer``) goes to the host of the link only."""
     headers = {"User-Agent": "nextime", "Accept": "text/calendar, */*"}
     if etag:
         headers["If-None-Match"] = etag
@@ -144,7 +145,8 @@ def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", m
                 check_host(current)
                 same = (urlsplit(current).hostname or "").lower() == first_host
                 auth = httpx.BasicAuth(username, password) if username and same else None
-                with client.stream("GET", current, headers=headers, auth=auth) as answer:
+                sent = {**headers, "Authorization": f"Bearer {bearer}"} if bearer and same else headers
+                with client.stream("GET", current, headers=sent, auth=auth) as answer:
                     if answer.status_code in (301, 302, 303, 307, 308) and answer.headers.get("Location"):
                         target = urljoin(current, answer.headers["Location"])
                         if urlsplit(target).scheme.lower() not in ("http", "https"):
@@ -154,7 +156,8 @@ def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", m
                     if answer.status_code == 304:
                         return Fetched(None, etag, modified)
                     if answer.status_code in (401, 403):
-                        raise FetchError("subscription_login_refused" if username else "subscription_login_needed")
+                        raise FetchError("subscription_login_refused" if username or bearer
+                                         else "subscription_login_needed")
                     if answer.status_code in (404, 410):
                         raise FetchError("subscription_gone")
                     if answer.status_code >= 400:
@@ -369,10 +372,16 @@ def round_(db: Session, source: Source, *, force: bool = False) -> None:
         return
     options = dict(source.options or {})
     try:
-        fetched = fetch(str(secret.get("url", "")), username=str(secret.get("username", "")),
-                        password=str(secret.get("password", "")),
-                        etag="" if force else str(options.get("etag", "")),
-                        modified="" if force else str(options.get("modified", "")))
+        if secret.get("connection"):
+            fetched = _fetch_by_connection(db, source, str(secret["connection"]), etag="" if force else str(
+                options.get("etag", "")), modified="" if force else str(options.get("modified", "")))
+            if fetched is None:
+                return
+        else:
+            fetched = fetch(str(secret.get("url", "")), username=str(secret.get("username", "")),
+                            password=str(secret.get("password", "")),
+                            etag="" if force else str(options.get("etag", "")),
+                            modified="" if force else str(options.get("modified", "")))
         feed = parse(fetched.text) if fetched.text is not None else None
     except FetchError as exc:
         source.failures += 1
@@ -392,3 +401,91 @@ def round_(db: Session, source: Source, *, force: bool = False) -> None:
     source.synced_at = sync.clock()
     source.due_at = sync.clock() + _hour()
     sync.set_state(db, source, STATE_OK)
+
+
+# --- A subscription over a connection with another nex app (plan "Apps verbinden" V1 8a) ------------------------------
+
+#: What a partner offers as a calendar over a connection made by a click: nexfolk's birthdays (``birthdays.read``,
+#: only the address books given; ``GET /api/v1/birthdays.ics`` with the connection's access).
+BY_CONNECTION = {"nexfolk": "/api/v1/birthdays.ics"}
+
+
+def _identity_of(partner: str) -> str:
+    return f"connection:{partner}"
+
+
+def by_connection(db: Session, account_id: int, partner: str) -> Source | None:
+    return db.scalar(select(Source).where(Source.account_id == account_id, Source.kind == SOURCE_SUBSCRIPTION,
+                                          Source.identity == _identity_of(partner)))
+
+
+def subscribe_by_connection(db: Session, account_id: int, partner: str) -> Source | None:
+    """"Mit nexfolk verbinden" makes the subscription itself (V1 8a): a calendar like any subscription (read only,
+    once an hour, the last events kept while nexfolk is away), fetched with the connection's access instead of a
+    secret link. Once per connection; nothing when the partner offers no calendar."""
+    from . import verbinden_store
+
+    if partner not in BY_CONNECTION:
+        return None
+    known = by_connection(db, account_id, partner)
+    if known is not None:
+        return known
+    account = db.get(Account, account_id)
+    if account is None:
+        return None
+    try:
+        base, token = verbinden_store.access(db, account_id, partner)
+        fetched = fetch(clean_url(base) + BY_CONNECTION[partner], bearer=token)
+        feed = parse(fetched.text or "")
+    except (verbinden_store.NotConnected, FetchError) as exc:
+        logger.info("No calendar over the connection yet partner=%s reason=%s", partner,
+                    getattr(exc, "code", type(exc).__name__))
+        return None
+    row = Source(account_id=account_id, kind=SOURCE_SUBSCRIPTION, identity=_identity_of(partner), label=partner,
+                 state=STATE_OK, synced_at=sync.clock(), due_at=sync.clock() + _hour(),
+                 options={"etag": fetched.etag, "modified": fetched.modified, "google": False, "unreadable": {},
+                          "connection": partner})
+    db.add(row)
+    db.flush()
+    row.secret_enc = vault.seal({"connection": partner}, sync.place(row))
+    calendar = calendars._make(db, account_id, (feed.name or partner)[: calendars.NAME_MAX], "brown",
+                               background=False)
+    calendar.source_id, calendar.remote_url, calendar.read_only = row.id, "subscription", True
+    db.flush()
+    sync.replace_all(db, calendar, feed.objects)
+    live.touch_accounts(db, {account_id})
+    db.commit()
+    logger.info("Subscribed over a connection partner=%s source=%s events=%s", partner, row.id, len(feed.objects))
+    return row
+
+
+def _fetch_by_connection(db: Session, source: Source, partner: str, *, etag: str, modified: str) -> Fetched | None:
+    """The calendar of ``partner`` with the connection's access; a 401 asks once more with a renewed access (V18).
+    The connection ended: the subscription goes with it (what was only mirrored goes), ``None``."""
+    from . import sources, verbinden_store
+
+    try:
+        base, token = verbinden_store.access(db, source.account_id, partner)
+    except verbinden_store.NotConnected as exc:
+        if exc.code == "not_connected":
+            account = db.get(Account, source.account_id)
+            if account is not None:
+                sources.disconnect(db, account, source.id, drop_waiting=True)
+            return None
+        raise FetchError("subscription_unreachable" if exc.code == "unreachable" else "subscription_login_refused") \
+            from None
+    url = clean_url(base) + BY_CONNECTION.get(partner, "")
+    try:
+        found = fetch(url, bearer=token, etag=etag, modified=modified)
+    except FetchError as exc:
+        if exc.code != "subscription_login_refused":
+            verbinden_store.reached(db, source.account_id, partner, "unreachable")
+            raise
+        try:
+            token = verbinden_store.renewed(source.account_id, partner)
+            found = fetch(url, bearer=token, etag=etag, modified=modified)
+        except (verbinden_store.NotConnected, FetchError):
+            verbinden_store.reached(db, source.account_id, partner, "token_invalid")
+            raise FetchError("subscription_login_refused") from None
+    verbinden_store.reached(db, source.account_id, partner, None)
+    return found

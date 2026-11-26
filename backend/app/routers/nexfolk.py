@@ -1,4 +1,4 @@
-"""Birthdays from nexfolk over a connection made by a click (``services/nexfolk.py``): for "Heute"."""
+"""nexfolk over a connection made by a click (``services/nexfolk.py``): names of attendees (V29)."""
 
 from __future__ import annotations
 
@@ -10,11 +10,6 @@ from ..deps import Account, DbSession
 from ..services import nexfolk
 
 router = APIRouter(tags=["nexfolk"])
-
-
-@router.get("/api/birthdays", summary="Birthdays and anniversaries of the next days from nexfolk (a connection)")
-def birthdays(account: Account, db: DbSession) -> dict[str, Any]:
-    return nexfolk.birthdays(db, account.id)
 
 
 @router.get("/api/people/names", summary="Names nexfolk knows for attendees' addresses (a connection, people only)")

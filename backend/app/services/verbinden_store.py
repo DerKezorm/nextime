@@ -287,12 +287,29 @@ def old_key(store: Store, account_id: Any, partner: str) -> str | None:
 
 def connected(store: Store, account_id: Any, partner: str) -> None:
     """``on_connected`` of the module: nextime's services take the new connection as they took a key (V18)."""
-    from . import nexpaper, nextasks
+    from . import nexpaper, nextasks, subscriptions
 
     if partner == "nextasks":
         nextasks.connected_by_click(store.db, int(account_id))
     elif partner == "nexpaper":
         nexpaper.connected_by_click(store.db, int(account_id))
+    elif partner in subscriptions.BY_CONNECTION:
+        # "Mit nexfolk verbinden" makes the birthday calendar itself (V1 8a).
+        subscriptions.subscribe_by_connection(store.db, int(account_id), partner)
+
+
+def calendars_due(db: Session) -> int:
+    """Connections a partner started (its consent page, then the token here) get their calendar too (V1 8a): the
+    clock asks every few minutes; the number made."""
+    from . import subscriptions
+
+    made = 0
+    partners = tuple(subscriptions.BY_CONNECTION)
+    for row in list(db.scalars(select(AppConnection).where(AppConnection.partner.in_(partners)))):
+        missing = subscriptions.by_connection(db, row.account_id, row.partner) is None
+        if missing and Store(db).account_may(row.account_id):
+            made += subscriptions.subscribe_by_connection(db, row.account_id, row.partner) is not None
+    return made
 
 
 
@@ -311,6 +328,7 @@ async def run_forever(stop: Any) -> None:
     def once() -> None:
         with SessionLocal() as db:
             nexverbinden.retry_waiting(Store(db), CONFIG, datetime.now(UTC))
+            calendars_due(db)
 
     while not stop.is_set():
         try:
