@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from app.models import Account
 from app.services import locales
 
 GOOD = {"_meta": {"name": "Español"}, "nav": {"graph": "Grafo", "search": "Buscar"}, "save": "Guardar"}
@@ -228,3 +229,15 @@ def test_a_caller_of_before_reads_the_list_as_before(client: TestClient, folder:
     assert client.get("/api/locales/es").json() == {"nav": {"graph": "Grafo", "search": "Buscar"}, "save": "Guardar"}
     assert client.get("/api/locales/de").json() == {"save": "Sichern"}
 
+
+
+def test_the_old_way_takes_a_profile_language_as_before(client: TestClient, account: Account, folder: Path) -> None:
+    """E52: ``PUT /api/me/language`` takes exactly what it took before the module sprachen: a shipped code, a code of
+    a file of the operator, or nothing; a valid code nextime has no file for stays refused (422 as before)."""
+    assert client.put("/api/me/language", json={"language": "nl"}).status_code == 422
+    put(folder, "nl.json", {"save": "Opslaan"})
+    locales.forget()
+    for code in ("nl", "de", "en", ""):
+        answer = client.put("/api/me/language", json={"language": code})
+        assert answer.status_code == 200 and answer.json()["language"] == code, code
+    assert client.put("/api/me/language", json={"language": "NL"}).status_code == 422

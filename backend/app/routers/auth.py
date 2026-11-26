@@ -186,9 +186,9 @@ def check_confirm(password: str, confirm: str | None) -> None:
 
 
 def check_language(language: str) -> str:
-    """Empty (the browser decides) or a language nextime has: built in, or a usable file of the operator
-    (``nexsprachen.known``, sprachen 1.0.0)."""
-    if language and not locales.known(language):
+    """Empty (the browser decides) or a language nextime has: shipped, or a file of the operator. Exactly what the
+    profile took before the module sprachen (E52); ``nexsprachen.known`` serves the language choice only."""
+    if language and language not in SHIPPED and language not in {item.code for item in locales.available()}:
         raise error("unknown_language", "nextime does not have this language.", 422)
     return language
 
