@@ -2153,6 +2153,12 @@
     "more_other": "+{{count}} more",
     "less": "Fewer"
   },
+  "nexnotes": {
+    "note": "Note in nexnotes",
+    "made": "Made in nexnotes, in the inbox.",
+    "found": "nexnotes already has the note to this event.",
+    "failed": "nexnotes did not take the note."
+  },
   "nexpaper": {
     "section": {
       "title": "nexpaper",

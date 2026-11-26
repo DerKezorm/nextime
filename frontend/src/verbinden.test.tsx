@@ -35,7 +35,7 @@ describe('the other nex apps on the page Connections', () => {
     serve(server('none'))
     await render(<AuthProvider><App /></AuthProvider>, '/settings/connections')
     const cards = [...box.querySelectorAll('[data-testid^="connection-nex"]')].map((card) => card.getAttribute('data-testid'))
-    expect(cards).toEqual(['connection-nextasks', 'connection-nexpaper', 'connection-nexmail', 'connection-nexfolk', 'connection-nexdiary'])
+    expect(cards).toEqual(['connection-nextasks', 'connection-nexpaper', 'connection-nexmail', 'connection-nexfolk', 'connection-nexdiary', 'connection-nexnotes'])
   })
 
   it('V23 a connection made by a click shows its choices open in the card', async () => {

@@ -2153,6 +2153,12 @@
     "more_other": "+{{count}} weitere",
     "less": "Weniger"
   },
+  "nexnotes": {
+    "note": "Notiz in nexnotes",
+    "made": "In nexnotes angelegt, im Eingang.",
+    "found": "Die Notiz zu diesem Termin gibt es in nexnotes schon.",
+    "failed": "nexnotes hat die Notiz nicht angenommen."
+  },
   "nexpaper": {
     "section": {
       "title": "nexpaper",

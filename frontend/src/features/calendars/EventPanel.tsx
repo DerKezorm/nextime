@@ -15,6 +15,7 @@ import { useLocation } from 'react-router-dom'
 import { ApiError } from '../../api/client'
 import { Avatar } from '../../components/Avatar'
 import { Dialog } from '../../components/Dialog'
+import { NoteButton } from '../nexnotes/NoteButton'
 import { CheckLine } from '../../components/CheckLine'
 import { knownZones, zonePlace } from '../../lib/display'
 import { errorText, problemText } from '../../lib/errors'
@@ -809,6 +810,8 @@ function EventPanel({ target }: { target: PanelTarget }) {
                 </p>
               )}
               {detail && <Attendees detail={detail} />}
+              {/* A note to the event in nexnotes, over a connection made by a click (draft, V19). */}
+              {detail && !detail.busy_only && <NoteButton eventId={detail.id} occurrence={detail.occurrence} />}
               {message && (
                 <Note tone="bad">
                   <span data-testid="panel-message">{message}</span>
@@ -1094,6 +1097,7 @@ function ReadOnly({ detail, calendar, places }: { detail: EventDetail; calendar:
         <RemoteAttachments eventId={detail.id} items={detail.remote_attachments ?? []} source={detail.source ?? ''} />
       )}
       <Attendees detail={detail} />
+      {!detail.busy_only && <NoteButton eventId={detail.id} occurrence={detail.occurrence} />}
       {detail.no_answers && (
         <p className="text-xs text-mist-500" data-testid="no-answers">
           {t('invitations.whyNot.read_only_source')}
