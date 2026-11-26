@@ -14,6 +14,54 @@ heute jedes eingerichtete iPhone, jeden Mac und jedes DAVx5 abhängen.
 
 ## 0. Stand
 
+### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
+
+Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus
+`bauplaene-stand` (zuletzt `bef0132`) mit `tools/sync.py copy`, `check` aller sieben grün: **`ui` 1.1.0, `konten`
+1.1.0, `oidc` 1.2.0, `post` 1.1.0, `log` 1.0.0, `sicherung` 1.0.1, `schluessel` 1.0.0**. Die Frontend-Vorlagen tragen
+ihre Kopfzeile `// Vorlage <Paket> <Fassung>`. App-Fassung unverändert 0.4.0, kein Release.
+
+| Bereich | woher jetzt | was gewandert ist (alt → neu) |
+|---|---|---|
+| Gerüst | `SettingsLayout`, `SettingsNav`, `SettingsPage` (ui) in `pages/SettingsPage.tsx`; Titel und Zeilen der gemeinsamen Bereiche aus `areaText`, nextimes eigene (`own`) aus `settings.areas.*` | eigene `SettingsNav`/`SettingsJump` und `pages/settings/ui.tsx` → weg; Reihenfolge nach Bauplan (Profil, Sicherheit, Darstellung, Kalender und Konten, Freigaben, Auf iPhone und Co, Mitnehmen und umziehen, Benachrichtigungen, Verbindungen; Server: Allgemein, Anmeldung, Mail, Speicher und Sicherung, Google einrichten, Konten, Log); `/settings` auf dem Handy die Liste; alte Pfade (`/account/<reiter>`, `/server/<seite>`) leiten weiter um, neu `/settings/reminders` → `/settings/notifications` |
+| Profil | `PAGES.profile` (konten), dazu `UnconfirmedEmailBox` (nur wo `showUnconfirmed`), `SignOutCard` des Moduls (`things` = „Kalender“) | Zeitzone aus Darstellung → unter „Sprache“ (E14); Zeile „Anmeldung mit Passwort / über …“ weg |
+| Darstellung | `pages/settings/AppearanceArea.tsx`: `AppearanceCard` (Theme am Konto, `PUT /api/me/theme`, beim ersten Laden `POST /api/me/theme/adopt` mit `nextime.theme` des Browsers), dann je Wahl eine Karte: Erster Wochentag, Kalenderwochen (`CheckboxRow`), Uhrzeit, Doppelte Termine, Termine im Monat (`Segment`) | Karte „Darstellung“ mit `ThemeSwitcher` und Auswahllisten → Karten; Hell/Dunkel gilt jetzt für das Konto (E5, Spalte `accounts.theme`) |
+| Benachrichtigungen | `features/reminders/RemindersArea.tsx`: `NotifyWays` (Dieser Browser, iPhone und iPad), dann „Erinnerungen“, „Vorgabe je Kalender“, „Geräte mit Erinnerungen“ | Slug `reminders` → `notifications` (E1), `Toggle` → `CheckboxRow`, Hinweise als `Notice`; keine Probemeldung, keine Liste „Browser mit Mitteilungen“ (Frage 5) |
+| Verbindungen | `features/keys/ConnectionsArea.tsx`: „Geräte“ (`AppDevicesSection`), „Auf diesem Gerät installieren“ (`pwa/InstallCard.tsx`, `listenForInstall`), nextasks und nexpaper als `Collapsible variant="card"` mit Logo (`fold.nextasks`/`fold.nexpaper` je Gerät wie bisher), `ApiKeysCard`, `ToolsCard` (schluessel) | App-Geräte aus „Auf iPhone und Co“ → hierher (E4); „Auf iPhone und Co“ nur noch CalDAV; eigene Schlüsselkarte `features/keys/KeysSection.tsx` → Modulkarten (nextimes Sätze zu ausgeblendeten Kalendern, schreibenden KI-Werkzeugen und `/api/v1` als `children`) |
+| Allgemein | `pages/settings/GeneralCards.tsx`: „Grenzen“ (`Field action`), „Funktionen für alle Konten“ (`CheckboxRow`), `InterfacesCard` (schluessel), „Sprachen“ (`Chip`, `Field action`) | „Zustand“, HTTPS-Hinweis, Proxy-Hinweis, lose Versionszeile weg; MCP/API-Schalter → „Schnittstellen“; keine Karte „Web Push“ (nichts einzustellen, E33) |
+| Anmeldung | `pages/settings/SignInArea.tsx` = `SignInPage` (konten) + `SignInProviders` (oidc); Wege `GET/PUT /api/server/sign-in`, `GET /api/server/sign-in/readiness` (`routers/server_signin.py`) | `SignInCards.tsx` weg; `PUT /api/settings` mit den Schaltern geht durch dieselben Regeln (Passwort-Rückfrage beim Abschalten des Faktors) |
+| Mail | `MailCard` (post) über `/api/server/mail`, Satz `server.mailSubtitle` | eigene `MailCard` weg; `/api/settings` (`smtp_*`) und `POST /api/settings/mail-test` bleiben (Testmail jetzt die des Moduls, alte Codes `mail_off`/`mail_failed`/`invalid_email`) |
+| Speicher und Sicherung | `StorageArea` (sicherung) über `/api/server/storage`; Haken `services/backup_hooks.py` (Format unverändert: `nextime-backup.json`, `database/nextime.db`, `attachments/`, `secret.key`; schrittweises Zurückspielen wie TIME-1 EC-5, Sync-Epoche) | eigene `BackupsCard` weg; neu „Jede Woche“, „Jeden Monat“; alte Wege `/api/backups/*` mit `x-nextime-password` (`legacy_router`, Codes `disk_full`/`write_failed`), `GET /api/backups/summary` in alter Form aus `plan.summary()` |
+| Konten | `AccountsTab` (konten, `capsOf('nextime', …)`), `WhatYouSeeCard`, `AllKeysCard` (schluessel) | Speichergrenze je Konto weg (E24: Knopf, Dialog, Prüfung bei Anhängen; Spalte `storage_limit` bleibt, `PUT …/storage-limit` antwortet `feature_off`); Zählzeile der Schlüssel → Tabelle mit Sperren/Entsperren |
+| Log | `LogCard` (log) mit nextimes Uhr/Zone (`when`/`clock`), `things` = „Kalendern“ | Datei, Format, Schlüssel `log_mode`/`log_mode_until` unverändert; geschwärzt auch `nt_api_`, `ntd_`, `/abo/…`, `/guest/…` |
+| Über | `AboutPage` (ui) in `pages/settings/AboutArea.tsx`, Logo `/logo.svg`, Was ist neu aus `useWhatsNew` | drei Karten `about`, `about-updates`, `about-built-with` |
+
+**Server:** Rollen, Sperren, Löschen/Zurückholen über `manage.*` (`routers/accounts.py`), Store mit `ManageStore`,
+`ThemeStore`, `SignInStore` (`konten_store.py`); Wanderung E23 beim Anlegen von `accounts.theme`
+(`konten_wanderung.run(added=…)`, `db._add_missing_columns` meldet die neuen Spalten); Systemmail ohne eigenen Mailer
+(`mailer.py` nur noch Sprache und alte Codes), Outbox mit `key`, `waiting`, `on_commit`, `recipient`, Runde nach dem
+Commit (`outbox_runner`); Schlüssel: `services/schluessel_store.py` (`CONFIG`, `KeyStore`), Modulwege unter
+`/api/connections`, alte Wege `/api/keys`, `/api/admin/keys` über `keys.listing/make/revoke/overview` in alter Form;
+neue Spalte `api_keys.blocked_at`, `apikeys.authenticate` lehnt gesperrte ab; `/api/connections/keys` auch für ein
+Konto mit geschuldetem zweiten Faktor (Frage 4).
+
+**⚠️ Rückweg auf 0.4.0 (E27):** nur neue Spalten (`accounts.theme`, `api_keys.blocked_at`, `mail_outbox.key`). 0.4.0
+liest sie nicht und startet. **Gesperrte API-Schlüssel wirken unter 0.4.0 wieder**: vor dem Rückweg sperrte Schlüssel
+widerrufen oder die Sicherung zurückspielen. Spalte entfernen: `ALTER TABLE api_keys DROP COLUMN blocked_at`. Neue
+Sicherungen bleiben für 0.4.0 lesbar (gleiches Format); Theme und Wochen-/Monatsplan gehen dabei verloren (0.4.0 kennt
+nur aus/täglich; „Jede Woche“ oder „Jeden Monat“ liest es als „aus“, also vor dem Rückweg „Jede Nacht“ wählen).
+
+**Umwege:** `time3.test.tsx` „heute 3:00 AM in New York“ ist `it.skip` mit `TODO sicherung 1.0.2` (die Sicherungskarte
+kennt Uhr und Zone des Kontos nicht, Frage 1); `time2.test.tsx` prüft die Namen der Navigation als Text statt Tooltip
+(`TODO ui 1.1.0`, Frage 7). Fenster, die nextime auch außerhalb der Einstellungen öffnet, bleiben bis nach Stufe 1
+(Fragen-Datei).
+
+**Läufe (26.11.2026, `reihe.sh nextime ende`):** ruff sauber; pytest (`-n 6`) 1742 grün, 11 übersprungen; `-m timing`
+8 grün; lint sauber; vitest 1262 grün, 1 übersprungen (der Umweg oben) in 73 Dateien; build grün. Playwright: nextime
+hat keine Reihe. Neue Tests: `tests/test_einstellungen.py`, Bestand-Tests E23/E27 im Block „After the change“, Vertrag
+`tests/nexlog`, `tests/nexsicherung`, `tests/nexschluessel`; Mutationsproben (Rückgabecode) für Schwärzen von `/abo/`,
+Sperre eines Schlüssels, E24, Theme, Umleitung `reminders`.
+
 Stand 25.11.2026, Zweig `konten`. **Gebaut.** Module aus `bauplaene` (Zweig `konten`), kopiert mit `tools/sync.py copy`,
 `check` grün: `konten` 0.3.9, `oidc` 1.1.0, `post` 0.1.1, `ui` 0.1.1. Vorlage war nexnotes 1.1.0 (dessen Änderungen
 gegen 1.0.1 Datei für Datei dreiseitig auf nextime gelegt, dann das Eigene von nextime nachgezogen). App-Fassung
