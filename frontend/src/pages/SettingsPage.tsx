@@ -38,6 +38,7 @@ export function SettingsPage() {
   const where = resolveArea(asked, me?.role, search)
   const area = 'area' in where ? findArea(where.area) : undefined
   const things = t('settings.things')
+  const thingsDative = t('settings.thingsDative')
   const words = (info: AreaInfo) =>
     info.own
       ? {
@@ -47,6 +48,7 @@ export function SettingsPage() {
       : (areaText(NEXUI_TEXTS[languageOf(i18n.language)], info.slug, {
           app: APP,
           things,
+          thingsDative,
         }) ?? { title: info.slug, text: '' })
   const title = area ? words(area).title : ''
   // Without a connection the settings are to read only (TIME-28 AC-3).
@@ -79,6 +81,7 @@ export function SettingsPage() {
           <SettingsNav
             app={APP}
             things={things}
+            thingsDative={thingsDative}
             groups={groups}
             about={{ href: areaPath(ABOUT_AREA.slug), slug: ABOUT_AREA.slug }}
             current={area.slug}
@@ -91,7 +94,7 @@ export function SettingsPage() {
           />
         }
       >
-        <Area slug={area.slug} app={APP} things={things} title={own?.title} subtitle={own?.text}>
+        <Area slug={area.slug} app={APP} things={things} thingsDative={thingsDative} title={own?.title} subtitle={own?.text}>
           {offline && (
             <div role="status" data-testid="settings-offline">
               <Notice tone="warn">{t('offline.settingsOff')}</Notice>

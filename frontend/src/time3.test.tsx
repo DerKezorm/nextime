@@ -204,6 +204,11 @@ describe('TIME-3 the account\'s clock and zone count on "Server" and in the log 
     mcp_enabled: true, address_suggestions: true, update_check: true, data_total: 1000, data_used: 100, data_free: 900,
     nextime_used: 10, nextime_parts: { database: 10 }, data_on_share: false,
   }
+  const STORAGE = { app: 'nextime', used: 10, parts: [{ key: 'database', bytes: 10, within: '', complete: true }], complete: true, total: 1000, disk_used: 100, free: 900, nearly_full: false, where: {}, network: [] }
+  const LAST = { name: 'nextime-backup-20261122-080000.zip', created: '2026-11-22T08:00:00+00:00', size: 14 * 1024 * 1024, kind: 'auto' }
+  // 04:30 UTC on the 22nd is 11:30 PM on the 21st in New York.
+  const EARLIER = { name: 'nextime-backup-20261122-043000.zip', created: '2026-11-22T04:30:00+00:00', size: 13 * 1024 * 1024, kind: 'auto' }
+  const BACKUPS = { schedule: { every: 'daily', time: '03:00', keep: 14 }, zone: 'Europe/Berlin', last: LAST, count: 2, kept: 2, failure: null, running: false, restore_failure: null, restored: null, restore: 'restart', download_password: false, backups: [LAST, EARLIER] }
   const LINE = { time: '2026-11-22 09:00:00', level: 'INFO', logger: 'nextime', message: 'probe line', request_id: null, user: null, at: '2026-11-22T08:00:00+00:00' }
 
   beforeEach(() => {
@@ -214,6 +219,8 @@ describe('TIME-3 the account\'s clock and zone count on "Server" and in the log 
   function server() {
     return signedIn(OPERATOR, (_method, path) => {
       if (path === '/api/backups/summary') return ok(SUMMARY)
+      if (path === '/api/server/storage') return ok(STORAGE)
+      if (path === '/api/server/storage/backups') return ok(BACKUPS)
       if (path === '/api/server/state') return ok({ version: '0.1.0', newer: null, https: true, internet: true, zone: 'Europe/Berlin' })
       if (path.startsWith('/api/logs/level')) return ok({ mode: 'normal', until: null, fixed_by_env: false, modes: ['quiet', 'normal', 'detailed', 'trace'] })
       if (path.startsWith('/api/logs')) return ok([LINE])
@@ -223,13 +230,16 @@ describe('TIME-3 the account\'s clock and zone count on "Server" and in the log 
     })
   }
 
-  // TODO sicherung 1.0.2: the module's card writes its moments in the browser's zone and the language's clock; it has
-  // no way yet to take the account's (question 1 of the settings pass). Until then this test waits.
-  it.skip('TIME-3 AC-6 AC-8 12 hours fixed in German and a fixed zone: the last backup reads "heute 3:00 AM" in New York', async () => {
+  it('TIME-3 AC-6 AC-8 12 hours fixed in German and a fixed zone: the last backup reads "heute 3:00 AM" in New York', async () => {
     serve(server())
     await render(<AuthProvider><App /></AuthProvider>, '/settings/storage')
+    await vi.waitFor(() => expect(box.querySelector('[data-testid="backup-last"]')?.textContent).toContain('Zuletzt'))
     // 08:00 UTC is 03:00 in New York; the rhythm keeps the server's own time and zone.
-    expect(box.querySelector('[data-testid="backup-line"]')!.textContent).toMatch(/^Täglich 03:00 \(Europe\/Berlin\) · zuletzt heute 3:00\sAM, 14 MB · 1 Stück aufbewahrt$/)
+    expect(box.querySelector('[data-testid="backup-last"]')!.textContent).toMatch(/^Zuletzt: heute 3:00\sAM, 14,0 MB$/)
+    expect(box.querySelector<HTMLInputElement>('[data-card="backups"] input[type="time"]')!.value).toBe('03:00')
+    expect(box.querySelector('[data-card="backups"]')!.textContent).toContain('In der Zeitzone des Servers (Europe/Berlin).')
+    // A backup of another day keeps the day, in the same clock and zone.
+    expect(box.querySelector('[data-testid="backup-list"]')!.textContent).toMatch(/21\.11\.2026, 11:30\sPM/)
   })
 
   it('TIME-3 AC-6 AC-8 the log shows its times in the account\'s clock and zone', async () => {

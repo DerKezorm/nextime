@@ -446,7 +446,8 @@
         "bad": "The server cannot reach the internet right now. Until it can, iCloud, Google and subscribed calendars rest, and no notification arrives. Check DNS, the firewall and any proxy for outgoing connections.",
         "off": "{{variable}} is empty: nextime does not check the internet and lets iCloud, Google and subscribed calendars rest. Remove the variable or set an address the server should reach."
       }
-    }
+    },
+    "todayAt": "today {{time}}"
   },
   "session": {
     "blockedText": "The operator has blocked your account. Nothing more is saved. Ask the operator.",
@@ -532,7 +533,7 @@
     },
     "later": "Comes in a later version.",
     "things": "calendars",
-    "thingsKept": "calendars"
+    "thingsDative": "calendars"
   },
   "setup": {
     "folder": "Data folder {{path}}",

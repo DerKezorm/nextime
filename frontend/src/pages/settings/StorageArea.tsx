@@ -2,11 +2,15 @@
  * Server › Storage and backups (TIME-1 AC-2, AC-8): the cards "Speicher" and "Sicherung" of the shared module
  * sicherung (`vendor/nexsicherung`, bauplaene/sicherung 1.0.1) over its routes (`/api/server/storage`). nextime hands
  * it its sentence of what a backup holds, the names of its parts and what a restore changes: attachments, events and
- * accounts, by number only (the operator never sees calendars or events of others, TIME-2 AC-3).
+ * accounts, by number only (the operator never sees calendars or events of others, TIME-2 AC-3), and its way of writing
+ * a moment (the account's clock and zone, TIME-3 AC-6).
  */
 import { useTranslation } from 'react-i18next'
 
 import { tabId } from '../../api/client'
+import { todayAt } from '../../features/views/state'
+import { clock, moment } from '../../lib/time'
+import { useDisplay } from '../../lib/useDisplay'
 import { useAuth } from '../../state/auth'
 import { StorageArea as SharedStorageArea } from '../../vendor/nexsicherung/StorageArea'
 import { makeSicherungApi, type Brief } from '../../vendor/nexsicherung/sicherung'
@@ -25,6 +29,12 @@ const number = (value: unknown) => (typeof value === 'number' ? value : 0)
 export function StorageArea() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
+  const { zone, timeOptions } = useDisplay()
+  // Every moment of the cards in the account's clock and zone (TIME-3 AC-6), "heute 3:00 AM" for today, as before.
+  const when = (iso: string, language: string) =>
+    todayAt(new Date(iso).getTime(), zone) === todayAt(Date.now(), zone)
+      ? t('server.todayAt', { time: clock(iso, language, timeOptions) })
+      : moment(iso, language, false, timeOptions)
   const details = (brief: Brief) => {
     const found = brief.details ?? {}
     return (
@@ -36,7 +46,9 @@ export function StorageArea() {
             remove: t('server.countFiles', { count: number(found.would_remove) }),
           })}
         </p>
-        <p className="m-0">{t('server.restoreEvents', { add: number(found.events_add), change: number(found.events_change), remove: number(found.events_remove) })}</p>
+        <p className="m-0">
+          {t('server.restoreEvents', { add: number(found.events_add), change: number(found.events_change), remove: number(found.events_remove) })}
+        </p>
         <p className="m-0 text-xs">{t('server.restoreAccounts', { add: number(found.accounts_add), remove: number(found.accounts_remove) })}</p>
       </div>
     )
@@ -52,6 +64,7 @@ export function StorageArea() {
       partLabel={partLabel}
       details={details}
       language={languageOf(i18n.language)}
+      when={when}
     />
   )
 }

@@ -615,7 +615,8 @@ def test_after_the_settings_pass_an_api_key_of_0_4_0_can_be_locked_and_unlocked(
     alle = betrieb.get("/api/connections/admin/keys")
     assert alle.status_code == 200, alle.text
     (schluessel,) = [k for k in alle.json()["keys"] if k["account"]["name"] == _name(konto)]
-    assert schluessel["blocked"] is False and schluessel["prefix"].startswith("nt_api_")
+    # The operator does not see the start of a key (schluessel, E36).
+    assert schluessel["blocked"] is False and "prefix" not in schluessel
     assert betrieb.post(f"/api/connections/admin/keys/{schluessel['id']}/block").status_code == 200
     assert browser().get("/api/v1/me", headers=kopf).status_code == 401
     assert betrieb.post(f"/api/connections/admin/keys/{schluessel['id']}/unblock").status_code == 200

@@ -52,15 +52,14 @@ describe('TIME-2 My account', () => {
     }
   })
 
-  // TODO ui 1.1.0: the kit's navigation gives an entry no tooltip with its whole name (question in the settings pass);
-  // the names stand whole as text.
-  it('TIME-2 EC-12 in English all areas of "My account" are there, each with its whole name', async () => {
+  it('TIME-2 EC-12 in English all areas of "My account" are there, each with its whole name as a tooltip', async () => {
     await i18n.changeLanguage('en')
     serve(signedIn(me({ language: 'en' })))
     await render(<AuthProvider><App /></AuthProvider>, '/settings')
     const entries = [...box.querySelectorAll<HTMLAnchorElement>('[data-testid="settings-nav"] ul a')]
     expect(entries).toHaveLength(9)
-    expect(entries.map((entry) => entry.textContent)).toEqual(['Profile', 'Security', 'Appearance', 'Calendars and accounts', 'Shares', 'On iPhone and co', 'Take along and move', 'Notifications', 'Connections'])
+    expect(entries.map((entry) => entry.title)).toEqual(['Profile', 'Security', 'Appearance', 'Calendars and accounts', 'Shares', 'On iPhone and co', 'Take along and move', 'Notifications', 'Connections'])
+    expect(entries.map((entry) => entry.textContent)).toEqual(entries.map((entry) => entry.title))
     expect(entries.every((entry) => entry.getAttribute('href')?.startsWith('/settings/'))).toBe(true)
     expect(box.querySelector('[data-testid="settings-nav-about"]')!.textContent).toBe('About nextime')
   })

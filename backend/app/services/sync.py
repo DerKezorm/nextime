@@ -24,9 +24,10 @@ from email.utils import parsedate_to_datetime
 from typing import Any
 
 import icalendar
-from sqlalchemy import delete, event, func, select
+from sqlalchemy import delete, event, func, or_, select, update
 from sqlalchemy.orm import Session
 
+from .. import security
 from ..db import SessionLocal
 from ..models import (
     ORIGIN_IMIP,
@@ -40,6 +41,7 @@ from ..models import (
     STATE_PAUSED,
     STATE_UNREACHABLE,
     WRITABLE_SOURCES,
+    Account,
     Calendar,
     Event,
     EventChange,
@@ -189,14 +191,29 @@ def _expired(db: Session, source: Source, problem: str = "credentials") -> None:
 # --- Rounds ---------------------------------------------------------------------------------------------------------
 
 
+def _accounts_out() -> Any:
+    """The accounts that are out (blocked or deleted, konten 1.1.0 E38): their sources rest until they are back."""
+    return select(Account.id).where(or_(Account.blocked_at.is_not(None), Account.deleted_at.is_not(None)))
+
+
+def wake(db: Session, account_id: int) -> int:
+    """An account is back (``KontenStore.on_back``): every source of it is due at once, its rounds go on where they
+    stopped. How many."""
+    result = db.execute(update(Source).where(Source.account_id == account_id).values(due_at=clock()))
+    return int(getattr(result, "rowcount", 0) or 0)
+
+
 def run_due(now: datetime | None = None) -> list[int]:
-    """Every source whose round is due, one after the other. The ids that ran."""
+    """Every source whose round is due, one after the other. The ids that ran. The sources of an account that is out
+    rest (E38): nothing is fetched or sent for it until it is back."""
     moment = now or clock()
     with SessionLocal() as db:
-        due = list(db.scalars(select(Source.id).where((Source.due_at.is_(None)) | (Source.due_at <= moment))
+        due = list(db.scalars(select(Source.id).where((Source.due_at.is_(None)) | (Source.due_at <= moment),
+                                                      Source.account_id.not_in(_accounts_out()))
                               .order_by(Source.id)))
         waiting = set(db.scalars(select(Calendar.source_id).join(RemoteChange, RemoteChange.calendar_id == Calendar.id)
-                                 .where(Calendar.source_id.is_not(None))))
+                                 .join(Source, Source.id == Calendar.source_id)
+                                 .where(Calendar.source_id.is_not(None), Source.account_id.not_in(_accounts_out()))))
     # A change waiting to go out does not wait for the round (AC-3), unless the source is resting after failures.
     wanted = sorted(set(due) | waiting)
     if len(wanted) <= 1:
@@ -219,6 +236,9 @@ def run_source(source_id: int, *, force: bool = False, only_push: bool = False) 
                 return False
             if only_push and (source.state != STATE_OK or source.failures):
                 return False
+            if security.account_out(db.get(Account, source.account_id)):
+                # Out (blocked or deleted, E38): the source rests as it is; ``wake`` makes it due again.
+                return True
             if source.kind in NEEDS_INTERNET and not internet.reachable():
                 # Paused, not failed: the last known events stay, nothing turns orange (TIME-17 EC-15).
                 source.due_at = clock() + timedelta(seconds=min(INTERVALS[source.kind], 300))

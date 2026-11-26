@@ -768,15 +768,21 @@ def set_switch(db: Session, account: Account, calendar_id: int, on: bool) -> Non
 # --- Accounts going ------------------------------------------------------------------------------------------------
 
 
+def hold(db: Session, account_ids: Any) -> None:
+    """Nothing that waits goes to these accounts any more (they are out). Their browsers stay signed up (konten 1.1.0,
+    E38): while the account is out no push goes to them (the round asks ``account_out`` before each), and when it is
+    back they get its notifications again, as long as their session lives."""
+    db.execute(update(NotifyOutbox).where(NotifyOutbox.account_id.in_(account_ids), NotifyOutbox.sent_at.is_(None),
+                                          NotifyOutbox.failed_at.is_(None))
+               .values(failed_at=clock(), last_error="account_out", payload={}))
+
+
 def accounts_out() -> None:
-    """``security.SESSIONS_ENDED`` (a sign-out, a block, a delete, a new password): the browsers of a blocked or
-    deleted account stop at once, and what waits for it goes (EC-12). A sign-out took its browser along already."""
+    """``security.SESSIONS_ENDED`` (a sign-out, a block, a delete, a new password): what waits for a blocked or
+    deleted account goes (EC-12), its browsers stay signed up for its return (E38). A browser whose session ended
+    (a sign-out) goes along."""
     with SessionLocal() as db:
-        out = select(Account.id).where(or_(Account.blocked_at.is_not(None), Account.deleted_at.is_not(None)))
-        db.execute(delete(WebPushSubscription).where(WebPushSubscription.account_id.in_(out)))
-        db.execute(update(NotifyOutbox).where(NotifyOutbox.account_id.in_(out), NotifyOutbox.sent_at.is_(None),
-                                              NotifyOutbox.failed_at.is_(None))
-                   .values(failed_at=clock(), last_error="account_out", payload={}))
+        hold(db, select(Account.id).where(or_(Account.blocked_at.is_not(None), Account.deleted_at.is_not(None))))
         db.execute(delete(WebPushSubscription).where(WebPushSubscription.session_id.not_in(select(AuthSession.id))))
         db.commit()
 

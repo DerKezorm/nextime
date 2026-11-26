@@ -685,7 +685,7 @@ function SecondFactor({ me }: { me: Me }) {
 export function SignOut() {
   const { t } = useTranslation()
   const { me, signOut } = useAuth()
-  return <SignOutCard t={t} things={t('settings.thingsKept')} provider={me?.sign_in === 'oidc'} pending={waitingChanges()} onSignOut={signOut} />
+  return <SignOutCard t={t} things={t('settings.things')} provider={me?.sign_in === 'oidc'} pending={waitingChanges()} onSignOut={signOut} />
 }
 
 /** The account's time zone, under the language in the profile (plan "Einstellungen", E14): saved at once. */

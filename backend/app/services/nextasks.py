@@ -42,7 +42,7 @@ from zoneinfo import ZoneInfo
 import httpx
 from dateutil.rrule import rrulestr
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -998,8 +998,11 @@ def claim(db: Session, tick_id: int) -> bool:
 
 def run_waiting(db: Session) -> int:
     """A round: every tick that waits and is due goes once more (EC-12), each only by whoever claimed it."""
+    # An account that is out (blocked or deleted, E38): its ticks wait until it is back.
+    out = select(Account.id).where(or_(Account.blocked_at.is_not(None), Account.deleted_at.is_not(None)))
     due = list(db.scalars(select(TaskTick.id).where(TaskTick.state.in_(("waiting", "sending")),
-                                                    TaskTick.next_at <= clock()).order_by(TaskTick.id)))
+                                                    TaskTick.next_at <= clock(),
+                                                    TaskTick.account_id.not_in(out)).order_by(TaskTick.id)))
     sent = 0
     for tick_id in due:
         if not claim(db, tick_id):

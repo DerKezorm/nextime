@@ -437,9 +437,10 @@ def test_time21_ec12_a_signed_out_browser_and_a_blocked_account_get_nothing(clie
     make_event(client, "Laternenumzug", "2026-12-04T18:00", "2026-12-04T19:00", calendar_id=family["calendar"])
     clock.later(200)
     assert push.arrived == []
+    # Its browser stays signed up for its return (konten 1.1.0, E38); nothing reaches it while it is out.
     with SessionLocal() as db:
         assert db.scalar(select(WebPushSubscription).where(WebPushSubscription.account_id == family["anna"].id)) \
-            is None
+            is not None
     # Blocked while its browser is still signed up (the block came another way): the bundle leaves it out all the same.
     with SessionLocal() as db:
         row = db.get(Account, family["anna"].id)

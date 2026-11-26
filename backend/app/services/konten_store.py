@@ -973,6 +973,26 @@ class KontenStore:
         self.db.flush()
         appdevices.end_all(self.db, int(account_id))
 
+    def on_shut_out(self, account: KontoAccount) -> None:
+        """konten 1.1.0 (E38): the account went out (blocked, or deleted while it could sign in), after the commit.
+        Nothing that waits goes to it; its browsers stay signed up, and no push reaches them while it is out (the
+        send round asks ``account_out``). Its sources (iCloud, Google, CalDAV, subscriptions) and its ticks to
+        nextasks rest (``sync.run_due``, ``nextasks.run_waiting`` leave out accounts that are out)."""
+        from . import notify
+
+        notify.hold(self.db, [int(account.id)])
+        self.db.commit()
+        logger.info("Account out: pushes and syncs halted account_id=%s", account.id)
+
+    def on_back(self, account: KontoAccount) -> None:
+        """konten 1.1.0 (E38): the account can sign in again (unblocked, or brought back unblocked). Its sources are
+        due at once and go on where they stopped; pushes go to every browser that is still signed up."""
+        from . import sync
+
+        woken = sync.wake(self.db, int(account.id))
+        self.db.commit()
+        logger.info("Account back: pushes and syncs go on account_id=%s sources=%s", account.id, woken)
+
     def deleted_before(self, moment: datetime) -> list[AccountId]:
         return list(
             self.db.scalars(select(Account.id).where(Account.deleted_at.is_not(None), Account.deleted_at <= moment))

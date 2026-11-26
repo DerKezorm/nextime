@@ -5,12 +5,15 @@ in its old shape, and the old address of "Erinnerungen" leading to "Benachrichti
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi.testclient import TestClient
+from sqlalchemy import select, update
 
 from app.config import get_settings
 from app.db import SessionLocal
-from app.models import Account
-from app.services import backups, internet
+from app.models import Account, NotifyOutbox, Source, WebPushSubscription
+from app.services import backups, internet, notify, sync
 
 from .conftest import PASSWORD, make_account, new_client
 from .test_time21 import push  # noqa: F401 - the fixture
@@ -139,3 +142,85 @@ def test_a_browser_of_the_own_account_can_be_removed_another_ones_never(client: 
     assert client.delete(f"/api/notify/webpush/{mine}").status_code == 204
     assert client.get("/api/reminders").json()["browsers"] == []
     assert client.delete(f"/api/notify/webpush/{mine}").status_code == 404
+
+
+def test_an_account_out_gets_no_push_its_browser_stays_and_its_sources_rest_until_it_is_back(
+        client: TestClient, operator: Account, push, monkeypatch) -> None:
+    """konten 1.1.0 (E38): blocked or deleted, nothing goes out to the account and its sources (iCloud, Google,
+    CalDAV, subscriptions) rest; its browser stays signed up; back, the sources are due at once and run again."""
+    anna = make_account("anna")
+    with new_client(anna) as browser_of_anna:
+        push.browser(browser_of_anna)
+        with SessionLocal() as db:
+            source = Source(account_id=anna.id, kind="caldav", label="Nextcloud", identity="contract-caldav",
+                            due_at=datetime.now(UTC) - timedelta(minutes=1))
+            db.add(source)
+            db.commit()
+            source_id = source.id
+        ran: list[int] = []
+        monkeypatch.setattr(sync, "_round", lambda _db, found, **_kw: ran.append(found.id))
+
+        def push_goes_out() -> bool:
+            with SessionLocal() as db:
+                target = db.scalar(select(WebPushSubscription).where(WebPushSubscription.account_id == anna.id))
+                assert target is not None, "the browser stays signed up while the account is out"
+                db.add(NotifyOutbox(account_id=anna.id, kind="change", target_id=target.id, calendar_id=None,
+                                    payload={"title": "nextime", "text": "probe", "url": "/"},
+                                    next_try_at=datetime.now(UTC) - timedelta(minutes=1)))
+                db.commit()
+            push.arrived.clear()
+            notify.send_round()
+            return bool(push.arrived)
+
+        assert push_goes_out() and sync.run_due() == [source_id] and ran == [source_id]
+        for out, back in (("block", "unblock"), ("delete", "restore")):
+            ran.clear()
+            confirm = {"current_password": PASSWORD}
+            if out == "block":
+                assert client.post(f"/api/accounts/{anna.id}/block", json=confirm).status_code == 204
+            else:
+                assert client.request("DELETE", f"/api/accounts/{anna.id}", json=confirm).status_code == 204
+            assert not push_goes_out(), out
+            with SessionLocal() as db:
+                db.execute(update(Source).where(Source.id == source_id).values(due_at=datetime.now(UTC)
+                                                                               - timedelta(minutes=1)))
+                db.commit()
+            assert sync.run_due() == [] and ran == [], out
+            # As if its last round had just run: the next one far off; the return makes it due at once.
+            with SessionLocal() as db:
+                db.execute(update(Source).where(Source.id == source_id).values(due_at=datetime.now(UTC)
+                                                                               + timedelta(hours=1)))
+                db.commit()
+            assert client.post(f"/api/accounts/{anna.id}/{back}", json=confirm).status_code in (200, 204), back
+            with SessionLocal() as db:
+                due = db.get(Source, source_id).due_at
+                assert due is not None and due.replace(tzinfo=UTC) <= datetime.now(UTC) + timedelta(seconds=1), back
+            assert sync.run_due() == [source_id] and ran == [source_id], back
+            # The return ends the sessions from before (konten), and their sign-ups go with them; the browser signs
+            # up again by itself at its next sign-in (``renewBrowser``).
+            with new_client(anna) as again:
+                push.browser(again)
+                assert push_goes_out(), back
+
+
+def test_a_tick_for_nextasks_of_an_account_that_is_out_waits_until_it_is_back(client: TestClient, operator: Account,
+                                                                              monkeypatch) -> None:
+    """E38: what the account checked off waits while it is out, and goes once it is back."""
+    from app.models import TaskTick
+    from app.services import nextasks
+
+    anna = make_account("anna")
+    sent: list[int] = []
+    monkeypatch.setattr(nextasks, "send", lambda _db, row: sent.append(row.id))
+    with SessionLocal() as db:
+        tick = TaskTick(account_id=anna.id, task_id="t1", ref="r1", next_at=datetime.now(UTC) - timedelta(minutes=1))
+        db.add(tick)
+        db.commit()
+        tick_id = tick.id
+    confirm = {"current_password": PASSWORD}
+    assert client.post(f"/api/accounts/{anna.id}/block", json=confirm).status_code == 204
+    with SessionLocal() as db:
+        assert nextasks.run_waiting(db) == 0 and sent == []
+    assert client.post(f"/api/accounts/{anna.id}/unblock", json=confirm).status_code == 204
+    with SessionLocal() as db:
+        assert nextasks.run_waiting(db) == 1 and sent == [tick_id]

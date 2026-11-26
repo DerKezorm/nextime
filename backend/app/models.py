@@ -794,7 +794,8 @@ class DeviceSetup(Base):
 class WebPushSubscription(Base):
     """One browser that allowed notifications (TIME-21 AC-5): its address at its push service and its two keys. It
     belongs to the session it was made in: signing out, a new password and the session's end take it along (EC-12);
-    a blocked or deleted account loses it at once (``notify.accounts_out``). TIME-7 reminders use the same rows."""
+    a blocked or deleted account keeps it for its return, and nothing reaches it while it is out (konten 1.1.0,
+    E38). TIME-7 reminders use the same rows."""
 
     __tablename__ = "webpush_subscriptions"
 

@@ -27,6 +27,7 @@ from typing import Any
 
 import pytest
 from konten_contract import Legacy, StandardAdapter, png
+from sqlalchemy import delete, select
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE / "bestand"))
@@ -177,6 +178,48 @@ class Adapter(StandardAdapter):
                 db.commit()
                 return ("known", row.id, sessions.add_mark("", mark))
         raise ValueError(kind)
+
+    def push_ready(self, account_id: Any) -> bool | None:
+        """konten 1.1.0 (E38): whether a push to the account goes out now, through nextime's own send round. The
+        account gets one browser signed up when it has none (in a session of its own; a return ends the old ones and
+        their sign-ups go with them, as in nextime), then one notification waits in the outbox and one round sends;
+        the push service is faked. True when it reached the browser."""
+        from datetime import UTC, datetime
+
+        from app.db import SessionLocal
+        from app.models import Account, NotifyOutbox, WebPushSubscription
+        from app.security import start_session
+        from app.services import notify, webpush
+
+        with SessionLocal() as db:
+            row = db.get(Account, account_id)
+            assert row is not None
+            target = db.scalar(select(WebPushSubscription).where(WebPushSubscription.account_id == row.id))
+            if target is None:
+                token = start_session(db, row, "127.0.0.1", "contract")
+                session_id = notify_session_id(db, token)
+                target = WebPushSubscription(account_id=row.id, session_id=session_id,
+                                             endpoint=f"https://push.example.com/contract-{row.id}-{session_id}",
+                                             p256dh="p" * 87, auth="a" * 22)
+                db.add(target)
+                db.flush()
+            outbox = NotifyOutbox(account_id=row.id, kind="change", target_id=target.id, calendar_id=None,
+                                  payload={"title": "nextime", "text": "probe", "url": "/"},
+                                  next_try_at=datetime.now(UTC) - timedelta(minutes=1))
+            db.add(outbox)
+            db.commit()
+            outbox_id = outbox.id
+        arrived: list[int] = []
+        real = webpush.deliver
+        webpush.deliver = lambda _db, sub, _body, **_kw: arrived.append(sub.id)  # type: ignore[assignment]
+        try:
+            notify.send_round()
+        finally:
+            webpush.deliver = real  # type: ignore[assignment]
+        with SessionLocal() as db:
+            db.execute(delete(NotifyOutbox).where(NotifyOutbox.id == outbox_id))
+            db.commit()
+        return bool(arrived)
 
     def session_alive(self, handle: Any) -> bool:
         if handle is None:
@@ -486,3 +529,13 @@ class Adapter(StandardAdapter):
         answer = browser.get("/api/server/sign-in/readiness")
         assert answer.status_code == 200, answer.text
         return dict(answer.json())
+
+
+def notify_session_id(db: Any, token: str) -> int:
+    """The row of a browser session started for ``push_ready`` (its token as nextime keeps it)."""
+    from app.models import AuthSession
+    from app.security import hash_token
+
+    found = db.scalar(select(AuthSession.id).where(AuthSession.token_hash == hash_token(token)))
+    assert found is not None
+    return int(found)
