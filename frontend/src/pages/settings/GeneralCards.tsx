@@ -105,10 +105,11 @@ export function LimitsCard({ server }: { server: Server }) {
   )
 }
 
-/** The switches of the features for every account (TIME-1 AC-5): sharing by link, connections into the own network,
- * Google (only once it is set up) and address suggestions. "MCP-Zugang" and "Programmschnittstelle (API) für
- * Mitglieder" are the card "Schnittstellen" of the module schluessel, right after this one. Whether nextime looks for
- * new versions is switched under "Über nextime". */
+/** The switches of the features for every account (TIME-1 AC-5): sharing by link, Google (only once it is set up) and
+ * address suggestions. "MCP-Zugang" and "Programmschnittstelle (API) für Mitglieder" are the card "Schnittstellen" of
+ * the module schluessel, right after this one. Whether nextime looks for new versions is switched under "Über
+ * nextime". "Verbindungen ins eigene Netz" has one place since verbinden 0.1.8, the card "Andere nex-Apps" of the
+ * module (the same setting, `connections_local_network`, which `PUT /api/settings` still takes, E55). */
 export function FeaturesCard({ server }: { server: Server }) {
   const { t } = useTranslation()
   const s = server.settings
@@ -117,13 +118,6 @@ export function FeaturesCard({ server }: { server: Server }) {
     <Card id="features" icon="SlidersHorizontal" title={t('server.features')} subtitle={t('server.featuresHint')}>
       <div className="flex flex-col gap-3" data-testid="switches">
         <CheckboxRow label={t('server.shareLinks')} hint={t('server.shareLinksHint')} checked={s.share_links} onChange={(share_links) => void server.save({ share_links })} testId="feature-share-links" />
-        <CheckboxRow
-          label={t('server.localNetwork')}
-          hint={t('server.localNetworkHint')}
-          checked={s.connections_local_network}
-          onChange={(connections_local_network) => void server.save({ connections_local_network })}
-          testId="feature-local-network"
-        />
         <CheckboxRow
           label={`${t('server.google')} ${s.google_configured ? t('server.googleSet') : t('server.googleNotSet')}`}
           hint={t('server.googleHint')}

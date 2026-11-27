@@ -24,6 +24,8 @@ class Adapter(StandardAdapter):
     partner = "nexmail"
     base = "https://nextime.example.com"
     older_link = False
+    #: verbinden 0.1.8 (B1, V43): the shown names ``Store.account_card`` gives (``make_account``: the name capitalized).
+    shown_names = {"owner": "Kim", "other": "Sam"}  # noqa: RUF012 (read only)
 
     def start(self, folder: Path, *, older: bool = False) -> None:
         from app.main import app
@@ -126,6 +128,23 @@ class Adapter(StandardAdapter):
 
     def areas_seen(self, purpose: str, answer: Any) -> set[str]:
         return {str(calendar["id"]) for calendar in answer["calendars"]}
+
+    def write_into(self, purpose: str, area: Any) -> tuple[str, str, Any]:
+        """verbinden 0.1.7 (V41): nexmail writes into the calendars given, an event (``events.write``) or an
+        invitation from a mail with the owner's answer (``invitations.answer``); into another calendar nextime says
+        404 as for a key."""
+        if purpose == "invitations.answer":
+            uid = f"{secrets.token_hex(6)}@example.com"
+            ical = ("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example Mail//EN\r\nMETHOD:REQUEST\r\n"
+                    f"BEGIN:VEVENT\r\nUID:{uid}\r\nSEQUENCE:0\r\nDTSTAMP:20261120T090000Z\r\n"
+                    "DTSTART;TZID=Europe/Berlin:20261201T090000\r\nDTEND;TZID=Europe/Berlin:20261201T100000\r\n"
+                    "SUMMARY:Planung\r\nORGANIZER;CN=Lead:mailto:lead@example.com\r\n"
+                    "ATTENDEE;CN=Kim;PARTSTAT=NEEDS-ACTION;RSVP=TRUE:mailto:kim@example.com\r\n"
+                    "END:VEVENT\r\nEND:VCALENDAR\r\n")
+            return "POST", "/api/v1/events/ical", {"ical": ical, "calendar_id": int(area), "answer": "accepted",
+                                                   "attendee": "kim@example.com"}
+        return "POST", "/api/v1/events", {"calendar_id": int(area), "title": "Aus nexmail", "start": "2026-12-01T09:00",
+                                          "end": "2026-12-01T10:00", "time_zone": "Europe/Berlin"}
 
     def everything(self) -> str:
         from app.config import get_settings

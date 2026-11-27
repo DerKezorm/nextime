@@ -62,6 +62,27 @@ Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege 
 Runde 3: V30 Feld „Teilnehmer“ in Terminen von iCloud- und Google-Kalendern (Spec TIME-18 AC-9, EC-13): nextime schreibt ORGANIZER und ATTENDEE in die Quelle, Vorschläge aus nexfolk über `GET /api/people` (`/api/v1/people`), freie Mailadresse; eigene Kalender ohne Feld (`attendees_not_here`). Ein 401 über eine Klick-Verbindung fragt einmal mit erneuertem Zugang neu (`access(force=True)`), erst dann „refused“ (nextasks, nexpaper, Abo nexfolk). MCP 14: wartende Rückfrage als Web Push (`notify.mcp_waiting`, Art `mcp` in `notify_outbox`). MCP 15: nextime hat
 keinen Verlauf, nichts gebaut. Fragen 10 bis 15 in `einst-fragen/nextime-module.md`.
 
+#### verbinden 0.1.8 (27.11.2026, aus `bauplaene-konten` `d2e8102`, vorher 0.1.6)
+
+Mit `tools/sync.py copy`, `check` grün; Vorlage `nexverbinden.test.tsx` neu genommen (Paar nextime/nextasks wie
+bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schreibt mit `events.write` und
+`invitations.answer` nur in die gegebenen Kalender, in einen anderen 404 wie für einen Schlüssel).
+
+- **Adressen nur vom Betreiber (V42, V46):** `ConnectionsArea operator={me.role === 'operator'}`; „Einrichten“ und
+  „Von Hand verbinden“ für eine neue Verbindung nur für den Betreiber, eine alte von Hand (nextasks, nexpaper) bleibt
+  dem Konto. `PUT /api/nextasks` und `PUT /api/nexpaper` nehmen weiter an (E55).
+- **Konto auf der Zustimmung (V43):** `Store.account_card`: Anzeigename, Benutzername, Profilbild unter
+  `/api/avatars/<id>?v=<avatar_at>` wie im Kontomenü, Farbe des Kreises aus `accounts.PERSON_HEX` (gleiche Liste wie
+  `frontend/src/lib/avatar.ts`, Test vergleicht beide). Adapter `shown_names` = Kim, Sam.
+- **Seiten mittig (V48):** `ConnectPages.tsx` ohne eigene Hülle, nur Anmeldewächter und Routen.
+- **Ein Ort fürs eigene Netz:** der Haken „Verbindungen ins eigene Netz“ steht nur noch in „Andere nex-Apps“; der
+  eigene Schalter unter „Funktionen für alle Konten“ ist weg, `PUT /api/settings` `connections_local_network` bleibt
+  (E55). Hinweise der Formulare von Hand zeigen auf Server › Allgemein › Andere nex-Apps (`#nex-apps`).
+- **Umweg `TODO verbinden 0.1.8`** in `features/connect/ConnectPages.tsx`: `ConsentPage` hat `navigate` in den
+  Abhängigkeiten seines Effekts, der Vorgabewert ist bei jedem Rendern neu, ohne eigenes `navigate` fragt die Seite
+  `GET /api/connect/consent` ohne Ende. nextime gibt eine feste Funktion; fällt weg, sobald das Modul seinen Vorgabewert
+  festhält.
+
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 
 Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus

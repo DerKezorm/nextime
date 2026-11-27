@@ -2,7 +2,8 @@
  * Settings › My account › Connections (plan "Einstellungen", Verbindungen; TIME-25, TIME-26, TIME-29), the cards in
  * their order: "Geräte" (the iPhone and iPad app), "Auf diesem Gerät installieren" (the web app), the other nex apps as
  * cards to fold (the shared module verbinden 0.1.2: one card per partner nextime has a use for, `in_use`; nextime's
- * choices open in the card, its form for a key typed in by hand under "Von Hand verbinden"), "API-Schlüssel" and
+ * choices open in the card, its form for a key typed in by hand under "Von Hand verbinden"; since 0.1.8 that form only
+ * for the operator or for a connection by hand there is, the operator sets the other apps up), "API-Schlüssel" and
  * "KI-Werkzeuge (MCP)" of the shared key module. The card of AI
  * tools carries the parts of the shared module mcp: "Rechte je Werkzeug" per key or program, "Wartende Rückfragen".
  */
@@ -56,6 +57,8 @@ export function ConnectionsArea() {
         areaWord={t('keys.dialog.calendars')}
         language={i18n.language}
         when={when}
+        // verbinden 0.1.8 (V42, V46): "Einrichten" and "Von Hand verbinden" for a new connection only for the operator.
+        operator={me?.role === 'operator'}
       />
       <ApiKeysCard request={keyRequest} things={t('settings.things')} thingsDative={t('settings.thingsDative')} words={words} docsHref="/api/v1/docs" operator={me?.role === 'operator'} when={when}>
         {/* What nextime's dialog said beside the choices (TIME-26 AC-1, EC-6): which calendars "all" means. */}

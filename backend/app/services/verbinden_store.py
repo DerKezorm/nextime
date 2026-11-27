@@ -1,4 +1,4 @@
-"""nextime's side of the shared module verbinden (``vendor/nexverbinden``, bauplaene/verbinden 0.1.1): its
+"""nextime's side of the shared module verbinden (``vendor/nexverbinden``, bauplaene/verbinden 0.1.1, now 0.1.8): its
 configuration and the ``Store`` over the tables ``vb_*``.
 
 nextime connects with six apps of the catalog: it reads tasks of nextasks (and ticks them), deadlines of nexpaper,
@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from typing import Any
+from urllib.parse import quote
 
 from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
@@ -34,7 +35,7 @@ from ..models import (
 )
 from ..security import account_out
 from ..vendor import nexverbinden
-from . import apikeys, calendars, settings_service, vault
+from . import accounts, apikeys, calendars, settings_service, vault
 
 CONFIG = nexverbinden.AppConfig(
     app_name="nextime",
@@ -210,6 +211,18 @@ class Store:
     def account_name(self, account_id: Any) -> str:
         row = self.db.get(Account, int(account_id))
         return row.name if row is not None else "?"
+
+    def account_card(self, account_id: Any) -> dict[str, Any] | None:
+        """Who is signed in on the consent page (verbinden 0.1.8, B1, V43): the shown name, the user name, the own
+        profile picture at the address nextime's pages use (``/api/avatars/<id>?v=<when it was set>``) and the color
+        of the circle with the initial, as in the account menu."""
+        row = self.db.get(Account, int(account_id))
+        if row is None:
+            return None
+        picture = (f"/api/avatars/{row.id}?v={quote(row.avatar_at.isoformat(), safe='')}"
+                   if row.avatar_at is not None else None)
+        return {"name": row.display_name or "", "username": row.name, "picture": picture,
+                "color": accounts.person_hex(row)}
 
     def areas(self, account_id: Any) -> list[dict[str, Any]]:
         """The calendars the account sees, its own first (the same list as for API keys)."""

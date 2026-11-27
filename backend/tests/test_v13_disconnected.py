@@ -85,7 +85,8 @@ def test_v13_ending_nexfolk_drops_the_birthday_calendar_at_once(client: TestClie
 
 def test_v12_the_box_in_the_card_and_nextime_s_own_switch_show_one_value(client: TestClient, operator: Account) -> None:
     """verbinden 0.1.4 (V-12): "Verbindungen ins eigene Netz" in the card "Andere nex-Apps" is the setting of nextime's
-    switch under Server (``connections_local_network``); set on one side, the other shows it."""
+    switch under Server (``connections_local_network``); set on one side, the other shows it. Since 0.1.8 the card is
+    the one place on the page; the old route ``PUT /api/settings`` keeps the name (E55)."""
     assert client.get("/api/connect/admin").json()["local"] is False
     assert client.put("/api/connect/admin", json={"local": True}).status_code == 200
     assert client.get("/api/settings").json()["connections_local_network"] is True

@@ -174,12 +174,16 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(box.querySelector('[data-card="features"] h2')!.textContent).toBe('Funktionen für alle Konten')
     const label = (item: HTMLInputElement) => box.querySelector(`label[for="${item.id}"]`)!.textContent
     const switches = [...box.querySelectorAll<HTMLInputElement>('[data-testid="switches"] input[type="checkbox"]')]
-    // "Verbindungen ins eigene Netz" for nextasks (TIME-25), off from the start, as nexnotes.
-    expect(switches.map(label)).toEqual(['Teilen per Link', 'Verbindungen ins eigene Netz', 'Google-Anbindung (nicht eingerichtet)', 'Adressvorschläge'])
-    expect(switches.map((item) => item.checked)).toEqual([true, false, false, true])
-    expect(switches[2].disabled).toBe(true)
-    await click(switches[3])
+    // "Verbindungen ins eigene Netz" (TIME-25) has one place since verbinden 0.1.8: the card "Andere nex-Apps" of the
+    // module, not among these switches any more.
+    expect(switches.map(label)).toEqual(['Teilen per Link', 'Google-Anbindung (nicht eingerichtet)', 'Adressvorschläge'])
+    expect(switches.map((item) => item.checked)).toEqual([true, false, true])
+    expect(switches[1].disabled).toBe(true)
+    await click(switches[2])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/settings')?.body).toEqual({ address_suggestions: false })
+    const ownNetwork = [...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].filter((item) => label(item)?.startsWith('Verbindungen ins eigene Netz'))
+    expect(ownNetwork).toHaveLength(1)
+    expect(ownNetwork[0].closest('[data-card="nex-apps"]')).not.toBeNull()
     // "MCP-Zugang" and the API for members: the card "Schnittstellen" of the key module, right after.
     const interfaces = [...box.querySelectorAll<HTMLInputElement>('[data-card="interfaces"] input[type="checkbox"]')]
     // Under "MCP-Zugang" the operator's settings of the shared module mcp, first whether programs may connect.

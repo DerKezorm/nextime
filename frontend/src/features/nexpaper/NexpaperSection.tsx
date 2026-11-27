@@ -182,7 +182,7 @@ function ConnectForm({ url: before, localAllowed, changing, disabled, onCancel, 
       )}
       {problem && <Notice tone="danger">{problem}</Notice>}
       {ownNetwork && (
-        <Link to="/settings/general#switches" className="block text-sm text-accent-400 hover:underline" data-testid="nexpaper-local-switch">
+        <Link to="/settings/general#nex-apps" className="block text-sm text-accent-400 hover:underline" data-testid="nexpaper-local-switch">
           {t('nexpaper.section.toSwitch')}
         </Link>
       )}

@@ -356,8 +356,19 @@ def use_reset(db: Session, token: str, new: str) -> Account:
 # --- Roles, blocking, deleting ---------------------------------------------------------------------------------------
 
 
-#: How many colors the circles of initials have (the calendar colors of the design system).
-PERSON_COLORS = 11
+#: The colors of the circles of initials, as the browser draws them (``frontend/src/lib/avatar.ts``, the calendar
+#: colors of the design system, darker tone); the account keeps an index into them.
+PERSON_HEX = ("#4a6491", "#c62f47", "#c2410c", "#a16207", "#2f7d4f", "#0e7f74", "#2563a8", "#6d4bc2", "#be3d78",
+              "#8a5a3b", "#61616f")
+#: How many colors the circles of initials have.
+PERSON_COLORS = len(PERSON_HEX)
+
+
+def person_hex(account: Account) -> str:
+    """The CSS color of the account's circle as nextime's own pages draw it: its index, or its number while it has
+    none yet (``personColor(color ?? accountId)``); nothing is given here, the database stays as it is."""
+    index = account.color if account.color is not None else account.id
+    return PERSON_HEX[index % PERSON_COLORS]
 
 
 def person_color(db: Session, account: Account) -> int:

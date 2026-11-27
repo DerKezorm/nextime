@@ -12,8 +12,8 @@ import { setViewDay } from './features/views/state'
 import i18n from './i18n'
 import { forgetPrefs, setPref } from './lib/devicePref'
 import { AuthProvider } from './state/auth'
-import { box, byText, calls, click, render, settle, start, stop, type } from './testing'
-import { NOW, theWeek, views } from './viewFakes'
+import { box, byText, calls, click, PARTNER_VIEWS, render, settle, start, stop, type } from './testing'
+import { NOW, robin, theWeek, views } from './viewFakes'
 
 const CONNECTED: NextasksStatus = { connected: true, local_allowed: false, url: 'https://tasks.example.com', host: 'tasks.example.com', name: 'Robin', level: 'write', hidden: false, problem: null }
 
@@ -26,6 +26,8 @@ type Setup = {
   open?: { gone: boolean; link: string }
   connect?: () => { status: number; body: unknown } | undefined
   tree?: AreaChoice[]
+  /** The signed-in account's role; robin is a member. */
+  role?: 'member' | 'operator'
   collections?: { id: number; name: string; calendar_ids: number[]; with_tasks?: boolean; updated_at: string }[]
 }
 
@@ -37,6 +39,15 @@ function server(setup: Setup = {}) {
     rows: theWeek(),
     collections: setup.collections,
     more: (method, path, body) => {
+      if (path === '/api/auth/me' && setup.role) return { status: 200, body: { ...robin, role: setup.role } }
+      if (path === '/api/connect/partners') {
+        // As the server shows the cards since verbinden 0.1.8: nextasks connected by hand is a connection by API key
+        // (its form stays the account's); without one nextasks is not set up here (no address of the operator).
+        const tasks = status.connected
+          ? { state: 'legacy', address: status.url ?? '', host: status.host ?? '', set_up: true, legacy: { shown: 'ntk_AbCd', expires_at: null } }
+          : { set_up: false }
+        return { status: 200, body: PARTNER_VIEWS.map((view) => (view.partner === 'nextasks' ? { ...view, ...tasks } : view)) }
+      }
       if (path === '/api/nextasks' && method === 'GET') return { status: 200, body: status }
       if (path === '/api/nextasks' && method === 'PUT') {
         const refused = setup.connect?.()
@@ -130,6 +141,18 @@ describe('TIME-25 the connection', () => {
     expect(one('tasks-block')).toBeNull()
     expect(one('calendar-group-nextasks')).toBeNull()
     expect(calls.some((call) => call.path.startsWith('/api/tasks'))).toBe(false)
+    // verbinden 0.1.8 (V42, V46): a member connects nothing new by hand; the card says the operator sets nextasks up.
+    await open('/settings/connections')
+    const card = document.querySelector<HTMLElement>('[data-card="nextasks"]')!
+    if (card.dataset.open === 'false') await click(card.querySelector<HTMLElement>('[data-part="collapsible-head"]'))
+    expect(one('nextasks-form')).toBeNull()
+    expect(one('connection-manual')).toBeNull()
+    expect(one('connection-not-set-up')!.textContent).toContain('Server › Allgemein › Andere nex-Apps')
+    stop()
+    start()
+    forgetNextasks()
+    // The operator has the form by hand.
+    server({ status: { connected: false, local_allowed: false }, role: 'operator' })
     await open('/settings/connections')
     await unfold('nextasks')
     expect(one('nextasks-how')!.textContent).toContain('in nextasks unter Mein Konto › Verbindungen › API-Schlüssel einen Schlüssel mit „Lesen und schreiben“')
@@ -137,7 +160,7 @@ describe('TIME-25 the connection', () => {
   })
 
   it('TIME-25 AC-1 EC-6 connecting sends the address without blanks; then "verbunden" with the address and what it shows', async () => {
-    server({ status: { connected: false, local_allowed: true } })
+    server({ status: { connected: false, local_allowed: true }, role: 'operator' })
     await open('/settings/connections')
     await unfold('nextasks')
     const form = one('nextasks-form')!
@@ -156,7 +179,7 @@ describe('TIME-25 the connection', () => {
       { status: 422, body: { detail: { code: 'nextasks_address_local', message: 'x' } } },
       { status: 502, body: { detail: { code: 'nextasks_unreachable', message: 'x' } } },
     ]
-    server({ status: { connected: false, local_allowed: false }, connect: () => answers.shift() })
+    server({ status: { connected: false, local_allowed: false }, connect: () => answers.shift(), role: 'operator' })
     await open('/settings/connections')
     await unfold('nextasks')
     const [url, key] = [...one('nextasks-form')!.querySelectorAll<HTMLInputElement>('input')]
@@ -164,8 +187,9 @@ describe('TIME-25 the connection', () => {
     type(key, 'ntk_beispiel')
     await click(one('nextasks-connect'))
     await settle()
-    expect(one('nextasks-form')!.textContent).toContain('nextasks liegt im eigenen Netz. Erlaube das unter Server › Allgemein › Funktionen für alle Konten › „Verbindungen ins eigene Netz“.')
-    expect(one('nextasks-local-switch')!.getAttribute('href')).toBe('/settings/general#switches')
+    // verbinden 0.1.8: one place for the own network, the module's card "Andere nex-Apps".
+    expect(one('nextasks-form')!.textContent).toContain('nextasks liegt im eigenen Netz. Erlaube das unter Server › Allgemein › Andere nex-Apps › „Verbindungen ins eigene Netz“.')
+    expect(one('nextasks-local-switch')!.getAttribute('href')).toBe('/settings/general#nex-apps')
     await click(one('nextasks-connect'))
     await settle()
     expect(one('nextasks-local-switch')).toBeNull()
