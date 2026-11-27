@@ -10,7 +10,6 @@ password (EC-11).
 from __future__ import annotations
 
 import hashlib
-import ipaddress
 import logging
 import socket
 import time
@@ -28,7 +27,7 @@ from sqlalchemy.orm import Session
 
 from ..errors import error
 from ..models import SOURCE_SUBSCRIPTION, STATE_EXPIRED, STATE_OK, Account, Calendar, Event, Source
-from . import calendars, ical, live, sync, vault
+from . import addresses, calendars, ical, live, outbound, sync, vault
 
 logger = logging.getLogger("nextime.subscriptions")
 
@@ -101,34 +100,35 @@ def _resolve(host: str) -> list[str]:
 resolve: Callable[[str], list[str]] = _resolve
 
 
-def _closed(address: str) -> bool:
-    """The machine itself and its link: loopback, link-local (cloud metadata at 169.254.169.254) and "any". The rest
-    of the home network stays open for subscriptions (TIME-17, Nextcloud at home)."""
-    try:
-        found = ipaddress.ip_address(address.split("%", 1)[0])
-    except ValueError:
-        return True
-    if isinstance(found, ipaddress.IPv6Address) and found.ipv4_mapped is not None:
-        found = found.ipv4_mapped
-    return found.is_loopback or found.is_link_local or found.is_unspecified
-
-
-def check_host(url: str) -> None:
-    """Refuses a link whose host is, or resolves to, a closed address; asked for every hop of a redirect."""
+def check_host(url: str, checked: addresses.Rule) -> None:
+    """Refuses a link whose host is, or resolves to, an address the rule turns down (``addresses``): the code
+    ``subscription_address_blocked``, or ``subscription_address_local`` for the own network while that is not allowed.
+    Asked for every hop of a redirect; the connection itself checks again what it connects to."""
     host = (urlsplit(url).hostname or "").strip("[]")
     if not host:
         raise FetchError("subscription_not_a_calendar")
-    try:
-        ipaddress.ip_address(host.split("%", 1)[0])
-        addresses = [host]
-    except ValueError:
-        addresses = resolve(host)
-    if not addresses or any(_closed(address) for address in addresses):
+    given = addresses.literal(host)
+    found = [given] if given is not None else resolve(host)
+    if not found:
         raise FetchError("subscription_address_blocked")
+    try:
+        addresses.check(found, checked)
+    except outbound.Refused as exc:
+        raise FetchError(_blocked(exc.reason)) from None
 
 
-def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", modified: str = "",
-          bearer: str = "") -> Fetched:
+def _blocked(reason: str) -> str:
+    return "subscription_address_local" if reason == "local" else "subscription_address_blocked"
+
+
+def _client(checked: addresses.Rule) -> httpx.Client:
+    """The tests' transport as it is; else httpx's own, whose sockets go only to checked addresses (DNS rebinding)."""
+    chosen = transport if transport is not None else addresses.transport(checked, lambda host: resolve(host))
+    return httpx.Client(transport=chosen, timeout=TIMEOUT, follow_redirects=False, trust_env=False)
+
+
+def fetch(url: str, *, checked: addresses.Rule, username: str = "", password: str = "", etag: str = "",
+          modified: str = "", bearer: str = "") -> Fetched:
     """The feed, within ``FETCH_SECONDS`` altogether, redirects followed by hand (each hop checked), at most
     ``MAX_REDIRECTS``. The login (or the access of a connection, ``bearer``) goes to the host of the link only."""
     headers = {"User-Agent": "nextime", "Accept": "text/calendar, */*"}
@@ -140,9 +140,9 @@ def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", m
     first_host = (urlsplit(url).hostname or "").lower()
     current = url
     try:
-        with httpx.Client(transport=transport, timeout=TIMEOUT, follow_redirects=False, trust_env=False) as client:
+        with _client(checked) as client:
             for _hop in range(MAX_REDIRECTS + 1):
-                check_host(current)
+                check_host(current, checked)
                 same = (urlsplit(current).hostname or "").lower() == first_host
                 auth = httpx.BasicAuth(username, password) if username and same else None
                 sent = {**headers, "Authorization": f"Bearer {bearer}"} if bearer and same else headers
@@ -175,7 +175,10 @@ def fetch(url: str, *, username: str = "", password: str = "", etag: str = "", m
             raise FetchError("subscription_unreachable")
     except FetchError:
         raise
-    except (httpx.HTTPError, OSError) as exc:
+    except outbound.Refused as exc:
+        # The name answered differently when the connection was made (DNS rebinding): refused there.
+        raise FetchError(_blocked(exc.reason)) from None
+    except (httpx.HTTPError, OSError, outbound.Unreachable) as exc:
         raise FetchError("subscription_unreachable") from exc
 
 
@@ -236,6 +239,7 @@ def _refuse(code: str) -> Exception:
         "subscription_too_large": "This calendar is too large.",
         "subscription_unreachable": "The link does not answer. Try again in a moment.",
         "subscription_address_blocked": "nextime does not fetch from this address.",
+        "subscription_address_local": "This address is in the local network. The operator has to allow that first.",
     }
     field_name = "password" if code == "subscription_login_refused" else "url"
     return error(code, texts.get(code, "There is no calendar at this link."), 422 if code != "subscription_unreachable"
@@ -257,7 +261,8 @@ def preview(db: Session, account: Account, raw: str, *, username: str = "", pass
     if google and not is_google(url):
         raise error("not_google_address", "This is not the secret address of a Google calendar.", 422, field="url")
     try:
-        feed = parse(fetch(url, username=username.strip(), password=password.strip()).text or "")
+        feed = parse(fetch(url, checked=addresses.for_account(db, account.id), username=username.strip(),
+                           password=password.strip()).text or "")
     except FetchError as exc:
         raise _refuse(exc.code) from None
     if google and not feed.objects and not feed.name:
@@ -295,7 +300,7 @@ def subscribe(db: Session, account: Account, raw: str, *, name: str, background:
         raise error("subscription_exists", "This link is subscribed already.", 409, source_id=existing.id)
     username, password = username.strip(), password.strip()
     try:
-        fetched = fetch(url, username=username, password=password)
+        fetched = fetch(url, checked=addresses.for_account(db, account.id), username=username, password=password)
         feed = parse(fetched.text or "")
     except FetchError as exc:
         raise _refuse(exc.code) from None
@@ -342,8 +347,8 @@ def change_link(db: Session, account: Account, source_id: int, raw: str) -> Sour
         raise error("not_google_address", "This is not the secret address of a Google calendar.", 422, field="url")
     secret = sync.access_of(row) or {}
     try:
-        parse(fetch(url, username=str(secret.get("username", "")), password=str(secret.get("password", ""))).text
-              or "")
+        parse(fetch(url, checked=addresses.for_account(db, account.id), username=str(secret.get("username", "")),
+                    password=str(secret.get("password", ""))).text or "")
     except FetchError as exc:
         raise _refuse(exc.code) from None
     row.secret_enc = vault.seal({**secret, "url": url}, sync.place(row))
@@ -378,7 +383,8 @@ def round_(db: Session, source: Source, *, force: bool = False) -> None:
             if fetched is None:
                 return
         else:
-            fetched = fetch(str(secret.get("url", "")), username=str(secret.get("username", "")),
+            fetched = fetch(str(secret.get("url", "")), checked=addresses.for_account(db, source.account_id),
+                            username=str(secret.get("username", "")),
                             password=str(secret.get("password", "")),
                             etag="" if force else str(options.get("etag", "")),
                             modified="" if force else str(options.get("modified", "")))
@@ -435,7 +441,8 @@ def subscribe_by_connection(db: Session, account_id: int, partner: str) -> Sourc
         return None
     try:
         base, token = verbinden_store.access(db, account_id, partner)
-        fetched = fetch(clean_url(base) + BY_CONNECTION[partner], bearer=token)
+        fetched = fetch(clean_url(base) + BY_CONNECTION[partner], checked=addresses.for_account(db, account_id),
+                        bearer=token)
         feed = parse(fetched.text or "")
     except (verbinden_store.NotConnected, FetchError) as exc:
         logger.info("No calendar over the connection yet partner=%s reason=%s", partner,
@@ -475,15 +482,16 @@ def _fetch_by_connection(db: Session, source: Source, partner: str, *, etag: str
         raise FetchError("subscription_unreachable" if exc.code == "unreachable" else "subscription_login_refused") \
             from None
     url = clean_url(base) + BY_CONNECTION.get(partner, "")
+    checked = addresses.for_account(db, source.account_id)
     try:
-        found = fetch(url, bearer=token, etag=etag, modified=modified)
+        found = fetch(url, checked=checked, bearer=token, etag=etag, modified=modified)
     except FetchError as exc:
         if exc.code != "subscription_login_refused":
             verbinden_store.reached(db, source.account_id, partner, "unreachable")
             raise
         try:
             token = verbinden_store.renewed(source.account_id, partner)
-            found = fetch(url, bearer=token, etag=etag, modified=modified)
+            found = fetch(url, checked=checked, bearer=token, etag=etag, modified=modified)
         except (verbinden_store.NotConnected, FetchError):
             verbinden_store.reached(db, source.account_id, partner, "token_invalid")
             raise FetchError("subscription_login_refused") from None

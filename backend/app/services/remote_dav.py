@@ -8,7 +8,12 @@ since the last sync token (RFC 6578), and where a server has none, the ETags com
 
 Every failure comes out as a ``RemoteError`` of one kind, which the sync turns into the states the member sees:
 access expired (``auth``), not answering (``down``), refused for good (``refused``), changed there meanwhile
-(``conflict``), no calendar server at this address (``not_caldav``).
+(``conflict``), no calendar server at this address (``not_caldav``), an address nextime never asks (``blocked``) or one
+in the own network while that is not allowed (``local``).
+
+Every connection goes only to addresses checked (``addresses``): the library's HTTP session resolves through
+``_Checked``, so the address checked is the one connected to, for the first request, every later one and every
+redirect alike (DNS rebinding, a redirect to the server itself).
 """
 
 from __future__ import annotations
@@ -22,7 +27,11 @@ from urllib.parse import unquote, urljoin, urlsplit
 
 import caldav
 from caldav.lib import error as dav_error
+from caldav.lib.http_sync import requests as http
 from lxml import etree
+from niquests.packages.urllib3.contrib.resolver.system import SystemResolver
+
+from . import addresses
 
 logger = logging.getLogger("nextime.remote")
 
@@ -32,6 +41,8 @@ REFUSED = "refused"
 CONFLICT = "conflict"
 NOT_CALDAV = "not_caldav"
 GONE = "gone"
+BLOCKED = "blocked"
+LOCAL = "local"
 
 #: Seconds a source has to answer; a slow one leaves the views alone, they read the copy (TIME-15 EC-17).
 TIMEOUT = 20
@@ -144,10 +155,37 @@ def same_path(a: str, b: str) -> bool:
     return unquote(urlsplit(a).path).rstrip("/") == unquote(urlsplit(b).path).rstrip("/")
 
 
-class Remote:
-    """One connection to a CalDAV account. ``bearer`` for Google, else user and password."""
+class _Checked(SystemResolver):
+    """The system's lookup, and every address it gives past the rule before a socket is made to it; a refused one
+    ends the request (``outbound.Refused``, translated to ``blocked`` or ``local``)."""
 
-    def __init__(self, url: str, *, username: str = "", password: str = "", bearer: str = "",
+    def __init__(self, checked: addresses.Rule) -> None:
+        super().__init__()
+        self._rule = checked
+
+    def recycle(self) -> SystemResolver:
+        return self
+
+    def getaddrinfo(self, host, port, family, type, proto=0, flags=0, *, quic_upgrade_via_dns_rr=False):  # type: ignore[no-untyped-def]
+        found = super().getaddrinfo(host, port, family, type, proto, flags,
+                                    quic_upgrade_via_dns_rr=quic_upgrade_via_dns_rr)
+        addresses.check((str(info[4][0]) for info in found), self._rule)
+        return found
+
+
+def _session(checked: addresses.Rule) -> object:
+    """The library's HTTP session, resolving only through ``_Checked``, reading no proxy or ``.netrc`` from the
+    environment."""
+    session = http.Session(resolver=_Checked(checked))
+    session.trust_env = False
+    return session
+
+
+class Remote:
+    """One connection to a CalDAV account. ``bearer`` for Google, else user and password. ``checked``: the rule for the
+    addresses of the server (``addresses``)."""
+
+    def __init__(self, url: str, *, checked: addresses.Rule, username: str = "", password: str = "", bearer: str = "",
                  timeout: int = TIMEOUT) -> None:
         self.url = url
         self.timeout = timeout
@@ -160,6 +198,9 @@ class Remote:
             else:
                 self.client = caldav.DAVClient(url=url, username=username or None, password=password or None,
                                                timeout=timeout, headers={"User-Agent": USER_AGENT})
+            given = self.client.session
+            self.client.session = _session(checked)
+            given.close()
         except dav_error.DAVError as exc:
             raise RemoteError(NOT_CALDAV) from exc
         except Exception as exc:
@@ -196,6 +237,9 @@ class Remote:
     def _translate(exc: BaseException) -> RemoteError:
         if isinstance(exc, RemoteError):
             return exc
+        refused = addresses.refusal(exc)
+        if refused is not None:
+            return RemoteError(LOCAL if refused == "local" else BLOCKED)
         if isinstance(exc, dav_error.AuthorizationError):
             status = getattr(exc, "status", None) or 401
             body = getattr(exc, "body", None) or b""

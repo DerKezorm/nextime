@@ -15,6 +15,7 @@ import { googleSetupApi, type GoogleSetup } from '../../features/sources/api'
 import { copyText } from '../../lib/copy'
 import { errorText, problemText } from '../../lib/errors'
 import { useServerSettings } from './ServerCards'
+import { SettingsLoadProblem } from './SettingsLoadProblem'
 import { Button, Buttons, Card, CheckboxRow, ConfirmDialog, Field, Notice } from '../../vendor/nexui'
 
 const STEPS = ['project', 'api', 'consent', 'client', 'values'] as const
@@ -25,6 +26,7 @@ export function GoogleArea() {
   const s = server.settings
   return (
     <div className="space-y-6" data-testid="google-area">
+      {!s && <SettingsLoadProblem server={server} />}
       {s && (
         <Card id="google" icon={Cloud} title={t('server.google')} subtitle={t('server.googleHint')}>
           <CheckboxRow

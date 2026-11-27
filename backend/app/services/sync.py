@@ -51,7 +51,7 @@ from ..models import (
     Source,
     utcnow,
 )
-from . import ical, internet, live, vault
+from . import addresses, ical, internet, live, vault
 from .remote_dav import AUTH, CONFLICT, DOWN, GONE, Remote, RemoteError
 
 logger = logging.getLogger("nextime.sync")
@@ -280,7 +280,8 @@ def _round(db: Session, source: Source, *, force: bool, only_push: bool) -> None
         return
     try:
         remote = google.remote_for(db, source, secret) if source.kind == SOURCE_GOOGLE else Remote(
-            source.server, username=source.username, password=str(secret.get("password", "")))
+            source.server, checked=addresses.for_account(db, source.account_id), username=source.username,
+            password=str(secret.get("password", "")))
     except RemoteError as exc:
         _handle(db, source, exc)
         return

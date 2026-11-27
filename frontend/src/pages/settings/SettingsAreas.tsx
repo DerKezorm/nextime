@@ -31,6 +31,7 @@ import { LanguagesArea } from './LanguagesArea'
 import { GoogleArea } from './GoogleArea'
 import { LogCard } from './LogCard'
 import { useServerSettings } from './ServerCards'
+import { SettingsLoadProblem } from './SettingsLoadProblem'
 import { SignInArea } from './SignInArea'
 import { StorageArea } from './StorageArea'
 
@@ -88,7 +89,7 @@ function MailArea() {
  * stand under Server › Connections (E67). */
 function GeneralArea() {
   const server = useServerSettings()
-  if (!server.settings) return null
+  if (!server.settings) return <SettingsLoadProblem server={server} />
   return (
     <div className="flex flex-col gap-6" data-testid="server-general">
       <LimitsCard server={server} />

@@ -38,7 +38,7 @@ from ..models import (
 )
 from ..security import account_out
 from ..vendor import nexverbinden
-from . import accounts, apikeys, calendars, settings_service, vault
+from . import accounts, apikeys, calendars, settings_service, totp, vault
 
 CONFIG = nexverbinden.AppConfig(
     app_name="nextime",
@@ -209,8 +209,10 @@ class Store:
     # --- the account and the app -------------------------------------------------------------------------------------
 
     def account_may(self, account_id: Any) -> bool:
+        """Not blocked or deleted, and no second factor owed: while the operator requires one that the account has not
+        set up, its connections rest as its API keys, MCP accesses and app devices do (``totp.setup_required``)."""
         row = self.db.get(Account, int(account_id))
-        return row is not None and not account_out(row)
+        return row is not None and not account_out(row) and not totp.setup_required(self.db, row)
 
     def account_name(self, account_id: Any) -> str:
         row = self.db.get(Account, int(account_id))

@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import ipaddress
 import json
 import threading
 import time
@@ -29,7 +30,7 @@ from sqlalchemy import select
 from app.db import SessionLocal
 from app.main import app
 from app.models import Account, Calendar, Event, Source
-from app.services import devices, google, internet, sources, subscriptions, sync
+from app.services import addresses, devices, google, internet, sources, subscriptions, sync
 
 from .calendar_helpers import make_calendar
 from .conftest import new_client
@@ -77,6 +78,11 @@ class Switchboard:
         if method in ("PUT", "DELETE"):
             SWITCHES.writes.append((method, path, {key.decode().lower(): value.decode()
                                                    for key, value in scope["headers"]}))
+        if path.startswith("/moved-to"):
+            # A redirect to wherever the test names (``?to=``): where a source sends nextime next.
+            target = parse_qs(scope.get("query_string", b"").decode()).get("to", [""])[0]
+            await _answer(send, 302, b"", "text/plain", [(b"location", target.encode())])
+            return
         if path.startswith("/not-dav"):
             await _answer(send, 200, b"<html><body>Welcome</body></html>", "text/html")
             return
@@ -153,7 +159,11 @@ def dav_server() -> Iterator[str]:
             break
         time.sleep(0.01)
     port = running.servers[0].sockets[0].getsockname()[1]
+    # The other side runs on this machine: let through for the tests that talk to it, never in the app.
+    before = addresses.TESTS_ALLOWED
+    addresses.TESTS_ALLOWED = (ipaddress.ip_network("127.0.0.1/32"),)
     yield f"http://127.0.0.1:{port}"
+    addresses.TESTS_ALLOWED = before
     running.should_exit = True
     thread.join(10)
 
@@ -167,7 +177,7 @@ def quiet_world(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     monkeypatch.setattr(subscriptions, "transport", None)
     monkeypatch.setattr(google, "transport", None)
     # No DNS from a test: every host of a subscription is somewhere on the net, unless a test says otherwise.
-    monkeypatch.setattr(subscriptions, "resolve", lambda host: ["203.0.113.10"])
+    monkeypatch.setattr(subscriptions, "resolve", lambda host: ["93.184.216.34"])
     yield
     SWITCHES.reset()
 

@@ -235,6 +235,23 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(await shown('bad', INTERNET_POINT.off, { variable: 'NEXTIME_INTERNET_PROBE_URL' })).toContain('NEXTIME_INTERNET_PROBE_URL ist leer')
   })
 
+  it('Server › Allgemein says why the settings did not come and asks again, instead of staying blank', async () => {
+    const base = server()
+    let broken = true
+    serve((method, path, body) =>
+      path === '/api/settings' && method === 'GET' && broken
+        ? { status: 500, body: { detail: { code: 'internal_error', message: 'boom' } } }
+        : base(method, path, body),
+    )
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
+    await vi.waitFor(() => expect(box.querySelector('[data-testid="server-settings-problem"]')).not.toBeNull())
+    expect(box.querySelector('[data-testid="server-general"]')).toBeNull()
+    broken = false
+    await click(box.querySelector<HTMLElement>('[data-testid="server-settings-retry"]')!)
+    await vi.waitFor(() => expect(box.querySelector('[data-testid="server-general"]')).not.toBeNull())
+    expect(box.querySelector('[data-testid="server-settings-problem"]')).toBeNull()
+  })
+
   it('TIME-3 AC-5 E51 Server › Allgemein ends with the card "Sprachen" of the module sprachen, over /api/locales', async () => {
     const base = server()
     const languages = [

@@ -33,8 +33,8 @@ from ..models import (
     RemoteNotice,
     Source,
 )
-from . import calendars, ical, live, shares, symbols, sync, trash, vault
-from .remote_dav import AUTH, DOWN, Remote, RemoteCalendar, RemoteError
+from . import addresses, calendars, ical, live, shares, symbols, sync, trash, vault
+from .remote_dav import AUTH, BLOCKED, DOWN, LOCAL, Remote, RemoteCalendar, RemoteError
 
 logger = logging.getLogger("nextime.sources")
 
@@ -84,11 +84,17 @@ def clean_server(raw: str) -> str:
 # --- iCloud and other CalDAV servers (AC-1, AC-2, AC-11, EC-4, EC-13, EC-14, EC-15) ---------------------------------
 
 
-def _check_dav(kind: str, server: str, username: str, password: str) -> Any:
+def _check_dav(db: Session, account: Account, kind: str, server: str, username: str, password: str) -> Any:
     try:
-        with Remote(server, username=username, password=password) as remote:
+        with Remote(server, checked=addresses.for_account(db, account.id), username=username,
+                    password=password) as remote:
             return remote.discover()
     except RemoteError as exc:
+        if exc.kind == BLOCKED:
+            raise error("source_address_blocked", "nextime never asks this address.", 422, field="server") from None
+        if exc.kind == LOCAL:
+            raise error("source_address_local", "This server is in the local network. The operator has to allow "
+                        "that first.", 422, field="server") from None
         if exc.kind == AUTH:
             if kind == SOURCE_ICLOUD and not APP_PASSWORD.match(password):
                 raise error("apple_password_not_app_specific", "Apple refuses. This looks like your normal Apple "
@@ -121,7 +127,7 @@ def connect_dav(db: Session, account: Account, kind: str, *, server: str, userna
     if existing is not None:
         # The same access twice is one connection: on to "Choose calendars" of the one there (EC-14).
         raise error("source_exists", "This account is connected already.", 409, source_id=existing.id)
-    found = _check_dav(kind, server, username, password)
+    found = _check_dav(db, account, kind, server, username, password)
     host = urlsplit(server).hostname or ""
     row = Source(account_id=account.id, kind=kind, identity=identity, server=server, username=username,
                  label=username if kind == SOURCE_ICLOUD else f"{username} · {host}", client_ref=client_ref,
@@ -152,7 +158,7 @@ def reconnect_dav(db: Session, account: Account, source_id: int, password: str) 
     password = (password or "").strip()
     if not password:
         raise error("password_missing", "Enter the password.", 422, field="password")
-    found = _check_dav(row.kind, row.server, row.username, password)
+    found = _check_dav(db, account, row.kind, row.server, row.username, password)
     row.secret_enc = vault.seal({"password": password}, sync.place(row))
     row.addresses, row.schedules = found.addresses, found.schedules
     options = dict(row.options or {})
@@ -224,7 +230,8 @@ def _refresh_listing(db: Session, row: Source) -> None:
     home = str((row.options or {}).get("home") or "")
     if not home:
         return
-    with Remote(row.server, username=row.username, password=str(secret.get("password", ""))) as remote:
+    with Remote(row.server, checked=addresses.for_account(db, row.account_id), username=row.username,
+                password=str(secret.get("password", ""))) as remote:
         apply_listing(db, row, remote.calendars(home))
 
 

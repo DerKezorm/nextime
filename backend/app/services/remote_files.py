@@ -5,8 +5,9 @@ fetches it for whoever may see the event and hands it on as a download:
 
 * only from the source's own host (iCloud: a host of ``icloud.com``), with the source's login, never a redirect to
   anywhere else;
-* never from the server itself or link-local addresses (as subscriptions, ``subscriptions.check_host``), and for iCloud
-  only from public addresses;
+* never from the server itself, link-local or metadata addresses, from the own network only as the source's account
+  may (``addresses``, as subscriptions), each checked where the connection is made; for iCloud only from public
+  addresses;
 * within ``FETCH_SECONDS`` and at most the operator's limit per attachment.
 
 Anything else (Google Drive links) the page opens in a new tab: the browser has the person's Google sign-in, nextime
@@ -24,7 +25,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from ..models import SOURCE_CALDAV, SOURCE_ICLOUD, Calendar, Source
-from . import subscriptions, webpush
+from . import addresses, outbound, subscriptions, webpush
 
 logger = logging.getLogger("nextime.attachments")
 
@@ -63,22 +64,26 @@ def fetch(db: Session, calendar: Calendar, url: str, max_bytes: int, into: Path)
     source = db.get(Source, calendar.source_id) if calendar.source_id is not None else None
     if source is None or not allowed(source, url):
         raise _unavailable("not_on_the_source")
+    # iCloud only from public addresses, the connection itself included.
+    checked = addresses.rule(False) if source.kind == SOURCE_ICLOUD else addresses.for_account(db, source.account_id)
     try:
-        subscriptions.check_host(url)
+        subscriptions.check_host(url, checked)
     except subscriptions.FetchError:
         raise _unavailable("address_blocked") from None
     if source.kind == SOURCE_ICLOUD:
         try:
-            addresses = subscriptions.resolve(urlsplit(url).hostname or "")
+            found = subscriptions.resolve(urlsplit(url).hostname or "")
         except subscriptions.FetchError:
             raise _unavailable("dns") from None
-        if not addresses or not all(webpush._public(address) for address in addresses):
+        if not found or not all(webpush._public(address) for address in found):
             raise _unavailable("not_public")
     secret = sync.access_of(source) or {}
     auth = httpx.BasicAuth(source.username, str(secret.get("password", ""))) if source.username else None
     deadline = time.monotonic() + FETCH_SECONDS
     try:
-        with (httpx.Client(transport=transport, timeout=TIMEOUT, follow_redirects=False, trust_env=False) as client,
+        chosen = transport if transport is not None else addresses.transport(
+            checked, lambda host: subscriptions.resolve(host))
+        with (httpx.Client(transport=chosen, timeout=TIMEOUT, follow_redirects=False, trust_env=False) as client,
               client.stream("GET", url, headers={"User-Agent": "nextime"}, auth=auth) as answer):
             if answer.status_code != 200:
                 raise _unavailable(f"http_{answer.status_code}")
@@ -92,7 +97,9 @@ def fetch(db: Session, calendar: Calendar, url: str, max_bytes: int, into: Path)
                         raise _unavailable("timeout")
                     sink.write(chunk)
             return size
-    except httpx.HTTPError as exc:
+    except outbound.Refused:
+        raise _unavailable("address_blocked") from None
+    except (httpx.HTTPError, outbound.Unreachable, subscriptions.FetchError) as exc:
         raise _unavailable(type(exc).__name__.lower()[:40]) from exc
     except OSError as exc:
         raise _unavailable("disk") from exc

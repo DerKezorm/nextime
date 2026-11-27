@@ -27,7 +27,7 @@ from sqlalchemy.orm import Session
 from ..errors import error
 from ..models import SOURCE_GOOGLE, STATE_EXPIRED, STATE_OK, Account, Calendar, Event, Source
 from ..security import decrypt_secret, encrypt_secret
-from . import ical, live, settings_service, sync, vault
+from . import addresses, ical, live, settings_service, sync, vault
 from .remote_dav import AUTH, DOWN, REFUSED, Remote, RemoteError
 
 logger = logging.getLogger("nextime.google")
@@ -328,7 +328,8 @@ def remote_for(db: Session, source: Source, secret: dict[str, Any]) -> Remote:
     """The CalDAV connection with the member's token; the calendar list comes from the API first."""
     token = access_token(db, source, secret)
     refresh_listing(db, source, secret)
-    return Remote(CALDAV_URL.format(id="primary"), bearer=token)
+    # Google's own address: public only, wherever the source's account may otherwise ask.
+    return Remote(CALDAV_URL.format(id="primary"), checked=addresses.rule(False), bearer=token)
 
 
 def calendar_url(calendar_id: str) -> str:

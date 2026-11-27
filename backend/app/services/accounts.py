@@ -484,18 +484,13 @@ def restore_account(db: Session, account: Account) -> None:
 
 
 def purge_deleted(db: Session) -> int:
-    """Accounts deleted more than ``DELETE_GRACE_DAYS`` days ago go for good, with everything they own."""
-    from . import content
+    """Accounts deleted more than ``DELETE_GRACE_DAYS`` days ago go for good, with everything they own, through the
+    shared module (``nexkonten.manage.purge_due``, ``KontenStore.purge_account``): their connections with other nex
+    apps end on both sides, their devices go, their user names stay reserved for ever. How many."""
+    from ..vendor.nexkonten import manage
+    from .konten_store import KontenStore
 
-    limit = utcnow() - timedelta(days=DELETE_GRACE_DAYS)
-    rows = list(db.scalars(select(Account).where(Account.deleted_at.is_not(None), Account.deleted_at <= limit)))
-    for row in rows:
-        content.account_purged(db, row.id)
-        db.delete(row)
-        logger.info("Deleted account removed for good name=%s", row.name)
-    if rows:
-        db.commit()
-    return len(rows)
+    return len(manage.purge_due(KontenStore(db)))
 
 
 # --- Invitations ---------------------------------------------------------------------------------------------------

@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from 'react'
 
 import { ApiError, settingsApi, type ServerSettings, type SettingsChange } from '../../api/client'
+import { problemText } from '../../lib/errors'
 import type { AddressQuestion } from '../../vendor/nexkonten/SignInPage'
 import { ASKED, useAction } from './actions'
 
@@ -13,10 +14,23 @@ export type Server = ReturnType<typeof useServerSettings>
 
 export function useServerSettings() {
   const [settings, setSettings] = useState<ServerSettings | null>(null)
+  /** Why the settings did not come (a 500, no network): the page says so and offers to ask again, never stays blank. */
+  const [loadProblem, setLoadProblem] = useState<string | null>(null)
   const action = useAction()
+  const reload = useCallback(
+    () =>
+      settingsApi.read().then(
+        (found) => {
+          setSettings(found)
+          setLoadProblem(null)
+        },
+        (error: unknown) => setLoadProblem(problemText(error)),
+      ),
+    [],
+  )
   useEffect(() => {
-    settingsApi.read().then(setSettings, () => undefined)
-  }, [])
+    void reload()
+  }, [reload])
   /** The switch moves at once; the server's answer confirms it, a refusal puts it back. */
   const save = async (change: SettingsChange, done?: string) => {
     const before = settings
@@ -42,7 +56,6 @@ export function useServerSettings() {
     }, done)
     return question
   }
-  const reload = useCallback(() => settingsApi.read().then(setSettings, () => undefined), [])
-  return { settings, save, saveAddress, reload, ...action }
+  return { settings, loadProblem, save, saveAddress, reload, ...action }
 }
 
