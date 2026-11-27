@@ -68,7 +68,8 @@ export function AppShell() {
   return (
     <PanelProvider>
       <CollectionsProvider>
-      <div className="flex h-dvh overflow-hidden">
+      {/* `relative` (B7): hidden texts (`sr-only`, absolute) are placed and clipped in this frame instead of making the page taller than the window. */}
+      <div className="relative flex h-dvh overflow-hidden">
         <div className="hidden shrink-0 lg:flex" data-testid="sidebar-wide">
           <Sidebar resizable />
         </div>
