@@ -734,10 +734,14 @@ def remaining_access_seen(account: Account, db: DbSession) -> dict[str, Any]:
 
 @router.post("/me/whats-new/seen", summary="What's new of the running version is read or put away")
 def whats_new_seen(account: Account, db: DbSession) -> dict[str, Any]:
+    """The route of before (W10): the shared module wasneu marks the running version as read."""
+    from ..services import whatsnew
+    from ..vendor import nexwasneu
+
+    nexwasneu.mark_seen(whatsnew.viewer_of(account))
     row = db.get(AccountRow, account.id)
     assert row is not None
-    row.whats_new_seen = __version__
-    db.commit()
+    db.refresh(row)
     return account_view(row)
 
 

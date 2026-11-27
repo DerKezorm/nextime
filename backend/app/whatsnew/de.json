@@ -5,7 +5,7 @@
       {
         "title": "Apps verbinden mit einem Klick",
         "where": "Einstellungen › Mein Konto › Verbindungen",
-        "body": "Bisher hast du in der anderen App einen API-Schlüssel angelegt und hier eingetragen. Jetzt hat jede App ihre eigene Karte: Klick auf „Mit … verbinden“, melde dich in der anderen App an und stimm einmal zu, fertig. Die Zustimmungsseite zeigt, mit welchem Konto du angemeldet bist und was jede Seite darf, in Worten wie „Aufgaben abhaken“. Darf eine App deine Kalender lesen, wählst du, welche. Eine Zustimmung gilt für beide Richtungen, und jede App darf nur, was sie wirklich braucht. Die Karte zeigt, seit wann ihr verbunden seid, wann die Verbindung zuletzt benutzt wurde und was erlaubt ist; „Jetzt prüfen“ und „Trennen“ (für beide Seiten) stehen gleich dabei. Klappt etwas nicht, landest du wieder in deiner Karte und liest dort, woran es liegt. Verbindungen mit Schlüssel laufen weiter wie bisher und lassen sich auf die neue Art erneuern."
+        "body": "Bisher hast du in der anderen App einen API-Schlüssel angelegt und hier eingetragen. Jetzt hat jede App ihre eigene Karte: Klick auf „Mit … verbinden“, melde dich in der anderen App an und stimm einmal zu, fertig. Die Zustimmungsseite zeigt, mit welchem Konto du angemeldet bist und was jede Seite darf, in Worten wie „Aufgaben abhaken“. Darf eine App deine Kalender lesen, wählst du, welche. Eine Zustimmung gilt für beide Richtungen, und jede App darf nur, was sie wirklich braucht. Die Karte zeigt, seit wann ihr verbunden seid, wann die Verbindung zuletzt benutzt wurde und was erlaubt ist, dazu „Erneuern“ und „Trennen“ (für beide Seiten); darf nur die andere App etwas bei nextime, wie nexmail und nexdiary, heißt der Knopf „Zugriff beenden“. Ist die andere App gerade nicht erreichbar, steht dort „Jetzt prüfen“. Klappt etwas nicht, landest du wieder in deiner Karte und liest dort, woran es liegt. Verbindungen mit Schlüssel laufen weiter wie bisher und lassen sich auf die neue Art erneuern."
       },
       {
         "title": "nextasks und nexpaper im Kalender",
@@ -35,7 +35,7 @@
       {
         "title": "Einstellungen wie in allen nex-Apps",
         "where": "Einstellungen",
-        "body": "Gleiche Bereiche, Karten und Knöpfe wie in den anderen nex-Apps. In der Darstellung wählst du Hell, Dunkel oder Wie das System, jetzt für dein Konto auf allen Geräten. „Erinnerungen“ heißt jetzt „Benachrichtigungen“ und beginnt mit den Wegen: Mitteilungen für diesen Browser, eine Probemeldung, iPhone und iPad. Die Verbindungen bringen Geräte, Installieren, die anderen Apps, API-Schlüssel und KI-Werkzeuge an einen Ort; Schlüssel lassen sich jetzt bearbeiten. Für den Betreiber stehen „Andere nex-Apps“ und „Schnittstellen“ unter Server › Verbindungen."
+        "body": "Gleiche Bereiche, Karten und Knöpfe wie in den anderen nex-Apps. In der Darstellung wählst du Hell, Dunkel oder Wie das System, jetzt für dein Konto auf allen Geräten. „Erinnerungen“ heißt jetzt „Benachrichtigungen“ und beginnt mit den Wegen: Mitteilungen für diesen Browser, eine Probemeldung, iPhone und iPad. Die Verbindungen bringen Geräte, Installieren, die anderen Apps, API-Schlüssel und KI-Werkzeuge an einen Ort; Schlüssel lassen sich jetzt bearbeiten."
       },
       {
         "title": "Sicherung jede Woche oder jeden Monat",
@@ -43,16 +43,21 @@
         "body": "Neben „Jede Nacht“ gibt es „Jede Woche“ und „Jeden Monat“. „Jetzt sichern“ nimmt eine Notiz mit, die in der Liste bei der Sicherung steht. Die Karte „Speicher“ zeigt, wie viel nextime belegt und was noch frei ist."
       },
       {
-        "title": "Bereit für die iPhone- und iPad-App",
+        "title": "Server › Verbindungen",
+        "where": "Einstellungen › Server › Verbindungen",
+        "body": "Was der Server mit anderen Programmen teilt, steht jetzt auf einer eigenen Seite. Unter „Andere nex-Apps“ trägst du die Adressen der anderen nex-Apps einmal ein und erlaubst bei Bedarf Verbindungen ins eigene Netz; danach verbindet jedes Konto mit einem Klick. Unter „Schnittstellen“ legst du fest, ob Mitglieder die Programmierschnittstelle nutzen, ob sich KI-Programme selbst verbinden dürfen, die höchste Stufe und gesperrte Werkzeuge; auf einer neuen Installation ist MCP zuerst aus, wo es an war, bleibt es an. Neu sind dort „iPhone-App erlauben“ und „Neue Geräte verbinden“, beide ab Werk an.",
+        "operator": true
+      },
+      {
+        "title": "Geräte: bereit für die iPhone- und iPad-App",
         "where": "Einstellungen › Mein Konto › Verbindungen",
-        "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt; ohne Kamera meldest du dich in der App an wie im Browser. Die Karte „Geräte“ zeigt jedes verbundene Gerät, „Trennen“ sperrt es sofort aus. Die App hält alle Termine auf dem Gerät, auch ohne Netz, und bringt Eingetragenes danach genau einmal zum Server; nach einem Konflikt siehst du beide Fassungen. Die App selbst kommt gesondert."
+        "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt, und daneben einen Code zum Abtippen; ohne Kamera meldest du dich in der App an wie im Browser. Die Karte „Geräte“ zeigt jedes verbundene Gerät mit Modell, App-Version und wann es zuletzt da war. Du kannst es umbenennen, „Trennen“ sperrt es sofort aus, „Alle Geräte trennen“ alle auf einmal. Unter Mein Konto › Benachrichtigungen wählst du je Gerät, welche Mitteilungen es bekommt: Änderungen in geteilten Kalendern, ein neu verbundenes Gerät und, für den Betreiber, eine neue Version von nextime. Kommt ein Gerät dazu, schickt nextime eine Mail wie bei einer neuen Anmeldung. Die App hält alle Termine auf dem Gerät, auch ohne Netz, und bringt Eingetragenes danach genau einmal zum Server; nach einem Konflikt siehst du beide Fassungen. Die App selbst ist noch nicht erschienen und kommt gesondert; der Code zum Abtippen und die Auswahl der Mitteilungen wirken erst mit ihr."
       }
     ],
     "smallTitle": "Außerdem",
     "small": [
       "In Terminen von iCloud- und Google-Kalendern lädst du jetzt Teilnehmer mit ihrer Mailadresse ein. Die Einladung verschickt iCloud oder Google wie gewohnt, Antworten der Eingeladenen bleiben erhalten. nextimes eigene Kalender laden niemanden ein.",
-      "Der Betreiber trägt die Adressen der anderen nex-Apps einmal unter Server › Verbindungen › Andere nex-Apps ein und erlaubt dort bei Bedarf Verbindungen ins eigene Netz; danach verbindet jedes Konto mit einem Klick.",
-      "Unter Server › Verbindungen › Schnittstellen legt der Betreiber fest, ob sich KI-Programme selbst verbinden dürfen, die höchste Stufe und gesperrte Werkzeuge. Auf einer neuen Installation ist MCP zuerst aus; wo es an war, bleibt es an.",
+      "Sperrt der Betreiber ein Konto oder löscht es mit 30 Tagen zum Zurückholen, ruhen dessen Geräte und arbeiten danach wieder, ohne neu verbunden zu werden. Unter Server › Konten › Verwalten sieht er Zahl, Art und letzten Kontakt der Geräte eines Kontos und kann sie trennen.",
       "„Bereit fürs Internet?“ unter Server › Anmeldung prüft https, zweiten Faktor, Schutz vor Raten, Cookies, Proxy und ob der Server das Internet erreicht, und sagt, was zu tun ist.",
       "Ob es eine neue Version gibt, sieht nur noch der Betreiber; eine neue Installation fragt einmal, ob nextime nachsehen soll.",
       "Unter Server › Konten sieht der Betreiber alle API-Schlüssel und kann einzelne sperren; abgelaufene Einladungen bleiben dort sichtbar, bis er sie zurückzieht.",

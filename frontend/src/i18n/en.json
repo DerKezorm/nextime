@@ -2172,14 +2172,6 @@
       "toSwitch": "Go to “Connections into the local network”"
     }
   },
-  "whatsNew": {
-    "title": "New in nextime {{version}}",
-    "banner": "nextime {{version}} is here.",
-    "show": "What's new?",
-    "putAway": "Dismiss",
-    "where": "Where:",
-    "done": "Got it"
-  },
   "emailLink": {
     "title": "Confirm the new address",
     "submit": "Confirm"

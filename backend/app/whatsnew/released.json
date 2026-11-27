@@ -1,0 +1,14 @@
+{
+  "0.1.0": {
+    "de": "sha256-+j+tCDsJ/ezB525p1kiEXxUVphr2/JKiLFPkWyd5Kkc=",
+    "en": "sha256-+mLCX5RbadyHaFEcCiGn0n80rPby9BujTCbyySSbARk="
+  },
+  "0.2.0": {
+    "de": "sha256-7GJRn/M/x+X1LzXzHN5w7T0TfoeDXrREZT8r5IvpOZo=",
+    "en": "sha256-e9LBTb2RZ4esvEXHxlK62hs8rSqjsNaZf5KFqK2z6BQ="
+  },
+  "0.3.0": {
+    "de": "sha256-zEnkBDw9Lk8e1YwuWcx0yEE13niA/nuUo3poZugr6jI=",
+    "en": "sha256-XJUdBC+IHWO5sMYqPbQp8KWihN1impBonrHa10vDpF4="
+  }
+}

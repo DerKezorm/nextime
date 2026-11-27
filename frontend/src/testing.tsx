@@ -107,6 +107,17 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
                               : undefined)
 }
 
+/** What the shared modules answer where a test names nothing: "Was ist neu" has nothing unread (wasneu), the account
+ * has no devices (geraete). */
+export const WHATS_NEW_READ = { version: '0.1.0', seen: '0.1.0', unread: [], more: false, current: null, earlier: false }
+
+function modules(path: string): { status: number; body: unknown } | undefined {
+  if (path.startsWith('/api/whats-new/history')) return { status: 200, body: { version: '0.1.0', entries: [] } }
+  if (path.startsWith('/api/whats-new')) return { status: 200, body: WHATS_NEW_READ }
+  if (path === '/api/geraete/app-devices') return { status: 200, body: DEVICE_LISTING }
+  return undefined
+}
+
 export function start(): void {
   ;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
   calls.length = 0
@@ -118,7 +129,7 @@ export function start(): void {
       const method = init?.method ?? 'GET'
       const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
       calls.push({ method, path, body, headers: (init?.headers ?? {}) as Record<string, string> })
-      const answer = handler(method, path, body) ?? { status: 200, body: [] }
+      const answer = handler(method, path, body) ?? modules(path) ?? { status: 200, body: [] }
       return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { 'Content-Type': 'application/json' } })
     }),
   )

@@ -41,7 +41,7 @@ RAISED = re.compile(
 #: checked in their own vitest files) and name
 #: other apps in their comments; they are not nextime's to word.
 SHARED = {"nexkonten", "nexpost", "nexsicherung", "nexlog", "nexschluessel", "nexsprachen", "nexupdates", "nexmcp",
-          "nexverbinden", "nexgeraete"}
+          "nexverbinden", "nexgeraete", "nexwasneu"}
 
 
 def _sources(folder: Path, suffixes: tuple[str, ...]) -> str:

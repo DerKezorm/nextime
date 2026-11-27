@@ -74,11 +74,13 @@ from .services import (
     totp,
     updates,
     verbinden_store,
+    whatsnew,
 )
 from .services.konten_store import KontenStore
 from .vendor import nexoidc
 from .vendor.nexkonten import factor as konten_factor
 from .vendor.nexkonten import setup as konten_setup
+from .vendor.nexwasneu import api as wasneu_api
 
 logger = logging.getLogger("nextime")
 
@@ -274,6 +276,8 @@ app.add_exception_handler(Exception, unhandled_error)
 
 for module in ROUTERS + FEATURE_ROUTERS:
     app.include_router(module.router)
+# The shared module wasneu: "Was ist neu" under /api/whats-new (the route of before stays in routers/auth.py).
+app.include_router(wasneu_api.router(viewer=whatsnew.viewer))
 # The shared module geraete (TIME-29): its app routes after nextime's own /api/app/1 routes (two of which keep their
 # old form), its browser routes for the cards under /api/geraete beside the old ones.
 app.include_router(app1_router.module_router)

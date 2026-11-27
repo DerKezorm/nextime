@@ -21,7 +21,6 @@ import unicodedata
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
-from .. import __version__
 from ..config import get_settings
 from ..db import SessionLocal
 from ..models import (
@@ -35,7 +34,7 @@ from ..models import (
 )
 from ..models import Invite as InviteRow
 from ..security import decrypt_secret, encrypt_secret
-from ..vendor import nexkonten, nexoidc
+from ..vendor import nexkonten, nexoidc, nexwasneu
 from ..vendor.nexoidc import (
     AccountState,
     Invite,
@@ -370,7 +369,7 @@ class SqlStore:
             email_proven=bool(address and invitation is not None and invitation.mailed),
             # Since E45: a new account through a provider starts with "system" as every new one.
             theme="system",
-            whats_new_seen=__version__,
+            whats_new_seen=nexwasneu.seen_for_new_account(),
         )
         self.db.add(row)
         self.db.flush()

@@ -32,7 +32,6 @@ from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from .. import __version__
 from ..config import get_settings
 from ..models import (
     MEMBER,
@@ -65,7 +64,7 @@ from ..security import (
     server_key,
     verify_password,
 )
-from ..vendor import nexkonten
+from ..vendor import nexkonten, nexwasneu
 from ..vendor.nexkonten import (
     Access,
     AccountId,
@@ -293,7 +292,7 @@ class KontenStore:
             language=new.language or "",
             # Since E45 (konten 1.1.0): a new account starts with "system"; only accounts of before have none.
             theme=getattr(new, "theme", "system") or "system",
-            whats_new_seen=__version__,
+            whats_new_seen=nexwasneu.seen_for_new_account(),
         )
         self.db.add(row)
         self._flush()

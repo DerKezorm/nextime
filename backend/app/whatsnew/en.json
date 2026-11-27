@@ -5,7 +5,7 @@
       {
         "title": "Connect apps with one click",
         "where": "Settings › My account › Connections",
-        "body": "Until now you made an API key in the other app and typed it in here. Now each app has a card of its own: click “Connect with …”, sign in to the other app and agree once, done. The consent page shows which account is signed in and what each side may do, in words like “Tick tasks off”. When an app may read your calendars, you choose which ones. One consent covers both directions, and each app may do only what it really needs. The card shows since when you are connected, when the connection was last used and what is allowed; “Check now” and “Disconnect” (for both sides) are right there. If something goes wrong, you land back in your card and read there what happened. Connections made with a key keep working as before and can be renewed the new way."
+        "body": "Until now you made an API key in the other app and typed it in here. Now each app has a card of its own: click “Connect with …”, sign in to the other app and agree once, done. The consent page shows which account is signed in and what each side may do, in words like “Tick tasks off”. When an app may read your calendars, you choose which ones. One consent covers both directions, and each app may do only what it really needs. The card shows since when you are connected, when the connection was last used and what is allowed, with “Renew” and “Disconnect” (for both sides); where only the other app may do something in nextime, like nexmail and nexdiary, the button is “End access”. While the other app cannot be reached, “Check now” stands there. If something goes wrong, you land back in your card and read there what happened. Connections made with a key keep working as before and can be renewed the new way."
       },
       {
         "title": "nextasks and nexpaper in the calendar",
@@ -35,7 +35,7 @@
       {
         "title": "Settings as in every nex app",
         "where": "Settings",
-        "body": "The same areas, cards and buttons as in the other nex apps. In Appearance you choose Light, Dark or As the system, now for your account on every device. “Reminders” is now “Notifications” and starts with the ways: notifications for this browser, a test notification, iPhone and iPad. Connections brings devices, installing, the other apps, API keys and AI tools to one place; keys can be edited now. For the operator, “Other nex apps” and “Interfaces” stand under Server › Connections."
+        "body": "The same areas, cards and buttons as in the other nex apps. In Appearance you choose Light, Dark or As the system, now for your account on every device. “Reminders” is now “Notifications” and starts with the ways: notifications for this browser, a test notification, iPhone and iPad. Connections brings devices, installing, the other apps, API keys and AI tools to one place; keys can be edited now."
       },
       {
         "title": "Backups every week or every month",
@@ -43,16 +43,21 @@
         "body": "Besides “Every night” there are “Every week” and “Every month”. “Back up now” takes a note along that stands beside the backup in the list. The card “Storage” shows how much nextime takes and what is still free."
       },
       {
-        "title": "Ready for the iPhone and iPad app",
+        "title": "Server › Connections",
+        "where": "Settings › Server › Connections",
+        "body": "What the server shares with other programs has a page of its own now. Under “Other nex apps” you enter the addresses of the other nex apps once and allow connections into the local network when needed; after that every account connects with one click. Under “Interfaces” you decide whether members use the programming interface, whether AI programs may connect themselves, the highest level and blocked tools; on a new installation MCP starts off, where it was on, it stays on. New there are “Allow the iPhone app” and “Connect new devices”, both on from the start.",
+        "operator": true
+      },
+      {
+        "title": "Devices: ready for the iPhone and iPad app",
         "where": "Settings › My account › Connections",
-        "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes; without a camera you sign in from the app as in the browser. The card “Devices” lists every connected device, and “Disconnect” locks one out at once. The app keeps every event on the device, also without a connection, and brings what was entered to the server exactly once afterwards; after a conflict you see both versions. The app itself comes separately."
+        "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes and a code to type beside it; without a camera you sign in from the app as in the browser. The card “Devices” lists every connected device with its model, app version and when it was last there. You can rename one, “Disconnect” locks it out at once, “Disconnect all devices” all of them. Under My account › Notifications you choose per device which notifications it gets: changes in shared calendars, a newly connected device and, for the operator, a new version of nextime. When a device is added, nextime sends a mail as for a new sign-in. The app keeps every event on the device, also without a connection, and brings what was entered to the server exactly once afterwards; after a conflict you see both versions. The app itself is not out yet and comes separately; the code to type and the choice of notifications take effect with it."
       }
     ],
     "smallTitle": "Also",
     "small": [
       "Invite attendees to events in iCloud and Google calendars by their email address. iCloud or Google sends the invitation as usual, and the answers of those invited are kept. nextime's own calendars invite nobody.",
-      "The operator enters the addresses of the other nex apps once under Server › Connections › Other nex apps and allows connections into the local network there when needed; after that every account connects with one click.",
-      "Under Server › Connections › Interfaces the operator decides whether AI programs may connect themselves, the highest level and blocked tools. On a new installation MCP starts off; where it was on, it stays on.",
+      "When the operator blocks an account or deletes it with 30 days to bring it back, its devices rest and work again afterwards without connecting anew. Under Server › Accounts › Manage the operator sees how many devices an account has, which kind and their last contact, and can disconnect them.",
       "“Ready for the internet?” under Server › Sign-in checks https, the second factor, the brake on guessing, cookies, the proxy and whether the server reaches the internet, and says what to do.",
       "Only the operator sees whether a new version is out; a new installation asks once whether nextime should look.",
       "Under Server › Accounts the operator sees every API key and can lock single ones; expired invitations stay listed there until withdrawn.",

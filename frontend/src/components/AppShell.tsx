@@ -16,7 +16,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 
-import { authApi } from '../api/client'
+import { authApi, tabFetch } from '../api/client'
 import { travelHint } from '../lib/display'
 import { useDisplay } from '../lib/useDisplay'
 import { EventPanelHost } from '../features/calendars/EventPanel'
@@ -34,11 +34,11 @@ import { useCompact } from '../features/views/state'
 import { UpdateBanner } from '../pwa/register'
 import { viewCommand } from '../features/views/state'
 import { useAuth } from '../state/auth'
+import { WhatsNewAfterUpdate } from '../vendor/nexwasneu'
 import { Avatar } from './Avatar'
 import { Dialog } from './Dialog'
 import { Logo } from './Logo'
 import { SessionDialog } from './SessionDialog'
-import { WhatsNewBanner } from './WhatsNew'
 import { NoticeHost } from './NoticeHost'
 import { Sidebar, VIEWS } from './Sidebar'
 
@@ -46,8 +46,8 @@ import { Sidebar, VIEWS } from './Sidebar'
 let clockTold = false
 
 export function AppShell() {
-  const { t } = useTranslation()
-  const { me } = useAuth()
+  const { t, i18n } = useTranslation()
+  const { me, refresh } = useAuth()
   // Ctrl/⌘ K, Ctrl/⌘ Shift F and "/" open the search everywhere (TIME-22, as in nexnotes).
   useSearchKeys()
   const [open, setOpen] = useState(false)
@@ -98,7 +98,7 @@ export function AppShell() {
             </span>
           </header>
           <UpdateBanner />
-          <WhatsNewBanner />
+          <WhatsNewAfterUpdate app="nextime" logo="/logo.svg" fetcher={tabFetch} language={i18n.language} onSeen={() => void refresh()} />
           <OfflineHint />
           <TravelHint />
           <OnlyBar />

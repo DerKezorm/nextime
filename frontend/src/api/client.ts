@@ -45,6 +45,14 @@ function zoneHeader(): Record<string, string> {
 }
 
 /** One id per tab: sessionStorage survives a reload of the tab but is not shared with other tabs. */
+/** The way of the shared modules' pages that call `fetch` themselves (updates, wasneu): every request names its tab
+ * (changes are refused without it). */
+export function tabFetch(path: string, init: RequestInit): Promise<Response> {
+  const headers = new Headers(init.headers)
+  headers.set('X-Nextime-Client', tabId())
+  return fetch(path, { credentials: 'same-origin', ...init, headers })
+}
+
 export function tabId(): string {
   if (clientId) return clientId
   try {
@@ -498,7 +506,6 @@ export const authApi = {
   accessSeen: () => api<Me>('/api/auth/access/seen', { method: 'POST' }),
   password: (current: string, next: string, confirm: string) =>
     api<void>('/api/auth/password', { method: 'PUT', body: { current, new: next, password_confirm: confirm } }),
-  whatsNewSeen: () => api<Me>('/api/me/whats-new/seen', { method: 'POST' }),
   resetNoticeSeen: () => api<Me>('/api/me/password-reset-notice/seen', { method: 'POST' }),
   myProviders: () => api<MyProvider[]>('/api/oidc/me'),
   linkStart: (slug: string, password: string) =>

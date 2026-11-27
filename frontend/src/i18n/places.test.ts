@@ -5,8 +5,12 @@
  */
 import de from './de.json'
 import en from './en.json'
-import whatsNewDe from './whatsnew/de.json'
-import whatsNewEn from './whatsnew/en.json'
+
+/** "Was ist neu" lies with the server since the shared module wasneu (`backend/app/whatsnew/`). The image builds only
+ * the frontend, so the texts are found by a pattern, which finds nothing there (the test itself runs in the repo). */
+const WHATS_NEW = import.meta.glob<Record<string, unknown>>('../../../backend/app/whatsnew/{de,en}.json', { eager: true, import: 'default' })
+const whatsNewDe = WHATS_NEW['../../../backend/app/whatsnew/de.json'] ?? {}
+const whatsNewEn = WHATS_NEW['../../../backend/app/whatsnew/en.json'] ?? {}
 
 function sentences(tree: unknown): string[] {
   if (typeof tree === 'string') return [tree]
@@ -81,6 +85,7 @@ describe('E46: places as group › area', () => {
     ['de', de, whatsNewDe],
     ['en', en, whatsNewEn],
   ] as const)('every path in %s starts with the group, with "›" between the steps', (language, texts, whatsNew) => {
+    expect(Object.keys(WHATS_NEW)).toHaveLength(2)
     const found = [...sentences(texts), ...sentences(whatsNew)].flatMap((text) => wrongPlaces(text, language).map((place) => `${place} in: ${text}`))
     expect(found).toEqual([])
   })

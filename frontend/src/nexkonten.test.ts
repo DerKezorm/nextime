@@ -125,6 +125,8 @@ async function show(path: string, at: string, page: string | ReactNode, answers:
         : asked === '/api/accounts' ? answers.accounts
         // nextime (konten 1.1.0): Accounts ends with the key module's "API-Schlüssel aller Konten".
         : asked === '/api/connections/admin/keys' ? { keys: [] }
+        // nextime (geraete 0.1.0): "Verwalten" shows the account's devices.
+        : asked.startsWith('/api/geraete/server/accounts/') ? { count: 0, devices: [] }
         : undefined
       const status = body === undefined && asked === '/api/auth/me' ? 401 : 200
       return new Response(JSON.stringify(body ?? []), { status, headers: { 'Content-Type': 'application/json' } })

@@ -22,7 +22,6 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-from .. import __version__
 from ..models import (
     DELETE_GRACE_DAYS,
     MEMBER,
@@ -35,6 +34,7 @@ from ..models import (
     utcnow,
 )
 from ..security import LOCK_MINUTES, MAX_FAILURES, MIN_PASSWORD, hash_password, hash_token, verify_password
+from ..vendor import nexwasneu
 
 logger = logging.getLogger("nextime.auth")
 
@@ -157,7 +157,7 @@ def create_with_password(
         password_changed_at=utcnow(),
         # Since E45: a new account starts with "system".
         theme="system",
-        whats_new_seen=__version__,
+        whats_new_seen=nexwasneu.seen_for_new_account(),
     )
     db.add(account)
     if commit:

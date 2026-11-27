@@ -7,24 +7,21 @@
  * only an operator sees it, switches the daily check and asks now, because the question goes out for the whole
  * installation; a member sees only the own version (U2, U15). The page says what goes out: the question to GitHub,
  * and nextime's other call by itself, the check of the internet connection (U11). Times in the account's clock and
- * zone (TIME-3 AC-6).
+ * zone (TIME-3 AC-6). "Was ist neu" and "Frühere Versionen" come from the shared module wasneu (`vendor/nexwasneu`):
+ * reading here marks nothing.
  */
 import { useTranslation } from 'react-i18next'
 
-import { tabId } from '../../api/client'
+import { tabFetch } from '../../api/client'
 import { moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
-import { useWhatsNew } from '../../lib/whatsNew'
 import { useAuth } from '../../state/auth'
 import { AboutPage, Notice, type BuiltWith } from '../../vendor/nexui'
 import { useUpdates, useUpdatesTexts, whatGoesOut, type Fetcher } from '../../vendor/nexupdates/updates'
+import { useAboutWhatsNew } from '../../vendor/nexwasneu'
 
 /** nextime's way to the module's routes: every request names its tab (changes are refused without it). */
-const fetcher: Fetcher = (path, init) => {
-  const headers = new Headers(init.headers)
-  headers.set('X-Nextime-Client', tabId())
-  return fetch(path, { credentials: 'same-origin', ...init, headers })
-}
+const fetcher: Fetcher = tabFetch
 
 const PARTS: BuiltWith[] = [
   { name: 'FastAPI', url: 'https://fastapi.tiangolo.com', licence: 'MIT' },
@@ -49,7 +46,7 @@ export function AboutArea() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
   const { timeOptions } = useDisplay()
-  const { entry } = useWhatsNew(me?.version, i18n.language)
+  const news = useAboutWhatsNew({ app: 'nextime', logo: '/logo.svg', fetcher: tabFetch, language: i18n.language })
   const operator = me?.role === 'operator'
   const texts = useUpdatesTexts(i18n.language)
   const state = useUpdates({
@@ -62,25 +59,28 @@ export function AboutArea() {
 
   if (!about) return state.problem ? <Notice tone="danger">{state.problem}</Notice> : null
   return (
-    <AboutPage
-      app="nextime"
-      logo="/logo.svg"
-      tagline={t('about.subtitle')}
-      version={about.version}
-      licence={{ name: about.license, href: 'https://www.gnu.org/licenses/agpl-3.0.html' }}
-      source={about.repo_url}
-      releases={about.releases_url}
-      project={about.project_url || null}
-      updates={state.updates}
-      showUpdates={state.showUpdates}
-      operator={operator}
-      onDaily={state.onDaily}
-      onCheck={state.onCheck}
-      checking={state.checking}
-      whatsNew={entry ?? null}
-      builtWith={PARTS}
-      problem={state.problem}
-      texts={{ updatesWhatGoesOut: whatGoesOut(texts, 'nextime', undefined, [t('about.updates.internetCheck')]) }}
-    />
+    <>
+      <AboutPage
+        app="nextime"
+        logo="/logo.svg"
+        tagline={t('about.subtitle')}
+        version={about.version}
+        licence={{ name: about.license, href: 'https://www.gnu.org/licenses/agpl-3.0.html' }}
+        source={about.repo_url}
+        releases={about.releases_url}
+        project={about.project_url || null}
+        updates={state.updates}
+        showUpdates={state.showUpdates}
+        operator={operator}
+        onDaily={state.onDaily}
+        onCheck={state.onCheck}
+        checking={state.checking}
+        {...news.about}
+        builtWith={PARTS}
+        problem={state.problem}
+        texts={{ updatesWhatGoesOut: whatGoesOut(texts, 'nextime', undefined, [t('about.updates.internetCheck')]) }}
+      />
+      {news.window}
+    </>
   )
 }
