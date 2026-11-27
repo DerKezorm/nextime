@@ -24,6 +24,10 @@ lxml==6.1.3
 # iCloud, Google and other CalDAV servers (TIME-15, TIME-16): finding the account, signing in, the connection; also
 # the other side in the tests of the calendar account (TIME-20).
 caldav==3.7.0
+# caldav's HTTP library and its urllib3: nextime checks every address of a CalDAV server in their resolver
+# (services/remote_dav.py), so their interface is held to the version tested.
+niquests==3.21.3
+urllib3-future==2.25.907
 # Public and school holidays of Germany, Austria and Switzerland, shipped with the image, nothing fetched (TIME-17).
 holidays==0.109
 # Passkeys (konten 0.3.x, WebAuthn): the version the shared account module is tested with (its manifest test asks).
