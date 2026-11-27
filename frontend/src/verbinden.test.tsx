@@ -80,7 +80,7 @@ describe('the pages of the module in nextime', () => {
     expect(page.querySelector('[data-testid="consent-account-picture"]')).not.toBeNull()
     expect(page.textContent).toContain('Anna')
     expect(page.textContent).toContain('anna')
-    // The page asks once (TODO verbinden 0.1.8 in ConnectPages: without a stable `navigate` it asked without end).
+    // The page asks once, also without a `navigate` of nextime's (verbinden 0.1.9; 0.1.8 asked without end).
     expect(calls.filter((call) => call.path.startsWith('/api/connect/consent'))).toHaveLength(1)
   })
 

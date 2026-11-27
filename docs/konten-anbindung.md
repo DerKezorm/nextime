@@ -78,10 +78,10 @@ bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schrei
 - **Ein Ort fürs eigene Netz:** der Haken „Verbindungen ins eigene Netz“ steht nur noch in „Andere nex-Apps“; der
   eigene Schalter unter „Funktionen für alle Konten“ ist weg, `PUT /api/settings` `connections_local_network` bleibt
   (E55). Hinweise der Formulare von Hand zeigen auf Server › Allgemein › Andere nex-Apps (`#nex-apps`).
-- **Umweg `TODO verbinden 0.1.8`** in `features/connect/ConnectPages.tsx`: `ConsentPage` hat `navigate` in den
-  Abhängigkeiten seines Effekts, der Vorgabewert ist bei jedem Rendern neu, ohne eigenes `navigate` fragt die Seite
-  `GET /api/connect/consent` ohne Ende. nextime gibt eine feste Funktion; fällt weg, sobald das Modul seinen Vorgabewert
-  festhält.
+- **verbinden 0.1.9** (`bauplaene-konten` `b277da0`): `ConsentPage` liest `navigate` über ein Ref und fragt
+  `GET /api/connect/consent` einmal, auch ohne eigenes `navigate` (0.1.8 fragte ohne Ende, Fund aus nextime). Der
+  Umweg `TODO verbinden 0.1.8` in `features/connect/ConnectPages.tsx` ist weg; `verbinden.test.tsx` bewacht die eine
+  Abfrage weiter.
 
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 

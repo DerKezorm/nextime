@@ -17,12 +17,6 @@ import type { VerbindenRequest } from '../../vendor/nexverbinden/verbinden'
 // eslint-disable-next-line react-refresh/only-export-components
 export const verbindenRequest: VerbindenRequest = <T,>(path: string, init: Parameters<VerbindenRequest>[1] = {}) => api<T>(path, init)
 
-/** TODO verbinden 0.1.8: `ConsentPage` names `navigate` among the deps of the effect that asks `GET /consent`, and its
- * default (`(url) => window.location.assign(url)`) is a new function at every render: without a `navigate` of its own
- * the page asks again after every answer, without end. One function that stays the same; goes once the module keeps
- * its default stable. */
-const go = (url: string) => window.location.assign(url)
-
 function SignedInOnly({ children }: { children: React.ReactNode }) {
   const { status } = useAuth()
   const location = useLocation()
@@ -37,7 +31,7 @@ export function ConnectConsentPage() {
   const location = useLocation()
   return (
     <SignedInOnly>
-      <ConsentPage request={verbindenRequest} search={location.search} navigate={go} areaWord={t('keys.dialog.calendars')} language={i18n.language} />
+      <ConsentPage request={verbindenRequest} search={location.search} areaWord={t('keys.dialog.calendars')} language={i18n.language} />
     </SignedInOnly>
   )
 }
