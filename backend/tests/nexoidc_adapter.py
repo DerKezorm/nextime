@@ -42,8 +42,6 @@ class Adapter(StandardAdapter):
     has_second_factor = True
     #: nextime was born with the provider list: no older single provider, no way back.
     legacy_model = "none"
-    #: No directory service to couple to.
-    supports_coupling = False
     old_callback_paths: tuple[str, ...] = ()
     operator_name = OPERATOR_NAME
     #: The own account lives in the settings (tab "My account").

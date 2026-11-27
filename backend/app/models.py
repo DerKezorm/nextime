@@ -254,10 +254,10 @@ class OidcProvider(Base):
     auto_create: Mapped[bool] = mapped_column(Boolean, default=False)
     #: "The provider checks the second factor itself": on from the start.
     trusts_second_factor: Mapped[bool] = mapped_column(Boolean, default=True)
-    #: "" by hand, "authentik" made by the authentik button, and the coupled value from the coupling.
+    #: "" by hand, "authentik" made by the authentik button, anything else counts as by hand.
     managed: Mapped[str] = mapped_column(String(20), default="")
     position: Mapped[int] = mapped_column(Integer, default=0)
-    #: A callback path the provider knew before (a migration or a coupling sets it); "" is the standard one.
+    #: A callback path the provider knew before (a migration sets it); "" is the standard one.
     redirect_path: Mapped[str] = mapped_column(String(300), default="")
     #: The redirect address the authentik button registered at authentik the last time ("" for none; an entry of
     #: before 1.0.10 has none). The card reports ``stale`` when today's address is another.

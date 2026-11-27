@@ -430,7 +430,7 @@ export type OidcProvider = {
   enabled: boolean
   auto_create: boolean
   trusts_second_factor: boolean
-  /** "" by hand, "authentik" through the button, and the coupled value from the coupling. */
+  /** "" by hand, "authentik" through the button, anything else counts as by hand. */
   managed: string
   position: number
   redirect_uri: string

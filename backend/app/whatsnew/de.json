@@ -1,6 +1,6 @@
 {
   "0.4.0": {
-    "lead": "Deine nex-Apps arbeiten jetzt zusammen: Du verbindest nextime mit einem Klick mit nextasks, nexpaper, nexmail, nexdiary und nexnotes, ohne Schlüssel abzutippen. Dazu kommen Passkeys, mehr Kontrolle über KI-Werkzeuge und Einstellungen wie in allen nex-Apps.",
+    "lead": "Deine nex-Apps arbeiten jetzt zusammen: Du verbindest nextime mit einem Klick mit nextasks, nexpaper, nexmail, nexdiary, nexnotes und nexfolk, ohne Schlüssel abzutippen. Dazu kommen Passkeys, mehr Kontrolle über KI-Werkzeuge und Einstellungen wie in allen nex-Apps.",
     "sections": [
       {
         "title": "Apps verbinden mit einem Klick",
@@ -56,6 +56,7 @@
     ],
     "smallTitle": "Außerdem",
     "small": [
+      "Neu ist nexfolk: Verbunden legt nextime einen Kalender mit den Geburtstagen aus nexfolk an, schlägt beim Einladen Personen aus nexfolk vor und zeigt bei Teilnehmern, die nur mit ihrer Mailadresse dastehen, den Namen aus nexfolk. nexfolk zeigt bei einem Kontakt den nächsten Termin mit ihm.",
       "In Terminen von iCloud- und Google-Kalendern lädst du jetzt Teilnehmer mit ihrer Mailadresse ein. Die Einladung verschickt iCloud oder Google wie gewohnt, Antworten der Eingeladenen bleiben erhalten. nextimes eigene Kalender laden niemanden ein.",
       "Sperrt der Betreiber ein Konto oder löscht es mit 30 Tagen zum Zurückholen, ruhen dessen Geräte und arbeiten danach wieder, ohne neu verbunden zu werden. Unter Server › Konten › Verwalten sieht er Zahl, Art und letzten Kontakt der Geräte eines Kontos und kann sie trennen.",
       "„Bereit fürs Internet?“ unter Server › Anmeldung prüft https, zweiten Faktor, Schutz vor Raten, Cookies, Proxy und ob der Server das Internet erreicht, und sagt, was zu tun ist.",

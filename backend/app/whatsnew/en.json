@@ -1,6 +1,6 @@
 {
   "0.4.0": {
-    "lead": "Your nex apps now work together: connect nextime with nextasks, nexpaper, nexmail, nexdiary and nexnotes with one click, without typing keys. Also new: passkeys, more control over AI tools, and settings as in every nex app.",
+    "lead": "Your nex apps now work together: connect nextime with nextasks, nexpaper, nexmail, nexdiary, nexnotes and nexfolk with one click, without typing keys. Also new: passkeys, more control over AI tools, and settings as in every nex app.",
     "sections": [
       {
         "title": "Connect apps with one click",
@@ -56,6 +56,7 @@
     ],
     "smallTitle": "Also",
     "small": [
+      "New is nexfolk: once connected, nextime adds a calendar with the birthdays from nexfolk, suggests people from nexfolk when you invite, and shows the name nexfolk knows for an attendee given only by a mail address. nexfolk shows the next event with a contact.",
       "Invite attendees to events in iCloud and Google calendars by their email address. iCloud or Google sends the invitation as usual, and the answers of those invited are kept. nextime's own calendars invite nobody.",
       "When the operator blocks an account or deletes it with 30 days to bring it back, its devices rest and work again afterwards without connecting anew. Under Server › Accounts › Manage the operator sees how many devices an account has, which kind and their last contact, and can disconnect them.",
       "“Ready for the internet?” under Server › Sign-in checks https, the second factor, the brake on guessing, cookies, the proxy and whether the server reaches the internet, and says what to do.",
