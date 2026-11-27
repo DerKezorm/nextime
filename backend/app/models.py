@@ -1177,6 +1177,18 @@ class AppGoneDevice(Base):
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
 
 
+class AppGoneSibling(Base):
+    """When a device that came in over iCloud was made, kept after it was disconnected (geraete 0.1.5, G33 anew): the
+    limit of siblings per hour counts it still, else disconnecting and asking again would pass the limit. Rows older
+    than an hour go with the next disconnection."""
+
+    __tablename__ = "app_gone_siblings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    account_id: Mapped[int] = mapped_column(Integer, index=True)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime)
+
+
 class AppOp(Base):
     """A change the app sent from its queue (``POST /api/app/1/ops``) and the answer it got: the same ``ref`` again
     gets the same answer and changes nothing (TIME-29 EC-6). Kept 30 days."""

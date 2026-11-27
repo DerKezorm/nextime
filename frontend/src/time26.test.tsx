@@ -63,6 +63,8 @@ async function open(where = '/settings/connections'): Promise<void> {
 }
 
 const one = (id: string) => document.querySelector<HTMLElement>(`[data-testid="${id}"]`)
+// Since schluessel 1.2.0 (B23) the new key shows in the window that made it, not on the card.
+const made = (id: string) => document.querySelector<HTMLElement>(`[data-testid="key-dialog"] [data-testid="${id}"]`)
 const all = (id: string) => [...document.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)]
 const rows = () => [...document.querySelectorAll<HTMLElement>('[data-testid="api-keys-table"] [data-part="table-row"]')]
 
@@ -98,7 +100,7 @@ describe('TIME-26 keys', () => {
     const sent = calls.find((call) => call.method === 'POST' && call.path === '/api/connections/keys')!.body as Record<string, unknown>
     expect(sent).toMatchObject({ kind: 'api', name: 'Planer am Laptop', right: 'write', areas: [2], options: { mcp: true }, days: null })
     expect(String(sent.client_ref)).not.toBe('')
-    expect((one('key-secret')!.querySelector('input') as HTMLInputElement).value).toBe(SHOWN_ONCE)
+    expect((made('key-secret')!.querySelector('input') as HTMLInputElement).value).toBe(SHOWN_ONCE)
     // Never again: opened anew, the key is gone from the page.
     await open()
     expect(box.textContent).not.toContain(SHOWN_ONCE)
@@ -198,9 +200,9 @@ describe('TIME-26 after the review', () => {
     await click(one('api-keys-new'))
     type(one('key-name') as HTMLInputElement, 'Telefon')
     await click(one('key-submit'))
-    const secret = one('key-secret')!.querySelector('input') as HTMLInputElement
+    const secret = made('key-secret')!.querySelector('input') as HTMLInputElement
     expect(secret.value).toBe(SHOWN_ONCE)
     expect(secret.readOnly).toBe(true)
-    expect(one('key-secret')!.querySelector('[data-icon="Copy"]')).not.toBeNull()
+    expect(made('key-secret')!.querySelector('[data-icon="Copy"]')).not.toBeNull()
   })
 })

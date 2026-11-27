@@ -338,7 +338,7 @@ def request(access: Access, *args: Any, **kwargs: Any) -> Any:
         if exc.code != "nextasks_token_invalid" or access.connection_of is None:
             raise
         try:
-            token = verbinden_store.renewed(access.connection_of, "nextasks")
+            token = verbinden_store.renewed(access.connection_of, "nextasks", failed=access.token)
         except verbinden_store.NotConnected:
             raise exc from None
         return _request_once(replace(access, token=token), *args, **kwargs)
@@ -428,7 +428,10 @@ def _connection_token(db: Session, account_id: int) -> str:
 def connected_by_click(db: Session, account_id: int) -> NextasksConnection:
     """The shared module verbinden made a connection with nextasks (``on_connected``): nextime keeps its row for it as
     for a key typed in by hand (same address: the choices of before stay), reads who it is there, and from then on
-    everything goes as before (V18)."""
+    everything goes as before (V18). It may run more than once for a connection, and also where nextasks started it,
+    right after nextime answered its token request (verbinden 0.2.1, BS6): nextasks may still be saving its side then
+    and refuse this first question. Such a refusal is not kept as the key's problem (the next use asks again and says
+    it, if it stays); the row and the choices stand either way."""
     base, token = verbinden_store.access(db, account_id, "nextasks")
     clean = clean_url(base)
     row = db.get(NextasksConnection, account_id)
@@ -447,8 +450,7 @@ def connected_by_click(db: Session, account_id: int) -> NextasksConnection:
             found = check(Access(url=clean, token=token, local=local_allowed(db)))
         row.name, row.time_zone, row.level = found["name"], found["time_zone"], found["level"]
     except NextasksError as exc:
-        row.problem = exc.code if exc.code in ("nextasks_token_invalid", "nextasks_too_old",
-                                               "nextasks_api_off") else ""
+        row.problem = exc.code if exc.code in ("nextasks_too_old", "nextasks_api_off") else ""
     db.commit()
     _drop_cache(account_id)
     logger.info("nextasks connected by a click account_id=%s host=%s", account_id, urlsplit(clean).hostname)

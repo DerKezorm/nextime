@@ -256,7 +256,7 @@ def request(access: Access, *args: Any, **kwargs: Any) -> Any:
         if exc.code != "nexpaper_token_invalid" or access.connection_of is None:
             raise
         try:
-            token = verbinden_store.renewed(access.connection_of, "nexpaper")
+            token = verbinden_store.renewed(access.connection_of, "nexpaper", failed=access.token)
         except verbinden_store.NotConnected:
             raise exc from None
         return _request_once(replace(access, token=token), *args, **kwargs)
@@ -340,7 +340,10 @@ def access_of(db: Session, row: NexpaperConnection) -> Access:
 
 def connected_by_click(db: Session, account_id: int) -> NexpaperConnection:
     """The shared module verbinden made a connection with nexpaper: nextime keeps its row for it as for a key typed in
-    by hand and reads who it is there; from then on the deadlines come as before (V18)."""
+    by hand and reads who it is there; from then on the deadlines come as before (V18). It may run more than once, and
+    also where nexpaper started the connection, right after nextime answered its token request (verbinden 0.2.1, BS6):
+    a refusal of this first question (nexpaper may still be saving its side) is not kept as the key's problem; the
+    next use asks again and says it, if it stays."""
     base, token = verbinden_store.access(db, account_id, "nexpaper")
     clean = clean_url(base)
     row = db.get(NexpaperConnection, account_id)
@@ -355,8 +358,8 @@ def connected_by_click(db: Session, account_id: int) -> NexpaperConnection:
         with outgoing(account_id, connecting=True):
             found = check(Access(url=clean, token=token, local=nextasks.local_allowed(db)))
         row.name, row.version = found["name"], found["version"]
-    except NexpaperError as exc:
-        row.problem = exc.code if exc.code == "nexpaper_token_invalid" else ""
+    except NexpaperError:
+        row.problem = ""
     db.commit()
     _drop_cache(account_id)
     logger.info("nexpaper connected by a click account_id=%s host=%s", account_id, urlsplit(clean).hostname)

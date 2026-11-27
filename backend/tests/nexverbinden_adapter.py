@@ -143,6 +143,28 @@ class Adapter(StandardAdapter):
             assert row is not None
             (accounts.block if blocked else accounts.unblock)(db, row)
 
+    def lock(self, role: str, locked: bool = True) -> None:
+        """verbinden 0.2.1 (E41): the account locked after failed sign-ins (``locked_until`` ahead), or free again."""
+        from datetime import timedelta
+
+        from app.db import SessionLocal
+        from app.models import Account, utcnow
+
+        with SessionLocal() as db:
+            row = db.get(Account, self._accounts[role].id)
+            assert row is not None
+            row.locked_until = utcnow() + timedelta(minutes=15) if locked else None
+            db.commit()
+
+    def require_second_factor(self, role: str, required: bool = True) -> None:
+        """verbinden 0.2.1 (E41): the operator requires a second factor that the account (a password account without
+        one) has not set up yet, or no longer requires it."""
+        from app.db import SessionLocal
+        from app.services import settings_service
+
+        with SessionLocal() as db:
+            settings_service.save(db, {"two_factor_required": bool(required)}, commit=True)
+
     def probe(self, purpose: str) -> str | None:
         # verbinden 0.1.13: a purpose about a person is asked at the module's place, never through ``/api/v1``.
         if purpose == self.about_purpose:

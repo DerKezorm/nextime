@@ -38,8 +38,10 @@ def click_connection(account_id: int, partner: str, base: str, access: str = ACC
     now = datetime.now(UTC)
     with SessionLocal() as db:
         store = verbinden_store.Store(db)
-        held = verbinden_connect._held(store, access, "ntcr_" + "r" * 40, expires or now + timedelta(hours=1),
-                                       "https://time.example.com")
+        # A refresh token of its own each time: since verbinden 0.2.1 the process remembers the last renewal of a
+        # refresh token (``connect.RENEWALS``), and the same one in the next test would bring that test's access back.
+        held = verbinden_connect._held(store, access, "ntcr_" + secrets.token_hex(20),
+                                       expires or now + timedelta(hours=1), "https://time.example.com")
         store.save(nexverbinden.Connection(
             id=secrets.token_urlsafe(18), account_id=account_id, partner=partner, partner_base=base,
             partner_account="tester", uses=verbinden_store.CONFIG.catalog.uses("nextime", partner), grants=(),
@@ -145,3 +147,44 @@ def test_v18_a_401_asks_once_more_with_a_renewed_access(client: TestClient, acco
     client.delete("/api/nextasks")
     assert connect(client).status_code == 409
     assert trades.count("/api/connect/token") == before
+
+
+def _heard_connected(account_id: int, partner: str) -> None:
+    """The module's ``on_connected`` of nextime, as it runs after nextime answered the partner's token request."""
+    with SessionLocal() as db:
+        verbinden_store.connected(verbinden_store.Store(db), account_id, partner)
+
+
+def test_v18_on_connected_runs_again_and_bears_a_first_refusal_of_nextasks(client: TestClient, account: Account,
+                                                                            fake: Fake) -> None:
+    """verbinden 0.2.1 (BS6): where nextasks started the connection, nextime's hook runs right after the answer to its
+    token request, while nextasks may still be saving its side and refuses the first question. The row stands without
+    a problem of the key; the hook again (it may run more than once) keeps the one row and reads who it is."""
+    fake.add("own", "Eigene", "2026-11-26")
+    fake.token = "ntc_" + "z" * 40
+    click_connection(account.id, "nextasks", "https://tasks.example.com")
+    _heard_connected(account.id, "nextasks")
+    shown = client.get("/api/nextasks").json()
+    assert shown["connected"] is True and shown["by_connection"] is True and shown["problem"] is None
+    fake.token = ACCESS
+    _heard_connected(account.id, "nextasks")
+    with SessionLocal() as db:
+        assert db.query(NextasksConnection).filter(NextasksConnection.account_id == account.id).count() == 1
+    shown = client.get("/api/nextasks").json()
+    assert shown["name"] == "Tester" and shown["problem"] is None
+    assert [task["id"] for task in tasks(client, "2026-11-30")["tasks"]] == ["own"]
+
+
+def test_v18_on_connected_bears_a_first_refusal_of_nexpaper(client: TestClient, account: Account, paper: Any,
+                                                            monkeypatch: pytest.MonkeyPatch) -> None:
+    """The same for nexpaper (verbinden 0.2.1, BS6): a first refusal is no problem of the key, the hook may run again."""
+    paper.soon = [paper_tests.deadline(3, "2026-12-01")]
+    click_connection(account.id, "nexpaper", "https://paper.example.com")
+    _heard_connected(account.id, "nexpaper")
+    assert client.get("/api/nexpaper").json()["problem"] is None
+    monkeypatch.setattr(paper_tests, "TOKEN", ACCESS)
+    _heard_connected(account.id, "nexpaper")
+    with SessionLocal() as db:
+        assert db.query(NexpaperConnection).filter(NexpaperConnection.account_id == account.id).count() == 1
+    found = client.get("/api/deadlines", params={"to": "2026-12-31"}).json()
+    assert found["problem"] is None and [row["id"] for row in found["deadlines"]] == ["3-due"]

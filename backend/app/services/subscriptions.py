@@ -490,7 +490,7 @@ def _fetch_by_connection(db: Session, source: Source, partner: str, *, etag: str
             verbinden_store.reached(db, source.account_id, partner, "unreachable")
             raise
         try:
-            token = verbinden_store.renewed(source.account_id, partner)
+            token = verbinden_store.renewed(source.account_id, partner, failed=token)
             found = fetch(url, checked=checked, bearer=token, etag=etag, modified=modified)
         except (verbinden_store.NotConnected, FetchError):
             verbinden_store.reached(db, source.account_id, partner, "token_invalid")

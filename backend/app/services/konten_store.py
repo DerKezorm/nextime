@@ -1012,7 +1012,7 @@ class KontenStore:
     def purge_account(self, account_id: AccountId) -> None:
         """Gone for good with everything it owned (``content.account_purged``: calendars, events, attachments,
         shares); its username and its former ones stay reserved for ever."""
-        from ..models import AppGoneDevice
+        from ..models import AppGoneDevice, AppGoneSibling
         from . import appdevices, content, verbinden_store
 
         row = self._row(account_id)
@@ -1023,6 +1023,8 @@ class KontenStore:
         # Its paired devices go for good (konten 1.1.5, geraete G26), with what an older version noted of them.
         appdevices.end_all(self.db, row.id)
         self.db.execute(delete(AppGoneDevice).where(AppGoneDevice.account_id == row.id))
+        # And when its devices from iCloud were made (geraete 0.1.5): nothing of the account stays.
+        self.db.execute(delete(AppGoneSibling).where(AppGoneSibling.account_id == row.id))
         content.account_purged(self.db, row.id)
         self.db.execute(update(FormerName).where(FormerName.account_id == row.id).values(account_id=None))
         self.db.add(FormerName(account_id=None, name=row.name))

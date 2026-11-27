@@ -24,7 +24,17 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.orm import Session
 
 from ..db import SessionLocal
-from ..models import OPERATOR, Account, AppCode, AppDevice, AppGoneDevice, AppPairing, Device, utcnow
+from ..models import (
+    OPERATOR,
+    Account,
+    AppCode,
+    AppDevice,
+    AppGoneDevice,
+    AppGoneSibling,
+    AppPairing,
+    Device,
+    utcnow,
+)
 from ..security import account_out
 from ..vendor import nexgeraete
 from ..vendor.nexgeraete import AppConfig, PushKind
@@ -261,16 +271,32 @@ class Store:
 
     def remove_device(self, device_id: Any) -> None:
         """The key goes with its push ticket. A calendar account set up from the device stays and gets its alarms
-        again (TIMEIOS-4 EC-15); a ``wait`` of the device going on right now ends at once."""
+        again (TIMEIOS-4 EC-15); a ``wait`` of the device going on right now ends at once. A device that came in over
+        iCloud leaves when it was made, for the limit of the hour (``sibling_times``, geraete 0.1.5)."""
         row = self.db.get(AppDevice, int(device_id))
         if row is None:
             return
         account_id = row.account_id
+        hour_ago = now() - timedelta(hours=1)
+        self.db.execute(delete(AppGoneSibling).where(AppGoneSibling.created_at < hour_ago))
+        made = _aware(row.created_at)
+        if row.via == "icloud" and made is not None and made >= hour_ago:
+            self.db.add(AppGoneSibling(account_id=account_id, created_at=made))
         self.db.execute(update(Device).where(Device.app_device_id == row.id).values(app_device_id=None))
         self.db.delete(row)
         self.db.flush()
         live.touch_accounts(self.db, {account_id})
         logger.info("App device disconnected device_id=%s", device_id)
+
+    def sibling_times(self, account_id: Any, since: datetime) -> list[datetime]:
+        """geraete 0.1.5 (G33 anew): when each device of the account that came in over iCloud at or after ``since``
+        was made, the ones disconnected since included."""
+        owner = int(account_id)
+        living = self.db.scalars(select(AppDevice.created_at).where(
+            AppDevice.account_id == owner, AppDevice.via == "icloud", AppDevice.created_at >= since))
+        gone = self.db.scalars(select(AppGoneSibling.created_at).where(
+            AppGoneSibling.account_id == owner, AppGoneSibling.created_at >= since))
+        return [moment for moment in (_aware(at) for at in [*living, *gone]) if moment is not None]
 
     def touch(self, device_id: Any, when: datetime) -> None:
         self.db.execute(update(AppDevice).where(AppDevice.id == int(device_id)).values(last_used_at=when))

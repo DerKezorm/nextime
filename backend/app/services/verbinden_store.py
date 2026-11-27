@@ -209,10 +209,13 @@ class Store:
     # --- the account and the app -------------------------------------------------------------------------------------
 
     def account_may(self, account_id: Any) -> bool:
-        """Not blocked or deleted, and no second factor owed: while the operator requires one that the account has not
-        set up, its connections rest as its API keys, MCP accesses and app devices do (``totp.setup_required``)."""
+        """Not blocked or deleted, not locked after failed sign-ins, and no second factor owed: while the operator
+        requires one that the account has not set up, its connections rest as its API keys, MCP accesses and app
+        devices do (``totp.setup_required``). The lock (``accounts.is_locked``) lets them rest too, for the click and
+        for a token brought to ``authenticate`` alike (verbinden 0.2.1, E41)."""
         row = self.db.get(Account, int(account_id))
-        return row is not None and not account_out(row) and not totp.setup_required(self.db, row)
+        return (row is not None and not account_out(row) and not accounts.is_locked(row)
+                and not totp.setup_required(self.db, row))
 
     def account_name(self, account_id: Any) -> str:
         row = self.db.get(Account, int(account_id))
@@ -432,24 +435,30 @@ class NotConnected(Exception):
         self.code = code
 
 
-def access(db: Session, account_id: int, partner: str, *, force: bool = False) -> tuple[str, str]:
+def access(db: Session, account_id: int, partner: str, *, force: bool = False,
+           failed: str | None = None) -> tuple[str, str]:
     """The partner's address and a valid access token of the account's connection with it, renewed when it runs out
     (``nexverbinden.access``, V18), so that nextime's services (``services/nextasks.py``, ``services/nexpaper.py``)
-    talk to the partner as they did with a key typed in by hand: the same routes, the same rules for the address."""
+    talk to the partner as they did with a key typed in by hand: the same routes, the same rules for the address.
+    ``failed`` (verbinden 0.2.1, BS1): the token the partner just refused; renewed only while it is still the one
+    held."""
     try:
-        found = nexverbinden.access(Store(db), CONFIG, account_id, partner, datetime.now(UTC), force=force)
+        found = nexverbinden.access(Store(db), CONFIG, account_id, partner, datetime.now(UTC), force=force,
+                                    failed=failed)
     except nexverbinden.Refused as refusal:
         raise NotConnected(refusal.code) from None
     return found.base, found.token
 
 
-def renewed(account_id: int, partner: str) -> str:
+def renewed(account_id: int, partner: str, failed: str | None = None) -> str:
     """A new access of the connection although the old one should still hold: the partner answered 401 once (an
-    access can end before its time). ``NotConnected`` when even that fails."""
+    access can end before its time) to ``failed``. Another request that met the same 401 may have renewed it already;
+    then that access comes back instead of a second renewal (verbinden 0.2.1, BS1). ``NotConnected`` when even that
+    fails."""
     from ..db import SessionLocal
 
     with SessionLocal() as db:
-        return access(db, account_id, partner, force=True)[1]
+        return access(db, account_id, partner, force=True, failed=failed)[1]
 
 
 def reached(db: Session, account_id: int, partner: str, problem: str | None) -> None:
