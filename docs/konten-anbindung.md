@@ -86,6 +86,10 @@ bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schrei
 - **verbinden 0.1.11** (`bauplaene-konten` `a2d6cac`): die Karte „Andere nex-Apps“ wieder ohne Hülle, sie steht direkt in der Reihe unter Server › Allgemein (`time1.test.tsx` fand sie mit 0.1.10 nicht).
 - **verbinden 0.1.12** (`bauplaene-konten` `dd07746`): Beispieladressen der Modultests in `172.16.0.0/12`. Nur die Kopie.
 
+#### verbinden 0.1.14 (27.11.2026, aus `bauplaene-konten` `caafd08`)
+
+Nur ein Vertragsfall: die Verbindung von nexfolk (nur `events.about`) öffnet keinen anderen Zweck von nextime (403); das deckt den Riegel in `api_v1._connection` aus 0.1.13 ab.
+
 #### verbinden 0.1.13 (27.11.2026, aus `bauplaene-konten` `e12760e`)
 
 Mit `tools/sync.py copy`, `check` grün; Vorlage `nexverbinden.test.tsx` neu genommen (Paar nextime/nextasks wie
