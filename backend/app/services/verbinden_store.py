@@ -1,4 +1,4 @@
-"""nextime's side of the shared module verbinden (``vendor/nexverbinden``, bauplaene/verbinden 0.1.1, now 0.1.8): its
+"""nextime's side of the shared module verbinden (``vendor/nexverbinden``, bauplaene/verbinden 0.1.1, now 0.2.0): its
 configuration and the ``Store`` over the tables ``vb_*``.
 
 nextime connects with six apps of the catalog: it reads tasks of nextasks (and ticks them), deadlines of nexpaper,
@@ -8,7 +8,9 @@ invitations, nexdiary reads its calendars. The calendars are the areas a partner
 Nothing of before changes: the connections typed in by hand (``nextasks_connections``, ``nexpaper_connections``)
 stay in their tables with their routes (``PUT /api/nextasks``, ``PUT /api/nexpaper``) and show in the cards as
 connections by API key (``legacy``). After "Neu verbinden" the old key of such a connection ends itself at the
-partner (``old_key``); a key of nextime brought to ``/api/connect/retire`` is removed here (``retire_key``). The
+partner (``old_key``); a key of nextime brought to ``/api/connect/retire`` is removed here (``retire_key``). Since
+0.2.0 a connection by click, "Trennen" or a no on the consent page ends the connection typed in by hand
+(``forget_legacy``). The
 tokens of a connection have their own prefixes (``ntv_``, ``ntvr_``, ``ntvc_``), never one of an API key.
 """
 
@@ -32,6 +34,7 @@ from ..models import (
     AppConnectionWaiting,
     NexpaperConnection,
     NextasksConnection,
+    TaskTick,
 )
 from ..security import account_out
 from ..vendor import nexverbinden
@@ -49,7 +52,8 @@ CONFIG = nexverbinden.AppConfig(
 )
 
 #: The module's settings under nextime's names (``settings_service.DEFAULTS``).
-SETTINGS = {"connections": "connections_enabled", "addresses": "connections_addresses"}
+SETTINGS = {"connections": "connections_enabled", "addresses": "connections_addresses",
+            "suggestions": "connections_suggestions"}
 #: Where the sealed parts of the module are bound (``vault``): one place for all, so a copy moved elsewhere opens not.
 PLACE = "verbinden"
 
@@ -248,6 +252,38 @@ class Store:
                 ok_at=_aware(paper.checked_at),
                 problem="refused" if paper.problem == "nexpaper_token_invalid" else None))
         return found
+
+    def forget_legacy(self, account_id: Any, partner: str) -> None:
+        """verbinden 0.2.0 (B9, V56): nextime's connection typed in by hand with ``partner`` ends. Where a connection
+        by click with the partner stands (it was just made, from either side), the row becomes the click's: the key
+        goes, the choices of before (lists, hidden rows) stay, as ``connected_by_click`` keeps them. Without one
+        ("Trennen", a no on the consent page) the row goes, with the ticks waiting for it. Never commits."""
+        from . import nexpaper, nextasks
+
+        services = {"nextasks": (NextasksConnection, nextasks), "nexpaper": (NexpaperConnection, nexpaper)}
+        if partner not in services:
+            return
+        model, service = services[partner]
+        owner = int(account_id)
+        row = self.db.get(model, owner)
+        if row is None or service.by_connection(row):
+            return
+        click = self.connection(owner, partner)
+        if click is not None:
+            base = (click.partner_base or "").strip().rstrip("/") or row.url
+            if partner == "nextasks" and base != row.url:
+                # Ticks still waiting for the address of before do not go to another one (as ``connected_by_click``).
+                self.db.query(TaskTick).filter(TaskTick.account_id == owner,
+                                               TaskTick.state.in_(("waiting", "sending"))).delete()
+            row.url = base
+            row.token_sealed = vault.seal(service.BY_CONNECTION, service._place(owner))
+            row.problem = ""
+        else:
+            if partner == "nextasks":
+                self.db.query(TaskTick).filter(TaskTick.account_id == owner).delete()
+            self.db.delete(row)
+        self.db.flush()
+        service._drop_cache(owner)
 
     def retire_key(self, token: str) -> bool:
         """An API key of nextime, brought by the partner after it connected anew, ends itself."""

@@ -60,6 +60,9 @@ DEFAULTS: dict[str, Any] = {
     #: the other nex apps the operator wrote down once (V1 1b).
     "connections_enabled": None,
     "connections_addresses": None,
+    #: verbinden 0.2.0 (B16, V58): addresses of other nex apps a partner passed on when it connected, offered to the
+    #: operator to take over with a click (``partner -> {"address", "from"}``).
+    "connections_suggestions": None,
     "mcp_max_level": None,
     "mcp_blocked_tools": None,
     #: Typing a place asks a free OpenStreetMap service for addresses; only the typed text goes out (TIME-1 AC-10).

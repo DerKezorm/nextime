@@ -1,4 +1,4 @@
-"""The shared module geraete (``vendor/nexgeraete``, bauplaene/geraete 0.1.1) in nextime: pairing the iPhone and iPad
+"""The shared module geraete (``vendor/nexgeraete``, bauplaene/geraete 0.1.4) in nextime: pairing the iPhone and iPad
 app, its devices, the notifications through the push relay (``docs/vertrag-app1.md``, TIME-29).
 
 The module keeps no table of its own: ``Store`` translates its calls to nextime's ``app_devices``, ``app_pairings``,
@@ -160,7 +160,9 @@ def device_of(row: AppDevice) -> ModuleDevice:
         via=row.via,
         created_at=_aware(row.created_at),
         last_seen_at=_aware(row.last_used_at),
-        push=PushState(row.push_ticket, row.push_key, understands(row)) if row.push_ticket else None,
+        # G61: ``push_alerts``: the kinds come from nextime's older form ``alerts``, not from the device.
+        push=PushState(row.push_ticket, row.push_key, understands(row), chosen=False if row.push_alerts else None)
+        if row.push_ticket else None,
         kinds={str(key): bool(value) for key, value in kinds.items()} if isinstance(kinds, dict) else {},
     )
 
@@ -372,8 +374,11 @@ class Store:
         if state is None:
             row.push_ticket, row.push_key, row.push_alerts, row.push_understands = "", "", False, None
         else:
-            row.push_ticket, row.push_key, row.push_alerts = state.ticket, state.key, False
-            row.push_understands = json.dumps(list(state.understands)) if state.understands is not None else None
+            # G61: what nextime set from ``alerts`` (``chosen`` False) is kept as ``alerts``, as before 0.1.0.
+            from_alerts = state.chosen is False and state.understands is not None and tuple(state.understands) == ALERTS
+            row.push_ticket, row.push_key, row.push_alerts = state.ticket, state.key, from_alerts
+            row.push_understands = (json.dumps(list(state.understands))
+                                    if state.understands is not None and not from_alerts else None)
         self.db.flush()
 
     def set_kinds(self, device_id: Any, kinds: dict[str, bool]) -> None:

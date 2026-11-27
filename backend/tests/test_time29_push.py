@@ -305,3 +305,27 @@ def test_TIME29_AC3_many_people_are_named_three_and_counted(client: TestClient, 
     message = json.loads(push_crypto.decrypt(relay.sent[0][1]["enc"], private))
     assert message["who"] == ["Anna", "Ben", "Cleo"] and message["who_more"] == 1 and message["count"] == 4
     assert len(relay.sent[0][1]["enc"]) < 3000
+
+
+def test_geraete_g61_alerts_of_the_testflight_app_are_no_choice_of_the_device(
+        client: TestClient, account: Account, relay: Relay) -> None:
+    """geraete 0.1.3 (G61, G62): ``alerts`` is nextime's own older form; the kinds it stands for come from nextime,
+    so the push card says "kommende App-Version" (``chooses_kinds`` false). A device naming ``understands`` chose.
+    nextime's own ``PUT /push`` answers alone (204), the module's is left out."""
+    _private, public = keys()
+    old_build = pair(client, "TestFlight")
+    new_build = pair(client, "Neue App")
+    assert call("PUT", "/push", old_build["token"], json={"ticket": "1.old", "key": public,
+                                                          "alerts": True}).status_code == 204
+    assert call("PUT", "/push", new_build["token"], json={"ticket": "1.new", "key": public,
+                                                          "understands": ["changed", "changes"]}).status_code == 204
+    listed = client.get("/api/geraete/app-devices").json()["devices"]
+    assert {row["name"]: (row["push"], row["chooses_kinds"]) for row in listed} == {
+        "TestFlight": (True, False), "Neue App": (True, True)}
+    from app.routers import app1
+
+    def puts(router: Any) -> list[Any]:
+        return [route for route in router.routes
+                if getattr(route, "path", "").endswith("/push") and "PUT" in getattr(route, "methods", set())]
+
+    assert len(puts(app1.router)) == 1 and puts(app1.module_router) == []

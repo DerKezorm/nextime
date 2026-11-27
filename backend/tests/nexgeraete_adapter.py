@@ -156,31 +156,13 @@ class Adapter(StandardAdapter):
         return b"".join(Path(str(path) + rest).read_bytes() for rest in ("", "-wal")
                         if Path(str(path) + rest).is_file())
 
-    def _actor(self, account: str) -> int:
-        """Who blocks or deletes: the operator; for the operator's own account a second operator (konten never lets
-        anyone block oneself, nor the last operator)."""
-        if account != "operator":
-            return self.ids["operator"]
-        if "deputy" not in self.ids:
-            from app.db import SessionLocal
-            from app.models import OPERATOR, Account
-            from app.security import hash_password
-
-            with SessionLocal() as db:
-                row = Account(name="deputy", display_name="Deputy", email="deputy@example.com", email_confirmed=True,
-                              role=OPERATOR, password_hash=hash_password(secrets.token_urlsafe(16)))
-                db.add(row)
-                db.commit()
-                self.ids["deputy"] = row.id
-        return self.ids["deputy"]
-
     def _manage(self, action: str, account: str) -> None:
         from app.db import SessionLocal
         from app.services.konten_store import KontenStore
         from app.vendor.nexkonten import manage
 
         with SessionLocal() as db:
-            getattr(manage, action)(KontenStore(db), self.ids[account], actor_id=self._actor(account),
+            getattr(manage, action)(KontenStore(db), self.ids[account], actor_id=self.ids["operator"],
                                     actor_confirmed=True)
 
     def block(self, account: str = "owner") -> None:

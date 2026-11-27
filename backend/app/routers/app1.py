@@ -125,10 +125,12 @@ def hello() -> dict[str, Any]:
 #: ``POST pairing/{id}/key``, ``POST pairing/code``, ``POST devices``, ``DELETE devices/{id}``, ``PATCH device``,
 #: ``DELETE device``, ``DELETE push``, ``GET``/``PUT push/kinds``; the pickups behind the sign-in brake of konten
 #: (pot ``app-pairing:<sender>``, EC-3), after each new device the mail "Neue Anmeldung" (G29) and ``security`` to the
-#: account's other devices. Mounted after ``router``: its ``GET devices`` and ``PUT push`` keep the old form.
+#: account's other devices. Mounted after ``router``: its ``GET devices`` keeps the old form; ``PUT push`` is
+#: nextime's alone (``skip``, G62), the module leaves its own out.
 module_router = geraete_api.app_router(
     config=geraete.CONFIG,
     store=geraete.store,
+    skip=("put_push",),
     brake=BRAKE,
     on_paired=lambda holder, device: geraete.on_paired(holder, device),
     send=geraete.send,
@@ -192,11 +194,15 @@ class PushIn(BaseModel):
 
 @router.put("/push", status_code=204, summary="Notifications for this device: the relay's ticket, the key, the kinds")
 def push_on(found: Device_, body: PushIn, request: Request) -> Response:
-    understands = body.understands if body.understands is not None else (list(geraete.ALERTS) if body.alerts else None)
+    # G61: ``alerts`` is nextime's own older form, not the device's choice (``chosen=False``): its push card says
+    # "kommende App-Version" instead of "Die App zeigt dieselben Haken".
+    chosen = body.understands is not None
+    understands = body.understands if chosen else (list(geraete.ALERTS) if body.alerts else None)
     with SessionLocal() as db:
         data = geraete.Store(db)
         try:
-            nexgeraete.push.register(data, geraete.CONFIG, found.found, body.ticket, body.key, understands)
+            nexgeraete.push.register(data, geraete.CONFIG, found.found, body.ticket, body.key, understands,
+                                     chosen=chosen)
         except nexgeraete.DeviceRefused as refused:
             data.rollback()
             raise _refusal(Refusal(refused), request) from None

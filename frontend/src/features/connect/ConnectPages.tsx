@@ -31,7 +31,7 @@ export function ConnectConsentPage() {
   const location = useLocation()
   return (
     <SignedInOnly>
-      <ConsentPage request={verbindenRequest} search={location.search} areaWord={t('keys.dialog.calendars')} language={i18n.language} />
+      <ConsentPage request={verbindenRequest} app="nextime" search={location.search} areaWord={t('keys.dialog.calendars')} language={i18n.language} />
     </SignedInOnly>
   )
 }
