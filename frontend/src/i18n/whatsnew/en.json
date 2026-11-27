@@ -1,27 +1,65 @@
 {
   "0.4.0": {
-    "lead": "The ground for the nextime app on iPhone and iPad: connect, sync, keep working without a connection.",
+    "lead": "Your nex apps now work together: connect nextime with nextasks, nexpaper, nexmail, nexdiary and nexnotes with one click, without typing keys. Also new: passkeys, more control over AI tools, and settings as in every nex app.",
     "sections": [
       {
-        "title": "Connect iPhone or iPad",
+        "title": "Connect apps with one click",
         "where": "Settings › My account › Connections",
-        "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes. In the app tap “Add Server” and scan it, done, without a password. Without a camera, enter the address in the app and sign in as in the browser, passkeys included."
+        "body": "Until now you made an API key in the other app and typed it in here. Now each app has a card of its own: click “Connect with …”, sign in to the other app and agree once, done. The consent page shows which account is signed in and what each side may do, in words like “Tick tasks off”. When an app may read your calendars, you choose which ones. One consent covers both directions, and each app may do only what it really needs. The card shows since when you are connected, when the connection was last used and what is allowed; “Check now” and “Disconnect” (for both sides) are right there. If something goes wrong, you land back in your card and read there what happened. Connections made with a key keep working as before and can be renewed the new way."
       },
       {
-        "title": "Devices",
-        "where": "Settings › My account › Connections",
-        "body": "The “Devices” card shows every connected iPhone and iPad with its last contact and whether notifications are on. “Disconnect” locks a device out at once; a new password or “Sign out everywhere else” disconnects them all."
+        "title": "nextasks and nexpaper in the calendar",
+        "where": "Today and the calendar",
+        "body": "Due tasks from nextasks, yours and those assigned to you, show in Today, Day, Week, Month and the lists. Tick them off right in the calendar, and choose which areas and lists appear. Open deadlines from nexpaper, such as paying, cancelling by or a warranty, stand as all-day entries on the day you have to act by; a click opens the document in nexpaper. Both were there before, now connected with one click."
       },
       {
-        "title": "Sync and offline",
-        "where": "nextime app",
-        "body": "The app keeps every event of every time on the device, also without a connection, and brings what was entered to the server exactly once afterwards. When two change the same event, the change that reaches the server later counts; whoever was overwritten sees both versions and can bring theirs back."
+        "title": "A note for an event in nexnotes",
+        "where": "Open an event › Note in nexnotes",
+        "body": "New: “Note in nexnotes” puts a note with the event's title, time, place and notes into the nexnotes inbox with one click, for points on a meeting, say. The same event never gets a second one; nextime tells you the note is already there. The button appears once nextime is connected with nexnotes."
+      },
+      {
+        "title": "Your calendars in nexmail and nexdiary",
+        "where": "nexmail and nexdiary",
+        "body": "nexmail shows all your calendars from nextime with their groups and colors, makes an event in nextime from a mail, enters invitations from mails and answers them. That was there before, now connected with one click. New is nexdiary: while you write up a day, it shows that day's events from nextime to look back on. nexdiary only reads. You choose which calendars the two see when you connect."
+      },
+      {
+        "title": "AI tools that ask first",
+        "where": "Settings › My account › Connections › AI tools (MCP)",
+        "body": "Connect AI programs with an MCP key of their own, or with no key at all: the program signs itself in, you agree once and choose what it may do and which calendars it reaches. Under “Rights per tool” you set each tool to Allow, Ask or Deny. When a program asks, nextime tells your browsers that have notifications on; a tap opens the request, and you allow or decline. API keys with the box for AI tools keep working."
+      },
+      {
+        "title": "Sign in with a passkey",
+        "where": "Settings › My account › Security",
+        "body": "Sign in with your fingerprint, face or the PIN of your device, without a password. Passkeys need the public address with https. Usernames are new too: you sign in with your username or your email. Forgot your password? nextime mails you a link once the operator has set up mail. A new email address is confirmed by a link."
+      },
+      {
+        "title": "Settings as in every nex app",
+        "where": "Settings",
+        "body": "The same areas, cards and buttons as in the other nex apps. In Appearance you choose Light, Dark or As the system, now for your account on every device. “Reminders” is now “Notifications” and starts with the ways: notifications for this browser, a test notification, iPhone and iPad. Connections brings devices, installing, the other apps, API keys and AI tools to one place; keys can be edited now."
+      },
+      {
+        "title": "Backups every week or every month",
+        "where": "Settings › Server › Storage and backups",
+        "body": "Besides “Every night” there are “Every week” and “Every month”. “Back up now” takes a note along that stands beside the backup in the list. The card “Storage” shows how much nextime takes and what is still free."
+      },
+      {
+        "title": "Ready for the iPhone and iPad app",
+        "where": "Settings › My account › Connections",
+        "body": "“Connect iPhone or iPad” shows a QR code that is valid for 10 minutes; without a camera you sign in from the app as in the browser. The card “Devices” lists every connected device, and “Disconnect” locks one out at once. The app keeps every event on the device, also without a connection, and brings what was entered to the server exactly once afterwards; after a conflict you see both versions. The app itself comes separately."
       }
     ],
     "smallTitle": "Also",
     "small": [
-      "Set up the calendar account from the app on the same iPhone, and only the app reminds there: nothing rings twice.",
-      "Notifications of changes in shared calendars reach the app too; changes show up there on their own."
+      "Invite attendees to events in iCloud and Google calendars by their email address. iCloud or Google sends the invitation as usual, and the answers of those invited are kept. nextime's own calendars invite nobody.",
+      "The operator enters the addresses of the other nex apps once under Server › General › Other nex apps and allows connections into the local network there when needed; after that every account connects with one click.",
+      "Under Server › General › Interfaces the operator decides whether AI programs may connect themselves, the highest level and blocked tools. On a new installation MCP starts off; where it was on, it stays on.",
+      "“Ready for the internet?” under Server › Sign-in checks https, the second factor, the brake on guessing, cookies, the proxy and whether the server reaches the internet, and says what to do.",
+      "Only the operator sees whether a new version is out; a new installation asks once whether nextime should look.",
+      "Under Server › Accounts the operator sees every API key and can lock single ones; expired invitations stay listed there until withdrawn.",
+      "System mail goes out right after saving, and the log blacks out every key and every guest link.",
+      "The time zone is in the profile now, under the language. There is no storage limit per account any more; the limit per file stays.",
+      "Set up the calendar account from the app on the same iPhone, and only the app reminds there. Notifications of changes in shared calendars reach the app too.",
+      "Fixed: nextime now also starts in a container with tightly cut rights; until now the start stopped at the write test of the data folder."
     ]
   },
   "0.3.0": {

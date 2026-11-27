@@ -45,11 +45,14 @@ address. On a phone the week shows three days, and nextime installs from the bro
 
 - **One container.** FastAPI and SQLite, the interface built in. The first account is the operator; it needs the
   setup code from the log or the one you set.
-- **Accounts.** Invitations, roles, blocking, deleting with 30 days to bring an account back, a second factor (TOTP),
-  sign-in through OpenID Connect providers such as authentik or Microsoft Entra ID.
-- **Operation.** Daily backups at 03:00 in the server's time zone (14 kept, both adjustable), restore with a check of
-  what comes, changes and goes, a log with four levels, limits and switches for the whole server, a hint when nextime
-  is not reached over HTTPS.
+- **Accounts.** Usernames, invitations, roles, blocking, deleting with 30 days to bring an account back, a second
+  factor (TOTP), passkeys, a new password by a link in a mail, sign-in through OpenID Connect providers such as
+  authentik or Microsoft Entra ID.
+- **Operation.** Backups every night at 03:00 in the server's time zone, or every week or month (14 kept, all
+  adjustable), one made by hand with a note of its own; restore with a check of what comes, changes and goes; a log
+  with four levels that blacks out keys and guest links; system mail through the operator's mail server; limits and
+  switches for the whole server. "Ready for the internet?" checks HTTPS, the second factor, the brake on guessing,
+  cookies, the proxy and whether the server reaches the internet. Only the operator sees when a new version is out.
 - **Calendars and events.** Own calendars with eleven colors or one of your own and a symbol, hidden or shown, in an
   order of one's own; events with whole days, time zones, busy or free, notes with links and "Join" for video
   meetings; series daily, weekly, monthly or yearly with exceptions, stored as iCalendar objects.
@@ -63,19 +66,27 @@ address. On a phone the week shows three days, and nextime installs from the bro
   read only through a calendar's secret address) and other CalDAV servers such as Nextcloud, read and written, synced
   every minute; changes made while a source is away wait and go out later. Subscriptions to calendar links, fetched
   hourly. Public and school holidays of Germany, Austria and Switzerland built in (no service asked). Invitations from
-  iCloud and Google answered from nextime. Access data is stored encrypted and never shown again.
+  iCloud and Google answered from nextime, and attendees invited to events there (iCloud or Google sends the
+  invitation). Access data is stored encrypted and never shown again.
 - **Sharing.** Own calendars shared with other accounts (see busy only, read, change) and with guests through a
   read-only link; the picture of whoever entered an event in a shared calendar; notifications by web push when others
   change something.
 - **Everyday.** Reminders per person and device, a place with address suggestions and a small map, attachments, quick
   entry in one line with day and time, defaults for new events per calendar (an all-day yearly birthday with a
   reminder the day before), a search over everything, a trash with undo, public holidays standing out in the views.
-- **Sister apps.** Due tasks from [nextasks](https://github.com/DerKezorm/nextasks) and deadlines from
-  [nexpaper](https://github.com/DerKezorm/nexpaper) in the calendar, each connected per person with a key of that app.
-- **For programs.** A REST API with keys per person and an MCP server for AI assistants, the operator decides who may
-  use them, each key with its own rights.
-- **Languages and appearance.** German and English, more as files from the operator; light, dark or like the device;
-  the first day of the week, ISO week numbers, 12 or 24 hours and the time zone per account.
+- **Connect nex apps.** Each person connects nextime with the other nex apps by one click and one consent for both
+  directions, each app with only the rights it needs: due tasks from nextasks in the calendar, ticked off there;
+  open deadlines from nexpaper as all-day entries; a note for an event in nexnotes; nexmail shows your calendars,
+  makes events from mails and answers invitations; nexdiary shows a day's events while you write it up. You choose
+  which calendars an app may read. The operator enters the other apps' addresses once; connections made with a key
+  keep working.
+- **For programs.** A REST API with keys per person, each key with its own rights, and an MCP server for AI
+  assistants: an MCP key, or a program that signs itself in with the person's consent; each tool allowed, asked for or
+  denied, and a request that waits for a yes. The operator decides who may use them, the highest level and blocked
+  tools.
+- **Languages and appearance.** German and English, more as files from the operator; light, dark or like the device,
+  kept with the account on every device; the first day of the week, ISO week numbers, 12 or 24 hours and the time
+  zone per account.
 - **Phone and installed web app.** A bar at the bottom below 1024 px, the week as three days on a phone; installable
   from the browser with its own symbol. Without a connection the installed app keeps showing the next four weeks to
   read and search (kept in the browser, gone when signing out); adding events needs a connection.
@@ -133,6 +144,7 @@ docker exec -u nextime nextime python -m app.emergency reset-link <username or e
 | `NEXTIME_PLACES_URL` | The address search behind the suggestions in the place field, a [Photon](https://github.com/komoot/photon) service. Empty: the free one at photon.komoot.io. nextime asks it, not the browser, and sends only the typed place. The operator can switch suggestions and maps off. |
 | `NEXTIME_TILES_URL` | Where the small map of a place is drawn from, with `{z}/{x}/{y}` in it. Empty: the tiles of OpenStreetMap. |
 | `NEXTIME_PUSH_RELAY` | The push relay that wakes the nextime app on iPhone and iPad when something changed (only the device's ticket and an encrypted note go there, never the content). Empty: nothing goes out. Default `https://push.nexapps.dev`. |
+| `NEXTIME_INTERNET_PROBE_URL` | The address nextime asks (a plain `HEAD`, at most every five minutes) to know whether the server reaches the internet; iCloud, Google and subscriptions pause without it. Default `https://api.github.com`. Empty: no check, and these syncs pause. |
 | `NEXTIME_MEDIA_MEMORY_MB` | Memory of the process that reads pictures and PDFs of attachments for their previews (1024 MB from the start). |
 | `TZ` | The server's time zone; the daily backup runs in it. |
 | `PUID`, `PGID` | Who owns the files in the data folder. |

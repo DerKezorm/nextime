@@ -1,27 +1,65 @@
 {
   "0.4.0": {
-    "lead": "Die Grundlage für die nextime-App auf iPhone und iPad: verbinden, abgleichen, ohne Netz weiterarbeiten.",
+    "lead": "Deine nex-Apps arbeiten jetzt zusammen: Du verbindest nextime mit einem Klick mit nextasks, nexpaper, nexmail, nexdiary und nexnotes, ohne Schlüssel abzutippen. Dazu kommen Passkeys, mehr Kontrolle über KI-Werkzeuge und Einstellungen wie in allen nex-Apps.",
     "sections": [
       {
-        "title": "iPhone oder iPad verbinden",
+        "title": "Apps verbinden mit einem Klick",
         "where": "Einstellungen › Mein Konto › Verbindungen",
-        "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt. In der App „Server hinzufügen“ tippen und scannen, fertig, ohne Passwort. Ohne Kamera gibst du in der App die Adresse ein und meldest dich an wie im Browser, auch mit Passkey."
+        "body": "Bisher hast du in der anderen App einen API-Schlüssel angelegt und hier eingetragen. Jetzt hat jede App ihre eigene Karte: Klick auf „Mit … verbinden“, melde dich in der anderen App an und stimm einmal zu, fertig. Die Zustimmungsseite zeigt, mit welchem Konto du angemeldet bist und was jede Seite darf, in Worten wie „Aufgaben abhaken“. Darf eine App deine Kalender lesen, wählst du, welche. Eine Zustimmung gilt für beide Richtungen, und jede App darf nur, was sie wirklich braucht. Die Karte zeigt, seit wann ihr verbunden seid, wann die Verbindung zuletzt benutzt wurde und was erlaubt ist; „Jetzt prüfen“ und „Trennen“ (für beide Seiten) stehen gleich dabei. Klappt etwas nicht, landest du wieder in deiner Karte und liest dort, woran es liegt. Verbindungen mit Schlüssel laufen weiter wie bisher und lassen sich auf die neue Art erneuern."
       },
       {
-        "title": "Geräte",
-        "where": "Einstellungen › Mein Konto › Verbindungen",
-        "body": "Die Karte „Geräte“ zeigt jedes verbundene iPhone und iPad mit dem letzten Kontakt und ob Mitteilungen an sind. „Trennen“ sperrt ein Gerät sofort aus; ein neues Passwort oder „Überall sonst abmelden“ trennt alle."
+        "title": "nextasks und nexpaper im Kalender",
+        "where": "Heute und Kalender",
+        "body": "Fällige Aufgaben aus nextasks, deine und dir zugewiesene, stehen in Heute, Tag, Woche, Monat und den Listen. Abhaken geht direkt im Kalender, und du wählst, welche Bereiche und Listen erscheinen. Offene Fristen aus nexpaper, etwa zahlen, kündigen bis oder Garantie, stehen als ganztägige Einträge an dem Tag, bis zu dem du handeln musst; ein Klick öffnet das Dokument in nexpaper. Beides gab es schon, jetzt mit einem Klick verbunden."
       },
       {
-        "title": "Abgleich und ohne Netz",
-        "where": "nextime-App",
-        "body": "Die App hält alle Termine aller Zeiten auf dem Gerät, auch ohne Netz, und bringt Eingetragenes danach genau einmal zum Server. Ändern zwei denselben Termin, gilt die Änderung, die später am Server ankommt; wer überschrieben wurde, sieht beide Fassungen und kann „Meine zurückholen“."
+        "title": "Eine Notiz zum Termin in nexnotes",
+        "where": "Termin öffnen › Notiz in nexnotes",
+        "body": "Neu: „Notiz in nexnotes“ legt mit einem Klick eine Notiz mit Titel, Zeit, Ort und Notizen des Termins in den Eingang von nexnotes, etwa für Stichpunkte zu einer Besprechung. Zum selben Termin entsteht keine zweite, nextime sagt dir dann, dass es sie schon gibt. Der Knopf erscheint, sobald nextime mit nexnotes verbunden ist."
+      },
+      {
+        "title": "Deine Kalender in nexmail und nexdiary",
+        "where": "nexmail und nexdiary",
+        "body": "nexmail zeigt alle deine Kalender aus nextime mit ihren Gruppen und Farben, legt aus einer Mail einen Termin in nextime an, trägt Einladungen aus Mails ein und beantwortet sie. Das gab es schon, jetzt mit einem Klick verbunden. Neu ist nexdiary: Während du einen Tag aufschreibst, zeigt es die Termine dieses Tages aus nextime, zum Zurückblicken. nexdiary liest nur. Welche Kalender die beiden sehen, wählst du beim Verbinden."
+      },
+      {
+        "title": "KI-Werkzeuge, die vorher fragen",
+        "where": "Einstellungen › Mein Konto › Verbindungen › KI-Werkzeuge (MCP)",
+        "body": "KI-Programme verbindest du jetzt mit einem eigenen MCP-Schlüssel oder ganz ohne Schlüssel: Das Programm meldet sich selbst an, du stimmst einmal zu und wählst, was es darf und welche Kalender es erreicht. Unter „Rechte je Werkzeug“ stellst du jedes Werkzeug auf Erlauben, Fragen oder Verweigern. Fragt ein Programm, meldet nextime das in deinen Browsern mit Mitteilungen; ein Tipp öffnet die Rückfrage, und du erlaubst oder lehnst ab. API-Schlüssel mit dem Haken für KI-Werkzeuge gelten weiter."
+      },
+      {
+        "title": "Anmelden mit Passkey",
+        "where": "Einstellungen › Mein Konto › Sicherheit",
+        "body": "Melde dich mit Fingerabdruck, Gesicht oder der PIN deines Geräts an, ganz ohne Passwort. Passkeys brauchen die öffentliche Adresse mit https. Neu sind auch Benutzernamen: Du meldest dich mit Benutzername oder E-Mail an. Passwort vergessen? nextime schickt dir einen Link, sobald der Betreiber Mail eingerichtet hat. Eine neue Mailadresse bestätigst du per Link."
+      },
+      {
+        "title": "Einstellungen wie in allen nex-Apps",
+        "where": "Einstellungen",
+        "body": "Gleiche Bereiche, Karten und Knöpfe wie in den anderen nex-Apps. In der Darstellung wählst du Hell, Dunkel oder Wie das System, jetzt für dein Konto auf allen Geräten. „Erinnerungen“ heißt jetzt „Benachrichtigungen“ und beginnt mit den Wegen: Mitteilungen für diesen Browser, eine Probemeldung, iPhone und iPad. Die Verbindungen bringen Geräte, Installieren, die anderen Apps, API-Schlüssel und KI-Werkzeuge an einen Ort; Schlüssel lassen sich jetzt bearbeiten."
+      },
+      {
+        "title": "Sicherung jede Woche oder jeden Monat",
+        "where": "Einstellungen › Server › Speicher und Sicherung",
+        "body": "Neben „Jede Nacht“ gibt es „Jede Woche“ und „Jeden Monat“. „Jetzt sichern“ nimmt eine Notiz mit, die in der Liste bei der Sicherung steht. Die Karte „Speicher“ zeigt, wie viel nextime belegt und was noch frei ist."
+      },
+      {
+        "title": "Bereit für die iPhone- und iPad-App",
+        "where": "Einstellungen › Mein Konto › Verbindungen",
+        "body": "„iPhone oder iPad verbinden“ zeigt einen QR-Code, der 10 Minuten gilt; ohne Kamera meldest du dich in der App an wie im Browser. Die Karte „Geräte“ zeigt jedes verbundene Gerät, „Trennen“ sperrt es sofort aus. Die App hält alle Termine auf dem Gerät, auch ohne Netz, und bringt Eingetragenes danach genau einmal zum Server; nach einem Konflikt siehst du beide Fassungen. Die App selbst kommt gesondert."
       }
     ],
     "smallTitle": "Außerdem",
     "small": [
-      "Richtest du das Kalenderkonto aus der App auf demselben iPhone ein, erinnert dort nur die App, nichts klingelt doppelt.",
-      "Mitteilungen bei Änderungen geteilter Kalender kommen auch in der App an; Änderungen erscheinen dort ohne Zutun."
+      "In Terminen von iCloud- und Google-Kalendern lädst du jetzt Teilnehmer mit ihrer Mailadresse ein. Die Einladung verschickt iCloud oder Google wie gewohnt, Antworten der Eingeladenen bleiben erhalten. nextimes eigene Kalender laden niemanden ein.",
+      "Der Betreiber trägt die Adressen der anderen nex-Apps einmal unter Server › Allgemein › Andere nex-Apps ein und erlaubt dort bei Bedarf Verbindungen ins eigene Netz; danach verbindet jedes Konto mit einem Klick.",
+      "Unter Server › Allgemein › Schnittstellen legt der Betreiber fest, ob sich KI-Programme selbst verbinden dürfen, die höchste Stufe und gesperrte Werkzeuge. Auf einer neuen Installation ist MCP zuerst aus; wo es an war, bleibt es an.",
+      "„Bereit fürs Internet?“ unter Server › Anmeldung prüft https, zweiten Faktor, Schutz vor Raten, Cookies, Proxy und ob der Server das Internet erreicht, und sagt, was zu tun ist.",
+      "Ob es eine neue Version gibt, sieht nur noch der Betreiber; eine neue Installation fragt einmal, ob nextime nachsehen soll.",
+      "Unter Server › Konten sieht der Betreiber alle API-Schlüssel und kann einzelne sperren; abgelaufene Einladungen bleiben dort sichtbar, bis er sie zurückzieht.",
+      "Systemmails gehen gleich nach dem Speichern hinaus, und das Log schwärzt jeden Schlüssel und jeden Gast-Link.",
+      "Die Zeitzone steht jetzt im Profil unter der Sprache. Eine Speichergrenze je Konto gibt es nicht mehr, die Grenze je Datei bleibt.",
+      "Richtest du das Kalenderkonto aus der App auf demselben iPhone ein, erinnert dort nur die App. Mitteilungen bei Änderungen geteilter Kalender kommen auch in der App an.",
+      "Behoben: nextime startet jetzt auch in einem Container mit stark beschnittenen Rechten; bisher brach der Start bei der Schreibprobe des Datenordners ab."
     ]
   },
   "0.3.0": {
