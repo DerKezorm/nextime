@@ -220,7 +220,7 @@ export function SetupPage() {
         <AuthField label={t('account.email')} value={email} onChange={setEmail} type="email" autoComplete="email" maxLength={EMAIL_MAX} hint={t('account.emailHint')} />
         <AuthField label={t('account.newPassword')} value={password} onChange={setPassword} type="password" autoComplete="new-password" hint={t('setup.passwordHint', { count: min })} />
         <PasswordConfirmField value={again.confirm} onChange={again.setConfirm} mismatch={again.mismatch} />
-        <UpdateSetupRow app="nextime" checked={updateCheck} onChange={setUpdateCheck} bell={false} language={i18n.language} />
+        <UpdateSetupRow app="nextime" checked={updateCheck} onChange={setUpdateCheck} bell={false} devices language={i18n.language} />
         {/* No word about the second factor under the password unless one is required (konten 0.3.6): the first
             account comes before any switch of the operator. */}
         {setupNotes({ factorRequired: false }).map((note) => (

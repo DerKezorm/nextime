@@ -1,4 +1,4 @@
-"""The shared module geraete (``vendor/nexgeraete``, bauplaene/geraete 0.1.0) in nextime: pairing the iPhone and iPad
+"""The shared module geraete (``vendor/nexgeraete``, bauplaene/geraete 0.1.1) in nextime: pairing the iPhone and iPad
 app, its devices, the notifications through the push relay (``docs/vertrag-app1.md``, TIME-29).
 
 The module keeps no table of its own: ``Store`` translates its calls to nextime's ``app_devices``, ``app_pairings``,
@@ -418,11 +418,13 @@ def remove_all(db: Session, account_id: int) -> int:
 
 
 def on_paired(holder: Holder, device: ModuleDevice) -> None:
-    """After a new device (G29): the mail "Neue Anmeldung" as after a sign-in from a browser not known yet, unless the
-    person switched it off."""
+    """After a new device (G29, G50): the mail "Neue Anmeldung" as after a sign-in from a browser not known yet, unless
+    the person switched it off; it names the device ("„Kims iPhone“ (iPhone 16 Pro)"), not a browser."""
+    from ..vendor import nexpost
     from ..vendor.nexkonten import sessions
-    from . import kontenpost
+    from . import kontenpost, mailer
     from .konten_store import KontenStore
+    from .post_store import PostStore
 
     with SessionLocal() as db:
         row = db.get(Account, int(holder.id))
@@ -430,13 +432,33 @@ def on_paired(holder: Holder, device: ModuleDevice) -> None:
             return
         konto = KontenStore(db).get_account(row.id)
         mail = sessions.new_sign_in(konto, known=False, wanted=bool(row.new_sign_in_mail)) if konto else None
-        if kontenpost.queue(db, mail, where=nexgeraete.devices.describe(device)):
-            logger.info("Mail about a new device queued name=%s", row.name)
+        if mail is None or not mailer.configured(db):
+            return
+        try:
+            letter = nexgeraete.notices.letter(
+                nexpost.letters, mail, device, language=mailer.language_for(db, row),
+                link=kontenpost.link_for(db, mail), time_zone=kontenpost.zone_for(row),
+            )
+        except (nexpost.MailError, ValueError) as exc:
+            logger.warning("Mail about a new device not queued reason=%s", type(exc).__name__)
+            return
+        if letter is None:
+            return
+        nexpost.outbox.queue(PostStore(db), letter)
+        db.commit()
+        logger.info("Mail about a new device queued name=%s", row.name)
 
 
-def on_newer(version: str, current: str | None = None) -> None:
-    """``updates`` found a newer nextime (G18): the operators' devices that understand ``update`` hear it once, with
-    the running version (``current``, else ``__version__``) and the way to "Was ist neu"."""
+def update_wanted() -> bool:
+    """For ``updates`` (``devices_want``, U24, G56): a device of an operator wants to hear of new versions. Only then
+    the background looks, at most once a day and only while the operator allows the check."""
+    with SessionLocal() as db:
+        return nexgeraete.notices.update_wanted(Store(db), CONFIG)
+
+
+def newer(version: str) -> None:
+    """For ``updates`` (``on_devices``, U24): a newer nextime; the operators' devices that want ``update`` hear it
+    once, with the running version and the way to "Was ist neu"."""
     from .. import __version__
 
     # The tag without its "v", as the bell of the other apps names it (``nexupdates.notice``).
@@ -444,7 +466,7 @@ def on_newer(version: str, current: str | None = None) -> None:
     with SessionLocal() as db:
         link = settings_service.public_url(db)
         told = nexgeraete.notices.newer(
-            Store(db), CONFIG, shown, current or __version__, f"{link}/settings/about" if link else "", send=send
+            Store(db), CONFIG, shown, __version__, f"{link}/settings/about" if link else "", send=send
         )
     logger.info("Newer version told to devices sent=%s", told.sent)
 

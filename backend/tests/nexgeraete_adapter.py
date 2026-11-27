@@ -156,13 +156,31 @@ class Adapter(StandardAdapter):
         return b"".join(Path(str(path) + rest).read_bytes() for rest in ("", "-wal")
                         if Path(str(path) + rest).is_file())
 
+    def _actor(self, account: str) -> int:
+        """Who blocks or deletes: the operator; for the operator's own account a second operator (konten never lets
+        anyone block oneself, nor the last operator)."""
+        if account != "operator":
+            return self.ids["operator"]
+        if "deputy" not in self.ids:
+            from app.db import SessionLocal
+            from app.models import OPERATOR, Account
+            from app.security import hash_password
+
+            with SessionLocal() as db:
+                row = Account(name="deputy", display_name="Deputy", email="deputy@example.com", email_confirmed=True,
+                              role=OPERATOR, password_hash=hash_password(secrets.token_urlsafe(16)))
+                db.add(row)
+                db.commit()
+                self.ids["deputy"] = row.id
+        return self.ids["deputy"]
+
     def _manage(self, action: str, account: str) -> None:
         from app.db import SessionLocal
         from app.services.konten_store import KontenStore
         from app.vendor.nexkonten import manage
 
         with SessionLocal() as db:
-            getattr(manage, action)(KontenStore(db), self.ids[account], actor_id=self.ids["operator"],
+            getattr(manage, action)(KontenStore(db), self.ids[account], actor_id=self._actor(account),
                                     actor_confirmed=True)
 
     def block(self, account: str = "owner") -> None:
@@ -248,11 +266,28 @@ class Adapter(StandardAdapter):
                       quiet=quiet, send=geraete.send)
 
     def announce(self, version: str) -> None:
-        """``updates.on_newer`` (``geraete.on_newer``). The contract reads "1.2.1" as the running version in the text
-        (the reference's); nextime's own runs with ``__version__``."""
-        from app.services import geraete
+        """The way ``updates`` tells the devices (``on_devices`` → ``geraete.newer``, U24), with the running version
+        (``running``)."""
+        from app.services import updates  # noqa: F401  (configures the module)
+        from app.vendor import nexupdates
 
-        geraete.on_newer(version, current="1.2.1")
+        told = nexupdates.current().on_devices
+        assert told is not None
+        told(version)
+
+    def update_wanted(self) -> bool:
+        """What ``updates`` asks before its daily look (``devices_want`` → ``geraete.update_wanted``, G56)."""
+        from app.services import updates  # noqa: F401  (configures the module)
+        from app.vendor import nexupdates
+
+        wanted = nexupdates.current().devices_want
+        assert wanted is not None
+        return wanted()
+
+    def running(self) -> str:
+        from app import __version__
+
+        return __version__
 
     def sweep(self) -> int:
         from app.db import SessionLocal

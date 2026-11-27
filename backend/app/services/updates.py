@@ -1,12 +1,13 @@
-"""Whether a newer nextime is out: the shared module ``updates`` (``vendor/nexupdates``, bauplaene/updates 0.1.1).
+"""Whether a newer nextime is out: the shared module ``updates`` (``vendor/nexupdates``, bauplaene/updates 0.1.3).
 
 The module asks GitHub at most once a day for the newest release, only while the operator's switch is on
 (``update_check`` in the settings, as before), says nothing to members (U2, U15) and keeps nextime's routes
-(``/api/about…``) and the names of their description (E53). nextime has no bell; since the shared module geraete
-0.1.0 the operators' iPhones and iPads hear of a newer version once (G18, ``on_newer`` → ``geraete.on_newer``), so the
-background looks once an hour (``run_forever`` in ``main.py``), asks at most once a day and only while the switch is
-on. Besides, the question goes out when an operator opens "Über nextime" or the page "Server" (``/api/server/state``,
-a thin wrapper, U16).
+(``/api/about…``) and the names of their description (E53). nextime has no bell (``on_newer`` None). The operators'
+iPhones and iPads hear of a newer version once (U24, G56): while a device of an operator wants ``update``
+(``devices_want`` → ``geraete.update_wanted``), the background (``run_forever`` in ``main.py``, a look an hour) asks
+at most once a day, and only while the switch is on; ``on_devices`` → ``geraete.newer`` tells them. Without such a
+device the background asks nothing (U19); the question goes out when an operator opens "Über nextime" or the page
+"Server" (``/api/server/state``, a thin wrapper, U16).
 
 Nothing goes out but the question itself: no names, no calendars, no settings, no version of this server.
 """
@@ -23,7 +24,19 @@ from ..vendor import nexupdates
 
 # The names of the old services/updates.py (parse, is_newer, state, forget, State ...); not a star import, which would
 # bring the module's own __version__ along.
-from ..vendor.nexupdates import INTERVAL, MAX_ANSWER, RETRY, State, check, forget, is_newer, parse, state
+from ..vendor.nexupdates import (
+    INTERVAL,
+    MAX_ANSWER,
+    RETRY,
+    State,
+    check,
+    forget,
+    is_newer,
+    look_once,
+    parse,
+    run_forever,
+    state,
+)
 
 REPO = "DerKezorm/nextime"
 REPO_URL = f"https://github.com/{REPO}"
@@ -49,7 +62,7 @@ def _write_switch(on: bool) -> None:
         settings_service.save(db, {SWITCH: bool(on)})
 
 
-#: The version the operators' devices were last told about (``on_newer``), so nobody hears of one twice.
+#: The version the operators' devices were last told about (``on_devices``), so nobody hears of one twice.
 TOLD = "update_told"
 
 
@@ -66,15 +79,20 @@ def _write_told(version: str) -> None:
         settings_service.save(db, {TOLD: version})
 
 
-def _on_newer(version: str) -> None:
+def _devices_want() -> bool:
     from . import geraete
 
-    geraete.on_newer(version)
+    return geraete.update_wanted()
+
+
+def _on_devices(version: str) -> None:
+    from . import geraete
+
+    geraete.newer(version)
 
 
 def configure() -> nexupdates.AppConfig:
-    """The module's settings for nextime (at import, and again in tests). ``on_newer``: no bell, the operators'
-    devices (G18)."""
+    """The module's settings for nextime (at import, and again in tests): no bell, the operators' devices (U24)."""
     return nexupdates.configure(nexupdates.AppConfig(
         app_name="nextime",
         version=lambda: __version__,
@@ -85,7 +103,9 @@ def configure() -> nexupdates.AppConfig:
         write_switch=_write_switch,
         read_told=_read_told,
         write_told=_write_told,
-        on_newer=_on_newer,
+        on_newer=None,
+        devices_want=_devices_want,
+        on_devices=_on_devices,
     ))
 
 
@@ -93,5 +113,5 @@ configure()
 
 __all__ = [
     "API_URL", "INTERVAL", "MAX_ANSWER", "PROJECT_URL", "RELEASES_URL", "REPO", "REPO_URL", "RETRY", "State", "check",
-    "configure", "forget", "is_newer", "parse", "state",
+    "configure", "forget", "is_newer", "look_once", "parse", "run_forever", "state",
 ]

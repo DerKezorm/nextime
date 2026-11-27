@@ -195,7 +195,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(_sweep_forever(stop)))
         # The silent nudges to the iPhone app (TIME-29).
         tasks.append(asyncio.create_task(apppush.run_forever(stop)))
-        # A newer nextime for the operators' devices (geraete G18): a look an hour, a question a day at most.
+        # A newer nextime for the operators' devices (updates U24): a look an hour; a question a day at most, only
+        # while a device of an operator wants it and the check is on.
         tasks.append(asyncio.create_task(updates.run_forever(stop)))
         # iCloud, Google, CalDAV servers, subscriptions and holidays (TIME-15 to TIME-17).
         tasks.append(asyncio.create_task(sync.run_forever(stop)))

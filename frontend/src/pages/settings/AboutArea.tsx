@@ -3,9 +3,10 @@
  * comes from, whether a newer one is out (TIME-1 AC-7, AC-11), and what it is built with. An area of the settings
  * (`/settings/about`, last in the navigation, for every account).
  *
- * The card "Aktualisierungen" comes from the shared module updates (`vendor/nexupdates`, bauplaene/updates 0.1.1):
+ * The card "Aktualisierungen" comes from the shared module updates (`vendor/nexupdates`, bauplaene/updates 0.1.3):
  * only an operator sees it, switches the daily check and asks now, because the question goes out for the whole
- * installation; a member sees only the own version (U2, U15). The page says what goes out: the question to GitHub,
+ * installation; a member sees only the own version (U2, U15). nextime has no bell: the daily hint says when the
+ * question goes out by itself, while a device of an operator wants to hear of new versions (U24). The page says what goes out: the question to GitHub,
  * and nextime's other call by itself, the check of the internet connection (U11). Times in the account's clock and
  * zone (TIME-3 AC-6). "Was ist neu" and "Frühere Versionen" come from the shared module wasneu (`vendor/nexwasneu`):
  * reading here marks nothing.
@@ -17,7 +18,7 @@ import { moment } from '../../lib/time'
 import { useDisplay } from '../../lib/useDisplay'
 import { useAuth } from '../../state/auth'
 import { AboutPage, Notice, type BuiltWith } from '../../vendor/nexui'
-import { useUpdates, useUpdatesTexts, whatGoesOut, type Fetcher } from '../../vendor/nexupdates/updates'
+import { dailyHint, useUpdates, useUpdatesTexts, whatGoesOut, type Fetcher } from '../../vendor/nexupdates/updates'
 import { useAboutWhatsNew } from '../../vendor/nexwasneu'
 
 /** nextime's way to the module's routes: every request names its tab (changes are refused without it). */
@@ -78,7 +79,10 @@ export function AboutArea() {
         {...news.about}
         builtWith={PARTS}
         problem={state.problem}
-        texts={{ updatesWhatGoesOut: whatGoesOut(texts, 'nextime', undefined, [t('about.updates.internetCheck')]) }}
+        texts={{
+          updatesWhatGoesOut: whatGoesOut(texts, 'nextime', undefined, [t('about.updates.internetCheck')]),
+          updatesDailyHint: dailyHint(texts, { bell: false, devices: true }),
+        }}
       />
       {news.window}
     </>
