@@ -426,10 +426,11 @@ def _enqueue(db: Session, account: Account, calendar_id: int, payload: dict[str,
         count += 1
     if apppush.relay_url():
         # The iPhone app (TIME-29 AC-3): its devices that show notifications with text. Never reminders (G6).
-        for device_id in db.scalars(select(AppDevice.id).where(AppDevice.account_id == account.id,
-                                                               AppDevice.push_ticket != "",
-                                                               AppDevice.push_alerts.is_(True))):
-            db.add(NotifyOutbox(account_id=account.id, kind=APP, target_id=device_id, calendar_id=calendar_id,
+        for device in db.scalars(select(AppDevice).where(AppDevice.account_id == account.id,
+                                                         AppDevice.push_ticket != "").order_by(AppDevice.id)):
+            if not apppush.shows_alerts(device):
+                continue
+            db.add(NotifyOutbox(account_id=account.id, kind=APP, target_id=device.id, calendar_id=calendar_id,
                                 payload=payload, created_at=now, next_try_at=now))
             count += 1
     return count
@@ -446,7 +447,7 @@ def _send_app(db: Session, account: Account, row: NotifyOutbox) -> None:
     from . import appdevices
 
     device = db.get(AppDevice, row.target_id)
-    if device is None or device.account_id != row.account_id or not device.push_ticket or not device.push_alerts:
+    if device is None or device.account_id != row.account_id or not apppush.shows_alerts(device):
         raise LookupError("no_target")
     payload = dict(row.payload or {})
     app = dict(payload.get("app") or {})
@@ -456,7 +457,7 @@ def _send_app(db: Session, account: Account, row: NotifyOutbox) -> None:
     try:
         apppush.alert(device, message, f"nt-{opaque(row.calendar_id)}")
     except apppush.Gone:
-        device.push_ticket, device.push_key, device.push_alerts = "", "", False
+        device.push_ticket, device.push_key, device.push_alerts, device.push_understands = "", "", False, None
         raise
 
 

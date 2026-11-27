@@ -218,7 +218,7 @@ describe('TIME-2 the accounts of the server', () => {
     await click(byText('Verwalten', box.querySelector<HTMLElement>('[data-testid="account-anna"]')!))
     const dialog = document.querySelector<HTMLElement>('[data-testid="manage-dialog"]')!
     expect(dialog.querySelector('[data-testid="fact-storage"]')!.textContent).toContain('ohne Grenze')
-    expect([...dialog.querySelectorAll('h3')].map((head) => head.textContent)).toEqual(['Ändern', 'Zugang', 'Beenden'])
+    expect([...dialog.querySelectorAll('h3')].map((head) => head.textContent)).toEqual(['Geräte', 'Ändern', 'Zugang', 'Beenden'])
     const change = dialog.querySelector<HTMLElement>('[data-testid="manage-change"]')!
     expect([...change.querySelectorAll('button')].map((button) => button.textContent)).toEqual([
       // No "Speichergrenze" any more: nextime has no storage limit per account (plan "Einstellungen", E24).

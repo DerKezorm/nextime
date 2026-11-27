@@ -57,6 +57,8 @@ import {
   type ListedInvite,
 } from '../../vendor/nexkonten/konten'
 import { WhatYouSeeCard } from '../../vendor/nexkonten/AccountCards'
+import { AccountDevicesPart } from '../../vendor/nexgeraete'
+import { GERAETE_BASE, deviceRequest } from '../../features/app/devices'
 import { AllKeysCard } from '../../vendor/nexschluessel'
 import { Avatar, Badge, Button, ButtonGroup, Card, CheckboxRow, ConfirmDialog, Dialog, Facts, Field, Notice, Row, Rows, SelectField, type IconName } from '../../vendor/nexui'
 import { APP_CAPS, APP_OWN_ACTIONS, listedOf } from './accountList'
@@ -292,6 +294,8 @@ function ManageDialog({ row, listed, operatorHasPassword, mailServer, onClose, o
             <Row lead={<Picture row={listed} size={48} />} name={name} badge={<Badges shown={accountBadges(listed)} />} sub={accountLine(listed)} />
           </Rows>
           <Facts items={facts} label={t(MANAGE_DIALOG.title, { name })} testId="manage-facts" />
+          {/* Its iPhones and iPads: how many, which, last seen, "Geräte trennen" (shared module geraete, G28). */}
+          <AccountDevicesPart request={deviceRequest} base={GERAETE_BASE} accountId={row.id} name={name} blocked={Boolean(listed.blocked || listed.deletedAt)} language={lang} />
           {groups.map((group) => (
             <ButtonGroup key={group.group} title={t(group.title)} layout={group.layout} testId={`manage-${group.group}`}>
               {group.actions.map((act) =>

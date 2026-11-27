@@ -1,7 +1,10 @@
-"""The browser's side of the nextime app (TIME-29), as nexnotes has it: "iPhone oder iPad verbinden" with its QR code
-(AC-1), the page ``/app-connect`` that hands the app a one-time code after signing in (AC-5), and the list of devices
-with "Trennen" (AC-4, AC-7). Only with a browser session. The rules are in ``services/appdevices.py``, the app's side
-in ``routers/app1.py``.
+"""The browser's side of the nextime app (TIME-29).
+
+Since the shared module geraete 0.1.0 the page's cards call the module's browser routes (``module_router`` under
+``/api/geraete``: pairing with QR code and code to type, ``/app-connect``, the devices with renaming, the kinds of
+notification per device, the operator's view of an account). The routes of before stay here as thin shells over the
+module, with their answers of before (the old QR link ``nextime://connect?server=…&pairing=…&secret=…``, ``link`` from
+``/app-connect``, the list of devices as a list). Only with a browser session.
 
 | Method | Path | What |
 |---|---|---|
@@ -15,20 +18,22 @@ in ``routers/app1.py``.
 
 from __future__ import annotations
 
-import io
 import logging
 from typing import Annotated, Any
 from urllib.parse import quote, urlsplit
 
-import segno
-from fastapi import APIRouter, Depends, Path, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 from pydantic import BaseModel, Field
 
-from ..deps import DbSession, require_account
+from ..deps import DbSession, require_account, require_operator
 from ..errors import error
 from ..models import Account as AccountRow
-from ..services import appdevices, settings_service
-from ..services.appdevices import PairingError
+from ..models import AppDevice
+from ..services import appdevices, geraete, settings_service
+from ..vendor import nexgeraete
+from ..vendor.nexgeraete import DeviceRefused
+from ..vendor.nexgeraete import api as geraete_api
+from ..vendor.nexgeraete import qr as geraete_qr
 
 logger = logging.getLogger("nextime.app")
 
@@ -36,7 +41,6 @@ router = APIRouter(prefix="/api", tags=["app"])
 
 #: The scheme the app listens to: the camera opens the QR code's link right in nextime.
 CONNECT_LINK = "nextime://connect"
-CONNECTED_LINK = "nextime://connected"
 
 PairingId = Annotated[str, Path(min_length=1, max_length=32)]
 
@@ -51,13 +55,17 @@ def browser_account(request: Request, account: Annotated[AccountRow, Depends(req
 Browser = Annotated[AccountRow, Depends(browser_account)]
 
 
-def _fail(exc: PairingError) -> Exception:
-    return error(exc.code, exc.text, exc.status, **exc.values)
+def _fail(db: DbSession, refused: DeviceRefused) -> HTTPException:
+    db.rollback()
+    return HTTPException(status_code=refused.status, detail=refused.as_dict(), headers=refused.headers)
 
 
-class PairingIn(BaseModel):
-    #: Where the browser sees nextime now. Counts only when the operator has set no public address; that one wins.
-    address: str = Field(default="", max_length=600)
+def public_address(request: Request) -> str:
+    """The public address from the settings: it wins over the browser's (the module's ``address``)."""
+    from ..db import SessionLocal
+
+    with SessionLocal() as db:
+        return settings_service.public_url(db)
 
 
 def _address(db: DbSession, from_browser: str, request: Request) -> str:
@@ -71,43 +79,49 @@ def _address(db: DbSession, from_browser: str, request: Request) -> str:
     raise error("app_address_missing", "nextime does not know its address. The operator sets it.", 422)
 
 
-def _qr_svg(link: str) -> str:
-    """Dark on white with a quiet zone, readable on a dark page too; with a ``viewBox`` so that it scales."""
-    out = io.BytesIO()
-    segno.make(link, error="m").save(out, kind="svg", scale=4, dark="#14141a", light="#ffffff", border=4,
-                                     xmldecl=False, svgns=True, omitsize=True)
-    return out.getvalue().decode("utf-8")
+class PairingIn(BaseModel):
+    #: Where the browser sees nextime now. Counts only when the operator has set no public address; that one wins.
+    address: str = Field(default="", max_length=600)
+
+
+def _old(device: nexgeraete.Device) -> dict[str, Any]:
+    entry = nexgeraete.devices.entry(device)
+    return {key: entry[key] for key in ("id", "name", "kind", "created_at", "last_seen_at")}
 
 
 @router.post("/app-pairing", status_code=201, summary="A QR code for the app (valid 10 minutes, one device)")
 def pair(account: Browser, db: DbSession, request: Request, body: PairingIn | None = None) -> dict[str, Any]:
     address = _address(db, body.address if body else "", request)
+    data = geraete.Store(db)
     try:
-        made = appdevices.prepare(db, account)
-    except PairingError as exc:
-        raise _fail(exc) from exc
-    link = (f"{CONNECT_LINK}?server={quote(address, safe='')}&pairing={quote(made.id, safe='')}"
+        made = nexgeraete.pairing.start(data, geraete.CONFIG, account.id, address=address, now=geraete.now())
+    except DeviceRefused as refused:
+        raise _fail(db, refused) from None
+    # The link of before: the published app reads ``server``, ``pairing`` and ``secret``.
+    link = (f"{CONNECT_LINK}?server={quote(address, safe='')}&pairing={quote(made.pairing.id, safe='')}"
             f"&secret={quote(made.secret, safe='')}")
     logger.info("Pairing made for the app")
-    return {"id": made.id, "secret": made.secret, "expires_at": appdevices.iso(made.expires_at), "link": link,
-            "address": address, "qr_svg": _qr_svg(link)}
+    return {"id": made.pairing.id, "secret": made.secret, "code": made.code,
+            "expires_at": appdevices.iso(made.pairing.expires_at), "link": link, "address": address,
+            "qr_svg": geraete_qr.svg(link)}
 
 
 @router.get("/app-pairing/{pairing_id}", summary="Whether the app used the QR code")
 def pairing_state(pairing_id: PairingId, account: Browser, db: DbSession) -> dict[str, Any]:
     try:
-        state, device = appdevices.state(db, pairing_id, account)
-    except PairingError as exc:
-        raise _fail(exc) from exc
-    return {"state": state, "device": appdevices.device_out(device) if device is not None else None}
+        state, device = nexgeraete.pairing.state(geraete.Store(db), geraete.CONFIG, account.id, pairing_id,
+                                                 geraete.now())
+    except DeviceRefused as refused:
+        raise _fail(db, refused) from None
+    return {"state": state, "device": _old(device) if device is not None else None}
 
 
 @router.delete("/app-pairing/{pairing_id}", status_code=204, summary="Withdraw a QR code")
 def withdraw(pairing_id: PairingId, account: Browser, db: DbSession) -> Response:
     try:
-        appdevices.withdraw(db, pairing_id, account)
-    except PairingError as exc:
-        raise _fail(exc) from exc
+        nexgeraete.pairing.withdraw(geraete.Store(db), geraete.CONFIG, account.id, pairing_id)
+    except DeviceRefused as refused:
+        raise _fail(db, refused) from None
     return Response(status_code=204)
 
 
@@ -120,12 +134,12 @@ def connect(body: ConnectIn, account: Browser, db: DbSession) -> dict[str, str]:
     """"Verbinden" on the page the app opened in its sign-in sheet (AC-5): the browser goes on to the link, which
     hands the code (five minutes, once) to the app."""
     try:
-        state = appdevices.clean_state(body.state)
-        code = appdevices.make_code(db, account, state)
-    except PairingError as exc:
-        raise _fail(exc) from exc
+        link = nexgeraete.pairing.consent(geraete.Store(db), geraete.CONFIG, account.id, body.state,
+                                          now=geraete.now())
+    except DeviceRefused as refused:
+        raise _fail(db, refused) from None
     logger.info("Code made for the app")
-    return {"link": f"{CONNECTED_LINK}?code={quote(code, safe='')}&state={quote(state, safe='')}"}
+    return {"link": link, "redirect": link}
 
 
 @router.get("/app-devices", summary="The own connected iPhones and iPads")
@@ -136,6 +150,24 @@ def own_devices(account: Browser, db: DbSession) -> list[dict[str, Any]]:
 
 @router.delete("/app-devices/{device_id}", status_code=204, summary="Disconnect a device")
 def disconnect(device_id: int, account: Browser, db: DbSession) -> Response:
-    if not appdevices.disconnect(db, account.id, device_id):
+    if db.get(AppDevice, device_id) is None or not appdevices.disconnect(db, account.id, device_id):
         raise error("not_found", "Not found.", 404)
     return Response(status_code=204)
+
+
+def _operator(account: Annotated[AccountRow, Depends(require_operator)]) -> AccountRow:
+    return account
+
+
+#: The module's browser routes (G2–G28): what the cards "Geräte", "Mitteilungen auf deinen Geräten", the operator's
+#: part in Server › Konten and the page ``/app-connect`` call.
+module_router = geraete_api.browser_router(
+    config=geraete.CONFIG,
+    store=geraete.store,
+    account=browser_account,
+    operator=_operator,
+    address=public_address,
+    send=geraete.send,
+    clock=geraete.now,
+    prefix=geraete.BROWSER_PREFIX,
+)

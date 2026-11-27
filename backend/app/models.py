@@ -1121,6 +1121,16 @@ class AppDevice(Base):
     #: The app shows notifications with text (it said so with ``PUT /push``, ``alerts``): only then do the changes of
     #: shared calendars go to it (TIME-21 through the relay); every device with a ticket gets the silent nudge.
     push_alerts: Mapped[bool] = mapped_column(Boolean, default=False, server_default=false())
+    # Since the shared module geraete (0.1.0): what the app says of itself in ``X-Nex-App`` (model, system, its
+    # version), the way the device came in (``qr``, ``code``, ``browser``, ``icloud``), the kinds of notification it
+    # understands (JSON list; ``NULL``: the published app, which gets ``changed`` and, with ``push_alerts``, the
+    # changes of shared calendars) and the kinds switched on or off on it (JSON object). Rows of before keep ``NULL``.
+    model: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    system: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    app_version: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    via: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    push_understands: Mapped[str | None] = mapped_column(Text, nullable=True)
+    push_kinds: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class AppPairing(Base):
@@ -1132,6 +1142,8 @@ class AppPairing(Base):
     id: Mapped[str] = mapped_column(String(32), primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     secret_hash: Mapped[str] = mapped_column(String(64))
+    #: The code to type beside the QR code (module geraete), its SHA-256; ``NULL`` for pairings of before.
+    code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
     used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)
@@ -1147,6 +1159,8 @@ class AppCode(Base):
     code_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
     account_id: Mapped[int] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"), index=True)
     state: Mapped[str] = mapped_column(String(128), default="")
+    #: The app's PKCE challenge (S256, module geraete); ``NULL``: the app sent none.
+    challenge: Mapped[str | None] = mapped_column(String(128), nullable=True)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(UtcDateTime)
     used_at: Mapped[datetime | None] = mapped_column(UtcDateTime, nullable=True)

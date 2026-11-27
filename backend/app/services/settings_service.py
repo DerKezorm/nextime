@@ -47,6 +47,12 @@ DEFAULTS: dict[str, Any] = {
     #: Off on a new installation (the shared module mcp, decision 5). An installation of before kept it on without
     #: storing it; the start that brings the module writes that down first (``db.init_db``), so it stays on there.
     "mcp_enabled": False,
+    #: The shared module geraete (G30, Server › Connections): the iPhone and iPad app may be used, and new devices
+    #: may connect. On from the start; off, the devices rest and work again when it is switched on.
+    "app_enabled": True,
+    "app_pairing_enabled": True,
+    #: The newest version the operators' devices were told about (``services/updates.py``, G18).
+    "update_told": "",
     #: The shared module mcp: whether programs may connect over OAuth (``None``: on), the highest level of a key
     #: (``None``: write), the tools blocked for every account (``None``: none).
     "mcp_programs": None,

@@ -435,8 +435,8 @@ def unblock(db: Session, account: Account) -> None:
         return
     from ..security import end_all_sessions
 
-    # The sessions from before the block do not come back to life.
-    end_all_sessions(db, account.id)
+    # The sessions from before the block do not come back to life; the paired devices rested and work again (G26).
+    end_all_sessions(db, account.id, devices=False)
     account.blocked_at = None
     account.failed_logins = 0
     account.locked_until = None
@@ -445,12 +445,10 @@ def unblock(db: Session, account: Account) -> None:
 
 
 def _app_devices_out(db: Session, account: Account) -> None:
-    """The paired iPhones and iPads go with a block or deletion and hear why (TIME-29 EC-5); unblocked, they sign in
-    again."""
-    from . import appdevices
-
+    """Since geraete 0.1.0 (G26) the paired iPhones and iPads rest with a block or deletion: they hear
+    ``account_blocked`` while it lasts (TIME-29 EC-5) and work again afterwards without pairing anew. Nothing to do
+    here but what the caller commits."""
     db.flush()
-    appdevices.end_all(db, account.id)
 
 
 def delete_account(db: Session, account: Account) -> None:
@@ -478,7 +476,7 @@ def restore_account(db: Session, account: Account) -> None:
         raise AccountError("not_found", "Not found.", 404)
     from ..security import end_all_sessions
 
-    end_all_sessions(db, account.id)
+    end_all_sessions(db, account.id, devices=False)
     account.deleted_at = None
     db.commit()
     content.account_restored(db, account.id)

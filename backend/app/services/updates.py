@@ -2,8 +2,10 @@
 
 The module asks GitHub at most once a day for the newest release, only while the operator's switch is on
 (``update_check`` in the settings, as before), says nothing to members (U2, U15) and keeps nextime's routes
-(``/api/about…``) and the names of their description (E53). nextime has no bell, so nothing looks in the background
-(U19): the question goes out only when an operator opens "Über nextime" or the page "Server" (``/api/server/state``,
+(``/api/about…``) and the names of their description (E53). nextime has no bell; since the shared module geraete
+0.1.0 the operators' iPhones and iPads hear of a newer version once (G18, ``on_newer`` → ``geraete.on_newer``), so the
+background looks once an hour (``run_forever`` in ``main.py``), asks at most once a day and only while the switch is
+on. Besides, the question goes out when an operator opens "Über nextime" or the page "Server" (``/api/server/state``,
 a thin wrapper, U16).
 
 Nothing goes out but the question itself: no names, no calendars, no settings, no version of this server.
@@ -47,8 +49,32 @@ def _write_switch(on: bool) -> None:
         settings_service.save(db, {SWITCH: bool(on)})
 
 
+#: The version the operators' devices were last told about (``on_newer``), so nobody hears of one twice.
+TOLD = "update_told"
+
+
+def _read_told() -> str | None:
+    with SessionLocal() as db:
+        row = db.get(Setting, TOLD)
+        return str(row.value) if row is not None and row.value else None
+
+
+def _write_told(version: str) -> None:
+    from . import settings_service
+
+    with SessionLocal() as db:
+        settings_service.save(db, {TOLD: version})
+
+
+def _on_newer(version: str) -> None:
+    from . import geraete
+
+    geraete.on_newer(version)
+
+
 def configure() -> nexupdates.AppConfig:
-    """The module's settings for nextime (at import, and again in tests). No ``on_newer``: nextime has no bell (U19)."""
+    """The module's settings for nextime (at import, and again in tests). ``on_newer``: no bell, the operators'
+    devices (G18)."""
     return nexupdates.configure(nexupdates.AppConfig(
         app_name="nextime",
         version=lambda: __version__,
@@ -57,6 +83,9 @@ def configure() -> nexupdates.AppConfig:
         update_url=lambda: get_settings().update_url,
         read_switch=_read_switch,
         write_switch=_write_switch,
+        read_told=_read_told,
+        write_told=_write_told,
+        on_newer=_on_newer,
     ))
 
 

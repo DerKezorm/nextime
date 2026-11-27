@@ -415,8 +415,11 @@ class KontenStore:
         """What a new password leaves: paired iPhones and iPads (``device``), calendar programs with their own device
         password (``calendar``, the calendar account of TIME-20), API keys and passkeys."""
         owner = int(account_id)
+        from ..vendor.nexgeraete import describe
+        from .geraete import device_of
+
         found = [
-            Access(f"{DEVICE_UID}{row.id}", nexkonten.ACCESS_DEVICE, row.name, row.last_used_at)
+            Access(f"{DEVICE_UID}{row.id}", nexkonten.ACCESS_DEVICE, describe(device_of(row)), row.last_used_at)
             for row in self.db.scalars(select(AppDevice).where(AppDevice.account_id == owner).order_by(AppDevice.id))
         ]
         found += [
@@ -964,20 +967,19 @@ class KontenStore:
             self.db.flush()
 
     def shut_out(self, account_id: AccountId) -> None:
-        """What a block or a delete ended in nextime before the module: the paired iPhones and iPads go and hear why
-        (TIME-29 EC-5), no browser counts as known any more. The browser sessions stay as they are but count for
-        nothing while the account is out (``security.account_out``), so that an open window hears that it is blocked
-        instead of being sent to sign in; unblocking and bringing back end them (``end_sessions``). API keys,
-        calendar programs and providers refuse a blocked or deleted account wherever they let it in; so do MCP keys
-        (they rest, E41). AI programs connected over OAuth end like sessions and devices (E42, the shared module mcp):
-        after the block they connect anew."""
+        """What a block or a delete ends in nextime: no browser counts as known any more. The browser sessions stay as
+        they are but count for nothing while the account is out (``security.account_out``), so that an open window
+        hears that it is blocked instead of being sent to sign in; unblocking and bringing back end them
+        (``end_sessions``). The paired iPhones and iPads rest (konten 1.1.5, geraete G26): they hear
+        ``account_blocked`` while the account is out and work again afterwards without pairing anew; nothing is
+        written to ``app_gone_devices`` any more. API keys, calendar programs and providers refuse a blocked or
+        deleted account wherever they let it in; so do MCP keys (they rest, E41). AI programs connected over OAuth
+        end like sessions (E42, the shared module mcp): after the block they connect anew."""
         from ..models import McpKey
-        from . import appdevices
         from .mcp_store import Store
 
         self.renew_device_key(account_id)
         self.db.flush()
-        appdevices.end_all(self.db, int(account_id))
         programs = Store(self.db)
         for program in self.db.scalars(select(McpKey.id).where(McpKey.account_id == int(account_id),
                                                               McpKey.client_id.is_not(None))).all():
@@ -1011,13 +1013,17 @@ class KontenStore:
     def purge_account(self, account_id: AccountId) -> None:
         """Gone for good with everything it owned (``content.account_purged``: calendars, events, attachments,
         shares); its username and its former ones stay reserved for ever."""
-        from . import content, verbinden_store
+        from ..models import AppGoneDevice
+        from . import appdevices, content, verbinden_store
 
         row = self._row(account_id)
         if row is None:
             return
         # Its connections with other nex apps end, both sides (the shared module verbinden).
         verbinden_store.end_all(self.db, row.id)
+        # Its paired devices go for good (konten 1.1.5, geraete G26), with what an older version noted of them.
+        appdevices.end_all(self.db, row.id)
+        self.db.execute(delete(AppGoneDevice).where(AppGoneDevice.account_id == row.id))
         content.account_purged(self.db, row.id)
         self.db.execute(update(FormerName).where(FormerName.account_id == row.id).values(account_id=None))
         self.db.add(FormerName(account_id=None, name=row.name))

@@ -48,7 +48,7 @@ CONFIG = AppConfig(
                 default_days=apikeys.DEFAULT_DAYS, max_keys=apikeys.MAX_KEYS, name_max=apikeys.NAME_MAX,
                 switch="mcp", programs_count=True),
     ),
-    switches=("api", "mcp"),
+    switches=("api", "mcp", "app", "pairing"),
     programs=True,
     mcp_path="/api/mcp",
     key_id=str,
@@ -60,7 +60,7 @@ CONFIG = AppConfig(
 )
 
 #: The module's switches under nextime's names.
-SWITCHES = {"api": "api_enabled", "mcp": "mcp_enabled"}
+SWITCHES = {"api": "api_enabled", "mcp": "mcp_enabled", "app": "app_enabled", "pairing": "app_pairing_enabled"}
 API, MCP = "api-", "mcp-"
 EARLIEST = datetime.min.replace(tzinfo=UTC)
 

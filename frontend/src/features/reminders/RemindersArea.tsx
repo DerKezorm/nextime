@@ -17,7 +17,9 @@
  * "Nicht doppelt, wenn Apple Kalender schon erinnert", what keeps reminders from arriving: no device, no HTTPS, no
  * internet, EC-15; "So sieht die Erinnerung aus"), "Vorgabe je Kalender" with color, name and choice per calendar
  * ("wie in iCloud" for connected ones), the devices that remind. The browser's permission and sign-up are the ones of
- * TIME-21 (`features/notify/browser.ts`). Built from the ui kit.
+ * TIME-21 (`features/notify/browser.ts`). Built from the ui kit. The row "iPhone und iPad" counts the paired devices and
+ * those with notifications, and "Mitteilungen auf deinen Geräten" switches the kinds per device (shared module
+ * geraete, G25).
  */
 import { Bell, CalendarDays, Smartphone } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
@@ -25,7 +27,9 @@ import { useTranslation } from 'react-i18next'
 
 import { LogoMark } from '../../components/Logo'
 import { problemText } from '../../lib/errors'
+import { DevicePushCard, useDevicesWay } from '../../vendor/nexgeraete'
 import { Badge, Card, CheckboxRow, Notice, NotifyWays, Row, Rows } from '../../vendor/nexui'
+import { GERAETE_BASE, deviceRequest } from '../app/devices'
 import { reminderLabel } from '../calendars/labels'
 import { Swatch } from '../calendars/Swatch'
 import { notifyApi } from '../notify/api'
@@ -33,7 +37,8 @@ import { allowBrowser, browserState, keepRemindHere, stopBrowser, type BrowserSt
 import { remindersApi, type ReminderBrowser, type ReminderCalendar, type ReminderSettings } from './api'
 
 export function RemindersArea() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
+  const devicesWay = useDevicesWay(deviceRequest, { base: GERAETE_BASE, href: '/settings/connections', language: i18n.language })
   const [settings, setSettings] = useState<ReminderSettings | null>(null)
   const [browser, setBrowser] = useState<BrowserState | null>(null)
   const [problem, setProblem] = useState('')
@@ -119,9 +124,10 @@ export function RemindersArea() {
               return remindersApi.get()
             }),
         }}
-        devices={{ href: '/settings/connections' }}
+        devices={devicesWay}
       />
       {done && <Notice tone="ok">{done}</Notice>}
+      <DevicePushCard request={deviceRequest} base={GERAETE_BASE} app="nextime" language={i18n.language} connectionsHref="/settings/connections" />
 
       <Card id="reminders" icon={Bell} title={t('settings.areas.reminders.title')}>
         <CheckboxRow

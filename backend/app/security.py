@@ -190,9 +190,11 @@ def sessions_ended() -> None:
 _sessions_ended = sessions_ended
 
 
-def end_all_sessions(db: Session, account_id: int, except_token: str | None = None) -> None:
+def end_all_sessions(db: Session, account_id: int, except_token: str | None = None, *, devices: bool = True) -> None:
     """Every browser session of the account but ``except_token``: a new password or "sign out everywhere" is what
-    one does when the account was taken. Tokens made by hand in the interface stay; they are revoked there."""
+    one does when the account was taken. Tokens made by hand in the interface stay; they are revoked there. With
+    ``devices=False`` (unblocking, bringing an account back) the paired iPhones and iPads stay: they rested while the
+    account was out and work again (geraete G26)."""
     statement = delete(AuthSession).where(AuthSession.account_id == account_id)
     if except_token:
         statement = statement.where(AuthSession.token_hash != hash_token(except_token))
@@ -200,9 +202,10 @@ def end_all_sessions(db: Session, account_id: int, except_token: str | None = No
     # The browsers known from before are forgotten too (their device cookies); the one that stays gets a new one.
     db.execute(update(Account).where(Account.id == account_id).values(device_key=new_device_key()))
     # The paired iPhones and iPads go as well (TIME-29): they sign in again.
-    from .services import appdevices
+    if devices:
+        from .services import appdevices
 
-    appdevices.end_all(db, account_id)
+        appdevices.end_all(db, account_id)
     db.commit()
     _sessions_ended()
 

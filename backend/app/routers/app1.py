@@ -9,6 +9,12 @@ pairing (a cookie opens nothing here). A disconnected device hears ``401 device_
 or deleted account ``401 account_blocked`` (EC-5); neither takes anything. The pickups stand behind the sign-in brake
 (EC-3).
 
+Since the shared module geraete 0.1.0 pairing, the devices, ``PUT``/``DELETE push`` and the kinds of notification come
+from the module (``module_router``, mounted after this one; ``services/geraete.py``), and every route here checks the
+device through it (``geraete_api.device``, G12: a blocked account's device rests, G26). Two old routes stay here in
+their old form, ahead of the module's: ``GET /devices`` (the list in the order of before) and ``PUT /push`` (``alerts``
+of the published app becomes what it understands, G16).
+
 What changed since a cursor comes from ``changes`` and ``wait``, changes made on the device go through ``ops``
 (``services/appsync.py``). Errors are ``{"detail": {"code", "message"}}`` as everywhere in nextime.
 """
@@ -24,20 +30,22 @@ from datetime import date, timedelta
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
 from .. import __version__
 from ..db import SessionLocal
 from ..deps import client_ip
-from ..errors import detail, error
+from ..errors import error
 from ..models import Account as AccountRow
-from ..models import Device, utcnow
-from ..security import brake as sign_in_brake
-from ..services import appdevices, apppush, appsync, display, events, live, logs, settings_service
-from ..services.appdevices import Caller, PairingError, Refusal
+from ..models import AppDevice, Device, utcnow
+from ..services import appdevices, apppush, appsync, display, events, geraete, live, logs, settings_service
+from ..services.appdevices import Caller, Refusal
 from ..services.oidc_store import SqlStore
+from ..vendor import nexgeraete
+from ..vendor.nexgeraete import api as geraete_api
+from ..vendor.nexgeraete import forms as geraete_forms
+from ..vendor.nexkonten.brake import BRAKE
 from ..vendor.nexoidc import providers
 
 logger = logging.getLogger("nextime.app")
@@ -58,16 +66,10 @@ FEATURES = ("pairing", "changes", "ops", "conflicts", "calendar_account", "push_
             "attachments", "trash")
 
 
-def _refused(code: str, text: str, status: int, retry: int | None = None) -> HTTPException:
-    headers = {"Retry-After": str(retry)} if retry is not None else None
-    return HTTPException(status_code=status, detail=detail(code, text), headers=headers)
-
-
-_REFUSALS = {
-    "device_disconnected": "This device was disconnected. Connect it again.",
-    "account_blocked": "This account is blocked or deleted.",
-    "second_factor_required": "Set up your second factor in the browser first, then connect again.",
-}
+def _refusal(refusal: Refusal, request: Request | None) -> HTTPException:
+    form = geraete_forms.form_of(geraete.CONFIG, request.headers if request is not None else {})
+    status, body, headers = geraete_forms.refusal(form, refusal.refused)
+    return HTTPException(status_code=status, detail=body["detail"], headers=headers)
 
 
 def _bearer(request: Request) -> str | None:
@@ -75,18 +77,29 @@ def _bearer(request: Request) -> str | None:
     return header[7:].strip() if header[:7].lower() == "bearer " else None
 
 
-def _caller(token: str | None) -> Caller:
+def _caller(token: str | None, request: Request | None = None) -> Caller:
+    client = nexgeraete.client_of(request.headers.get(nexgeraete.CLIENT_HEADER)) if request is not None else None
     with SessionLocal() as db:
         try:
-            return appdevices.authenticate(db, token)
+            return appdevices.authenticate(db, token, client)
         except Refusal as refusal:
-            raise _refused(refusal.code, _REFUSALS[refusal.code], 401) from refusal
+            raise _refusal(refusal, request) from refusal
 
 
-def device(request: Request) -> Caller:
-    found = _caller(_bearer(request))
-    logs.set_actor(found.account.name)
-    return found
+_module_device = geraete_api.device(config=geraete.CONFIG, store=geraete.store, clock=geraete.now)
+
+
+def device(found: Annotated[nexgeraete.Caller, Depends(_module_device)]) -> Caller:
+    """The device of the request, checked by the module (G12), with nextime's rows of its account and itself."""
+    with SessionLocal() as db:
+        account = db.get(AccountRow, int(found.holder.id))
+        row = db.get(AppDevice, int(found.device.id))
+        if account is None or row is None:
+            raise _refusal(Refusal(nexgeraete.DeviceRefused("device_disconnected")), None)
+        db.expunge(account)
+        db.expunge(row)
+    logs.set_actor(account.name)
+    return Caller(account=account, device=row, found=found)
 
 
 Device_ = Annotated[Caller, Depends(device)]
@@ -104,73 +117,24 @@ def hello() -> dict[str, Any]:
         if providers.public_list(SqlStore(db)):
             ways.append("oidc")
     return {"app": "nextime", "api": API, "min_api": MIN_API, "version": __version__, "sign_in": ways,
-            "features": list(FEATURES)}
+            "features": list(FEATURES), **geraete_api.hello_fields(geraete.CONFIG)}
 
 
-# --- Pairing (no token; behind the sign-in brake) ------------------------------------------------------------------
+# --- Pairing, devices, notifications: the module's routes (G1–G30) ---------------------------------------------
 
-
-class DeviceIn(BaseModel):
-    device_name: str = Field(default="", max_length=200)
-    device_kind: str = Field(default="", max_length=16)
-
-
-class KeyIn(DeviceIn):
-    secret: str = Field(default="", max_length=200)
-
-
-class CodeIn(DeviceIn):
-    code: str = Field(default="", max_length=200)
-
-
-def _paired(token: str, account: AccountRow, row: Any, status: int = 200) -> JSONResponse:
-    body = {"token": token, "account": appsync.account_out(account), "device": appdevices.device_out(row)}
-    # A token must not stay behind in any cache.
-    return JSONResponse(status_code=status, content=body, headers={"Cache-Control": "no-store"})
-
-
-def _pickup(request: Request, take: Any) -> JSONResponse:
-    """The brake counts per sender: there is no account to count at before the code is known (EC-3)."""
-    key = "app-pairing:" + client_ip(request)
-    wait = sign_in_brake.wait_seconds(key)
-    if wait:
-        raise _refused("too_many_attempts", "Too many attempts. Try again later.", 429, wait)
-    with SessionLocal() as db:
-        try:
-            token, account, row = take(db)
-        except PairingError as exc:
-            if exc.code == "pairing_gone":
-                sign_in_brake.failed(key)
-                logger.warning("Pairing refused")
-            raise error(exc.code, exc.text, exc.status, **exc.values) from exc
-        db.expunge(account)
-        db.expunge(row)
-    sign_in_brake.succeeded(key)
-    return _paired(token, account, row)
-
-
-@router.post("/pairing/{pairing_id}/key", summary="The device's token for the QR code")
-def pickup_by_secret(pairing_id: str, body: KeyIn, request: Request) -> JSONResponse:
-    return _pickup(request, lambda db: appdevices.by_secret(db, pairing_id, body.secret, body.device_name,
-                                                            body.device_kind))
-
-
-@router.post("/pairing/code", summary="The device's token for the code of the sign-in page")
-def pickup_by_code(body: CodeIn, request: Request) -> JSONResponse:
-    return _pickup(request, lambda db: appdevices.by_code(db, body.code, body.device_name, body.device_kind))
-
-
-@router.post("/devices", status_code=201, summary="A token of its own for another device of this account")
-def bring_in(found: Device_, body: DeviceIn) -> JSONResponse:
-    """The connection travels over iCloud to the account's other devices; each comes in under its own name."""
-    with SessionLocal() as db:
-        try:
-            token, row = appdevices.sibling(db, found.account, found.device, body.device_name, body.device_kind)
-        except PairingError as exc:
-            retry = exc.values.pop("retry_after", None)
-            raise _refused(exc.code, exc.text, exc.status, retry) from exc
-        db.expunge(row)
-    return _paired(token, found.account, row, status=201)
+#: ``POST pairing/{id}/key``, ``POST pairing/code``, ``POST devices``, ``DELETE devices/{id}``, ``PATCH device``,
+#: ``DELETE device``, ``DELETE push``, ``GET``/``PUT push/kinds``; the pickups behind the sign-in brake of konten
+#: (pot ``app-pairing:<sender>``, EC-3), after each new device the mail "Neue Anmeldung" (G29) and ``security`` to the
+#: account's other devices. Mounted after ``router``: its ``GET devices`` and ``PUT push`` keep the old form.
+module_router = geraete_api.app_router(
+    config=geraete.CONFIG,
+    store=geraete.store,
+    brake=BRAKE,
+    on_paired=lambda holder, device: geraete.on_paired(holder, device),
+    send=geraete.send,
+    sender=client_ip,
+    clock=geraete.now,
+)
 
 
 # --- The own device -----------------------------------------------------------------------------------------------
@@ -189,9 +153,11 @@ def me(found: Device_) -> dict[str, Any]:
     with SessionLocal() as db:
         account = db.get(AccountRow, found.account.id)
         assert account is not None
+        fields = geraete_api.me_fields(geraete.CONFIG, found.found)
         return {
+            **fields,
             "account": appsync.account_out(account),
-            "device": appdevices.device_out(found.device),
+            "device": fields["device"],
             "display": display.view(account),
             "language": account.language or "",
             "limits": {"ops": appsync.OPS_MAX, "changes_page": appsync.PAGE, "wait_seconds": int(WAIT_SECONDS),
@@ -199,57 +165,41 @@ def me(found: Device_) -> dict[str, Any]:
                        "location_chars": events.LOCATION_MAX, "upload_mb": settings_service.upload_max_mb(db),
                        "trash_days": settings_service.trash_days(db)},
             # The server nudges devices with a ticket through the relay; empty relay: nothing goes out.
-            "offers": {"push": bool(apppush.relay_url())},
-            "server_id": appdevices.server_id(),
+            "offers": fields["offers"],
+            "server_id": fields["server_id"],
             "calendar_account": _calendar_account(db, found.device.id),
         }
 
 
-@router.delete("/device", status_code=204, summary="This device disconnects itself")
-def forget_device(found: Device_) -> Response:
-    with SessionLocal() as db:
-        appdevices.disconnect(db, found.account.id, found.device.id)
-    return Response(status_code=204)
-
-
 @router.get("/devices", summary="The account's paired iPhones and iPads")
 def list_devices(found: Device_) -> list[dict[str, Any]]:
+    """In the order of before (the oldest first), each as the module shows it, ``this`` marked."""
     with SessionLocal() as db:
-        return [{**appdevices.device_out(row), "push": bool(row.push_ticket), "this": row.id == found.device.id}
+        return [nexgeraete.devices.entry(geraete.device_of(row), found.device.id)
                 for row in appdevices.of_account(db, found.account.id)]
-
-
-@router.delete("/devices/{device_id}", status_code=204, summary="Disconnect one of the account's devices")
-def drop_device(device_id: int, found: Device_) -> Response:
-    with SessionLocal() as db:
-        if not appdevices.disconnect(db, found.account.id, device_id):
-            raise error("not_found", "Not found.", 404)
-    return Response(status_code=204)
 
 
 class PushIn(BaseModel):
     ticket: str = Field(min_length=1, max_length=appdevices.TICKET_MAX)
     key: str = Field(min_length=1, max_length=100)
-    #: The app shows notifications with text (its notification service extension opens them, 0.3). Left out: only the
-    #: silent nudge, so that a build without the extension never shows an empty notification.
+    #: The published app (contract 0.3): it shows notifications with text. Becomes ``understands`` ``changed`` and
+    #: ``changes``; left out, only the silent nudge (``changed``), so that a build without the notification service
+    #: extension never shows an empty notification.
     alerts: bool = False
+    #: The kinds the device understands (G16); wins over ``alerts``.
+    understands: list[str] | None = Field(default=None, max_length=100)
 
 
-@router.put("/push", status_code=204, summary="Notifications for this device: the relay's ticket and the key")
-def push_on(found: Device_, body: PushIn) -> Response:
-    """Kept as nexnotes keeps it; the device gets the silent nudge on every change of the account."""
+@router.put("/push", status_code=204, summary="Notifications for this device: the relay's ticket, the key, the kinds")
+def push_on(found: Device_, body: PushIn, request: Request) -> Response:
+    understands = body.understands if body.understands is not None else (list(geraete.ALERTS) if body.alerts else None)
     with SessionLocal() as db:
+        data = geraete.Store(db)
         try:
-            appdevices.remember_push(db, found.device.id, body.ticket, body.key, body.alerts)
-        except ValueError as exc:
-            raise error("push_ticket_invalid", "The ticket or the key is not usable.", 422) from exc
-    return Response(status_code=204)
-
-
-@router.delete("/push", status_code=204, summary="No more notifications for this device")
-def push_off(found: Device_) -> Response:
-    with SessionLocal() as db:
-        appdevices.forget_push(db, found.device.id)
+            nexgeraete.push.register(data, geraete.CONFIG, found.found, body.ticket, body.key, understands)
+        except nexgeraete.DeviceRefused as refused:
+            data.rollback()
+            raise _refusal(Refusal(refused), request) from None
     return Response(status_code=204)
 
 

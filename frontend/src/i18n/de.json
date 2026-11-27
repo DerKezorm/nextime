@@ -2180,45 +2180,6 @@
     "where": "Wo:",
     "done": "Verstanden"
   },
-  "appDevices": {
-    "section": {
-      "title": "Geräte",
-      "text": "iPhone, iPad und Mac mit der nextime-App.",
-      "none": "Noch kein Gerät verbunden.",
-      "connect": "iPhone oder iPad verbinden",
-      "lastSeen": "zuletzt {{when}}",
-      "neverSeen": "noch nicht gemeldet",
-      "push": "Mitteilungen an",
-      "pushOff": "Mitteilungen aus",
-      "disconnect": "Trennen",
-      "disconnectTitle": "„{{name}}“ trennen?",
-      "disconnectText": "Das Gerät kommt ab sofort nicht mehr an deine Kalender. Um es wieder zu verbinden, scannst du einen neuen Code."
-    },
-    "kind": {
-      "ios": "iOS-App",
-      "mac": "iPad-App auf dem Mac"
-    },
-    "connect": {
-      "title": "iPhone oder iPad verbinden",
-      "qr": "QR-Code zum Verbinden",
-      "valid": "Gilt 10 Minuten",
-      "renew": "neu erzeugen",
-      "expired": "Der Code ist abgelaufen.",
-      "step1": "nextime auf dem iPhone oder iPad öffnen.",
-      "step2": "„Server hinzufügen“ tippen und den Code scannen.",
-      "step3": "Fertig. Deine Kalender laden, und die Anmeldung wandert über deine Apple-ID auf deine anderen Geräte.",
-      "noCamera": "Ohne Kamera: In der App die Adresse",
-      "noCameraEnd": "eingeben und anmelden."
-    }
-  },
-  "appConnect": {
-    "title": "Die nextime-App mit diesem Konto verbinden?",
-    "text": "Angemeldet als {{account}}. Die App bekommt dieselben Rechte wie du im Browser.",
-    "confirm": "Verbinden",
-    "invalid": "Diese Seite öffnet die nextime-App selbst. Starte das Verbinden in der App.",
-    "doneTitle": "Verbunden",
-    "done": "Weiter geht es in der App."
-  },
   "emailLink": {
     "title": "Neue Adresse bestätigen",
     "submit": "Bestätigen"

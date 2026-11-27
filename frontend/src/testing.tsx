@@ -72,6 +72,9 @@ export const PARTNER_VIEWS = ['nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nex
   areas_used: null, areas_granted: null, legacy: null, areas_choice: [], version: null,
 }))
 
+/** What the shared module geraete answers for the account's devices (`/api/geraete/app-devices`): none yet. */
+export const DEVICE_LISTING = { devices: [], max: 30, app_store_url: null, has_app: true }
+
 export function signedIn(account: Me, more: Handler = () => undefined): Handler {
   return (method, path, body) =>
     more(method, path, body) ??
@@ -97,7 +100,11 @@ export function signedIn(account: Me, more: Handler = () => undefined): Handler 
                         ? ok(PARTNER_VIEWS)
                         : path === '/api/connect/admin'
                           ? ok({ connections: true, partners: ['nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes'], addresses: {} })
-                          : undefined)
+                          : path === '/api/geraete/app-devices'
+                            ? ok(DEVICE_LISTING)
+                            : /^\/api\/geraete\/server\/accounts\/[^/]+\/devices$/.test(path)
+                              ? ok({ count: 0, devices: [] })
+                              : undefined)
 }
 
 export function start(): void {

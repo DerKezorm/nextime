@@ -63,6 +63,7 @@ from .services import (
     apppush,
     backups,
     cleanup,
+    geraete,
     locales,
     logs,
     nextasks,
@@ -71,6 +72,7 @@ from .services import (
     settings_service,
     sync,
     totp,
+    updates,
     verbinden_store,
 )
 from .services.konten_store import KontenStore
@@ -191,6 +193,8 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
         tasks.append(asyncio.create_task(_sweep_forever(stop)))
         # The silent nudges to the iPhone app (TIME-29).
         tasks.append(asyncio.create_task(apppush.run_forever(stop)))
+        # A newer nextime for the operators' devices (geraete G18): a look an hour, a question a day at most.
+        tasks.append(asyncio.create_task(updates.run_forever(stop)))
         # iCloud, Google, CalDAV servers, subscriptions and holidays (TIME-15 to TIME-17).
         tasks.append(asyncio.create_task(sync.run_forever(stop)))
         # Ticks of nextasks tasks that wait for nextasks (TIME-25 EC-12).
@@ -270,6 +274,10 @@ app.add_exception_handler(Exception, unhandled_error)
 
 for module in ROUTERS + FEATURE_ROUTERS:
     app.include_router(module.router)
+# The shared module geraete (TIME-29): its app routes after nextime's own /api/app/1 routes (two of which keep their
+# old form), its browser routes for the cards under /api/geraete beside the old ones.
+app.include_router(app1_router.module_router)
+app.include_router(app_pairing_router.module_router)
 # Google's way back after "Continue to Google", and the operator's Google set-up (TIME-16).
 app.include_router(sources_router.callback_router)
 app.include_router(sources_router.server_router)
@@ -281,6 +289,8 @@ app.include_router(api_v1_router.docs_router)
 
 # The shared sign-in module learns who it runs in before the first request (vendor/nexoidc).
 oidc_store.configure()
+# The daily run of the shared module geraete: a device unused for 365 days is disconnected (G27).
+geraete.register_sweep()
 
 
 #: The service worker and the manifest are asked anew each time: a new build is a new worker (TIME-28).

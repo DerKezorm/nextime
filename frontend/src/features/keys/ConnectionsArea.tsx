@@ -1,6 +1,7 @@
 /**
  * Settings › My account › Connections (plan "Einstellungen", Verbindungen; TIME-25, TIME-26, TIME-29), the cards in
- * their order: "Geräte" (the iPhone and iPad app), "Auf diesem Gerät installieren" (the web app), the other nex apps as
+ * their order: "Geräte" (the iPhone and iPad app, the shared module geraete: pairing with QR code or code, renaming,
+ * disconnecting), "Auf diesem Gerät installieren" (the web app), the other nex apps as
  * cards to fold (the shared module verbinden 0.1.2: one card per partner nextime has a use for, `in_use`; nextime's
  * choices open in the card, its form for a key typed in by hand under "Von Hand verbinden"; since 0.1.8 that form only
  * for the operator or for a connection by hand there is, the operator sets the other apps up), "API-Schlüssel" and
@@ -18,7 +19,8 @@ import { PendingRequests, ToolRights } from '../../vendor/nexmcp'
 import { ConnectionsArea as AppConnections } from '../../vendor/nexverbinden'
 import { ApiKeysCard, ToolsCard } from '../../vendor/nexschluessel'
 import type { KeyRequest } from '../../vendor/nexschluessel/schluessel'
-import { AppDevicesSection } from '../app/AppDevicesSection'
+import { DevicesCard } from '../../vendor/nexgeraete'
+import { GERAETE_BASE, SERVER_CONNECTIONS, deviceRequest } from '../app/devices'
 import { NexpaperChoices, NexpaperSection } from '../nexpaper/NexpaperSection'
 import { NextasksChoices, NextasksSection } from '../nextasks/NextasksSection'
 import { mcpRequest, useMcpWords } from '../mcp/McpPages'
@@ -46,7 +48,7 @@ export function ConnectionsArea() {
   const when = (iso: string, language: string) => moment(iso, language, false, timeOptions)
   return (
     <div className="flex flex-col gap-6" data-testid="connections-area">
-      <AppDevicesSection />
+      <DevicesCard request={deviceRequest} base={GERAETE_BASE} app="nextime" language={i18n.language} when={when} operator={me?.role === 'operator'} serverHref={SERVER_CONNECTIONS} />
       <InstallCard />
       <AppConnections
         app="nextime"

@@ -55,7 +55,6 @@ function server(account: Me = OPERATOR) {
     if (path === '/api/devices') return ok({ devices: [], https: true, address: 'https://nextime.example.com/dav/', user: 'tester', calendars: [], minutes: 10 })
     if (path === '/api/reminders') return ok(REMINDERS)
     if (path === '/api/notify/webpush') return ok({ key: 'k', subscribed: false, reminders: true })
-    if (path === '/api/app/devices') return ok([])
     if (path === '/api/connections/keys') return ok(KEYS_LISTING)
     if (path === '/api/connections/interfaces') return ok({ api: true, mcp: true })
     if (path === '/api/connections/admin/keys') return ok({ keys: [] })
@@ -311,7 +310,7 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     ['security', ['security']],
     // "Aussehen" of the account module first, then nextime's own (plan "Einstellungen", Darstellung).
     ['appearance', ['appearance', 'week-start', 'week-numbers', 'clock', 'duplicates', 'month-style']],
-    ['notifications', ['notify-ways', 'reminders', 'reminder-defaults', 'reminder-devices']],
+    ['notifications', ['notify-ways', 'devices-push', 'reminders', 'reminder-defaults', 'reminder-devices']],
     // The other nex apps are the cards of the shared module verbinden, one per partner of the catalog.
     ['connections', ['devices', 'install', 'nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes', 'api-keys', 'ai-tools']],
     ['general', ['limits', 'features', 'languages']],

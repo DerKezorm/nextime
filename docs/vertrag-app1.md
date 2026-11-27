@@ -6,10 +6,32 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.5 (24.11.2026), server TIME-29 on nextime branch `ios-app2` (0.1 `dd89332`, after the review
-`6a158d7`, 0.2 `a857c14`, 0.3 `29a72a3`/`ae9393a`, released as nextime 0.4.0 `10f6f91`; 0.4 and 0.5 on `ios-app2`). Parts
-marked **later** are named so that later stages dock on; the server does not have them yet and `hello.features` does
-not name them.
+Status: draft 0.6 (27.11.2026), server TIME-29 on nextime `main` (0.1 `dd89332`, after the review `6a158d7`, 0.2
+`a857c14`, 0.3 `29a72a3`/`ae9393a`, 0.4 and 0.5 on `ios-app2`, 0.6 with the shared module geraete 0.1.0; none
+released yet). Parts marked **later** are named so that later stages dock on; the server does not have them yet and
+`hello.features` does not name them.
+
+Changes in 0.6 (27.11.2026, the shared module geraete 0.1.0 in the server; every call of 0.5 answers as before, the
+app in TestFlight notices nothing but G26):
+- Pairing, the devices and `PUT`/`DELETE push` come from the module (G1–G49 of the plan "Geräte koppeln"). Without the
+  header `X-Nex-App` every answer has the form of 0.5; with it (`nextime-ios/<version> (<model>; iOS <x>)`) the
+  same form, and the server notes model, system and app version with „zuletzt gesehen“.
+- **A blocked or deleted account's devices rest (G26):** `401 account_blocked` while it lasts, and after unblocking or
+  bringing the account back the device works again without pairing anew (before: disconnected). The purge after 30
+  days, „Überall abmelden“, a new password and „Alle trennen“ still disconnect for good.
+- New: `hello.pairing` (`["qr", "code", "browser", "icloud"]`); the QR window shows a code to type
+  (`K7MQ-R4TX`), taken by `POST pairing/code {code}` like the one-time code of `/app-connect`; `/app-connect` takes a
+  PKCE `challenge` (S256) and `pairing/code` its `verifier`; `PATCH /device {name}` renames this device; `GET`/`PUT
+  /push/kinds` switch the kinds of notification per device (`changed` the silent nudge, `changes` the notifications of
+  changes, `security` a new device connected, `update` a new nextime for operators). `PUT /push` takes `understands`
+  (the kinds the build shows); `alerts: true` of 0.3 means `["changed", "changes"]`, without either only `changed`.
+- Devices in `me.device` and `GET /devices` carry `model`, `system`, `app_version`, `via` (`qr`, `code`, `browser`,
+  `icloud`; `null` for devices of before) and `this`. `GET /devices` keeps its order (the oldest first).
+- More than five devices brought in over iCloud in an hour: `429 too_many_attempts` with `Retry-After` until the
+  oldest leaves the hour (counted in the database, not in memory). At most 30 devices per account (`409
+  too_many_devices`), names up to 80 characters.
+- A device not used for 365 days is disconnected (G27). The operator switches the app and new devices under
+  Server › Verbindungen (`403 app_disabled`, `403 app_pairing_disabled`).
 
 Changes in 0.5 (24.11.2026, stage 4 of the app: TIMEIOS-11, 14, 20, TIME-10 for the app), each with the browser's
 rights:
@@ -622,8 +644,12 @@ So that later stages dock on; each comes with its name in `hello.features`.
 
 - `GET /api/app-devices` → `[{"id", "name", "kind", "created_at", "last_seen_at", "push": true|false}]`
 - `DELETE /api/app-devices/{id}` → `204`; the device has no access from that moment (TIME-29 AC-4).
-- A new password, „Überall abmelden“, a reset second factor, a block or deletion of the account disconnect every
-  device (`401 device_disconnected`; a blocked or deleted account's devices hear `401 account_blocked`).
+- A new password, „Überall abmelden“, „Alle trennen“ and the purge of the account disconnect every device
+  (`401 device_disconnected`). A blocked or deleted account's devices rest (`401 account_blocked`) and work again
+  after unblocking or bringing it back (0.6, G26).
+- Since 0.6 the page's cards use the module's routes under `/api/geraete` (`app-pairing`, `app-connect`,
+  `app-devices` with renaming, „Alle trennen“ and the kinds per device, `server/accounts/{id}/devices` for the
+  operator); the routes above stay with their answers of before.
 
 ## Test server for the app
 

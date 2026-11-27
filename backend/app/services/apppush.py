@@ -12,6 +12,10 @@ Changes come in bursts: an account is nudged ``DELAY`` seconds after its first c
 seconds (the relay takes 30 a minute per device). It is a nudge, not the data: kept in memory only, a restart may drop
 one, and the app still syncs when it opens. Only 410 from the relay drops a ticket (the app brings a new one); any
 other failure is logged without the ticket and left.
+
+Since the shared module geraete 0.1.0 the nudge goes through ``nexgeraete.push.tell`` (kind ``changed``, ``quiet``,
+sealed byte for byte as before): only to devices that understand it and have it on (G16, G25), never while the
+account is blocked or deleted (its devices rest, G26) or the operator has the app switched off.
 """
 
 from __future__ import annotations
@@ -24,7 +28,6 @@ import time
 from collections.abc import Callable
 
 import httpx
-from sqlalchemy import select, update
 
 from ..config import get_settings
 from ..db import SessionLocal
@@ -96,6 +99,17 @@ TITLE_MAX = 120
 TEXT_MAX = 300
 
 
+def shows_alerts(device: AppDevice) -> bool:
+    """The device gets notifications with text about changes of others (``changes``): it has a ticket, understands
+    them (the published app: ``alerts``) and has them on (G16, G25)."""
+    from ..vendor import nexgeraete
+    from . import geraete
+
+    found = geraete.device_of(device)
+    return nexgeraete.push.understood(geraete.CONFIG, found, geraete.KIND_CHANGES) and bool(
+        found.kinds.get(geraete.KIND_CHANGES, True))
+
+
 def alert(device: AppDevice, message: dict[str, object], collapse_mark: str) -> None:
     """A notification with text for one device (TIME-21 through the relay, contract 0.3): the alert's own words are
     the app's (``push_title``/``push_body``); what it shows comes from ``enc``, which its extension opens. Raises
@@ -103,7 +117,7 @@ def alert(device: AppDevice, message: dict[str, object], collapse_mark: str) -> 
     relay = relay_url()
     if not relay:
         raise Failed("no_relay")
-    if not device.push_ticket or not device.push_alerts:
+    if not device.push_ticket or not shows_alerts(device):
         raise Failed("no_ticket", final=True)
     text = json.dumps(message, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     try:
@@ -123,10 +137,14 @@ def alert(device: AppDevice, message: dict[str, object], collapse_mark: str) -> 
         raise Failed(f"http_{status}")
 
 
-def plaintext(account_id: int) -> bytes:
+def _server_id() -> str:
     from .appdevices import server_id
 
-    return json.dumps({"type": "changed", "account": account_id, "server": server_id()},
+    return server_id()
+
+
+def plaintext(account_id: int) -> bytes:
+    return json.dumps({"type": "changed", "account": account_id, "server": _server_id()},
                       separators=(",", ":")).encode("utf-8")
 
 
@@ -148,31 +166,22 @@ def flush(now: float | None = None) -> int:
             _last[account_id] = now
     if not due or not relay:
         return 0
+    from ..vendor import nexgeraete
+    from . import geraete
+
     sent = 0
     with SessionLocal() as db:
-        rows = db.execute(select(AppDevice.id, AppDevice.account_id, AppDevice.push_ticket, AppDevice.push_key)
-                          .where(AppDevice.account_id.in_(due), AppDevice.push_ticket != "")).all()
-        for device_id, account_id, ticket, key in rows:
-            try:
-                enc = push_crypto.encrypt(plaintext(account_id), key)
-            except ValueError:
-                logger.warning("App nudge not sent device_id=%s reason=bad_key", device_id)
-                continue
-            body: dict[str, object] = {"ticket": ticket, "enc": enc, "quiet": True, "collapse": collapse(account_id)}
-            try:
-                status = POST(f"{relay}/v1/send", body)
-            except (httpx.HTTPError, OSError) as exc:
-                logger.warning("App nudge not sent device_id=%s reason=%s", device_id, type(exc).__name__.lower())
-                continue
-            if status == 410:
-                db.execute(update(AppDevice).where(AppDevice.id == device_id, AppDevice.push_ticket == ticket)
-                           .values(push_ticket="", push_key=""))
-                db.commit()
-                logger.info("App nudge: the relay forgot the device device_id=%s", device_id)
-            elif status == 200:
-                sent += 1
-            else:
-                logger.warning("App nudge not sent device_id=%s reason=http_%s", device_id, status)
+        data = geraete.Store(db)
+        for account_id in sorted(due):
+            told = nexgeraete.push.tell(data, geraete.CONFIG, account_id, geraete.KIND_CHANGED,
+                                        {"type": "changed", "account": account_id, "server": _server_id()},
+                                        collapse=collapse(account_id), quiet=True,
+                                        send=lambda url, body: POST(url, body))
+            sent += told.sent
+            if told.gone:
+                logger.info("App nudge: the relay forgot a device's ticket account_id=%s", account_id)
+            if told.failed:
+                logger.warning("App nudge not sent account_id=%s count=%s", account_id, told.failed)
     return sent
 
 

@@ -246,6 +246,37 @@ class Adapter(StandardAdapter):
                 return bool(row and row.device_key) and sessions.is_known(handle[2], server_key(), row.device_key)
         raise ValueError(handle)
 
+    # --- konten 1.1.5 (G26): devices rest at a block or deletion, through the module geraete --------------------------
+
+    def pair_device(self, account_id: Any) -> Any:
+        """A device as a pairing makes one (the module's ``devices.add``); its key."""
+        from app.db import SessionLocal
+        from app.models import Account
+        from app.services import appdevices
+
+        with SessionLocal() as db:
+            row = db.get(Account, account_id)
+            assert row is not None
+            token, _device = appdevices.make_device(db, row, "Probe", "ios")
+        return token
+
+    def device_works(self, handle: Any) -> bool:
+        """``GET /api/app/1/me`` with the device's key, as the app asks."""
+        from fastapi.testclient import TestClient
+
+        from app.main import app
+
+        with TestClient(app, base_url="https://kalender.example.com") as phone:
+            return phone.get("/api/app/1/me", headers={"Authorization": f"Bearer {handle}"}).status_code == 200
+
+    def device_kept(self, handle: Any) -> bool:
+        from app.db import SessionLocal
+        from app.services import geraete
+        from app.vendor.nexgeraete import tokens
+
+        with SessionLocal() as db:
+            return geraete.Store(db).device_by_hash(tokens.digest(handle)) is not None
+
     def switch(self, name: str, on: bool) -> None:
         from app.db import SessionLocal
         from app.services import konten_store, settings_service

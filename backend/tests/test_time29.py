@@ -235,8 +235,9 @@ def test_TIME29_EC5_a_blocked_account_hears_blocked_and_a_new_password_disconnec
         row = db.get(Account, mika.id)
         assert row is not None
         accounts.unblock(db, row)
-    # Unblocked, the device of before signs in again; it never comes back by itself.
-    assert code(call("GET", "/me", device["token"])) == "device_disconnected"
+    # Since geraete 0.1.0 (G26) the device rested while the account was blocked: unblocked, it works again without
+    # pairing anew.
+    assert call("GET", "/me", device["token"]).status_code == 200
 
 
 def test_TIME29_follow_up9_the_device_signs_itself_off(client: TestClient, account: Account) -> None:
