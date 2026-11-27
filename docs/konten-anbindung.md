@@ -83,6 +83,7 @@ bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schrei
   Umweg `TODO verbinden 0.1.8` in `features/connect/ConnectPages.tsx` ist weg; `verbinden.test.tsx` bewacht die eine
   Abfrage weiter.
 - **verbinden 0.1.10** (`bauplaene-konten` `22671dd`): die Karte „Andere nex-Apps“ rollt sich ins Bild, wenn die Seite mit `#nex-apps` geöffnet wurde, wohin „Einrichten“ der Karten führt. Nur die Kopie und die Vorlage `nexverbinden.test.tsx`.
+- **verbinden 0.1.11** (`bauplaene-konten` `a2d6cac`): die Karte „Andere nex-Apps“ wieder ohne Hülle, sie steht direkt in der Reihe unter Server › Allgemein (`time1.test.tsx` fand sie mit 0.1.10 nicht).
 
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 
