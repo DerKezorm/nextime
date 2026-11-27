@@ -35,7 +35,7 @@
       {
         "title": "Settings as in every nex app",
         "where": "Settings",
-        "body": "The same areas, cards and buttons as in the other nex apps. In Appearance you choose Light, Dark or As the system, now for your account on every device. “Reminders” is now “Notifications” and starts with the ways: notifications for this browser, a test notification, iPhone and iPad. Connections brings devices, installing, the other apps, API keys and AI tools to one place; keys can be edited now."
+        "body": "The same areas, cards and buttons as in the other nex apps. In Appearance you choose Light, Dark or As the system, now for your account on every device. “Reminders” is now “Notifications” and starts with the ways: notifications for this browser, a test notification, iPhone and iPad. Connections brings devices, installing, the other apps, API keys and AI tools to one place; keys can be edited now. For the operator, “Other nex apps” and “Interfaces” stand under Server › Connections."
       },
       {
         "title": "Backups every week or every month",
@@ -51,8 +51,8 @@
     "smallTitle": "Also",
     "small": [
       "Invite attendees to events in iCloud and Google calendars by their email address. iCloud or Google sends the invitation as usual, and the answers of those invited are kept. nextime's own calendars invite nobody.",
-      "The operator enters the addresses of the other nex apps once under Server › General › Other nex apps and allows connections into the local network there when needed; after that every account connects with one click.",
-      "Under Server › General › Interfaces the operator decides whether AI programs may connect themselves, the highest level and blocked tools. On a new installation MCP starts off; where it was on, it stays on.",
+      "The operator enters the addresses of the other nex apps once under Server › Connections › Other nex apps and allows connections into the local network there when needed; after that every account connects with one click.",
+      "Under Server › Connections › Interfaces the operator decides whether AI programs may connect themselves, the highest level and blocked tools. On a new installation MCP starts off; where it was on, it stays on.",
       "“Ready for the internet?” under Server › Sign-in checks https, the second factor, the brake on guessing, cookies, the proxy and whether the server reaches the internet, and says what to do.",
       "Only the operator sees whether a new version is out; a new installation asks once whether nextime should look.",
       "Under Server › Accounts the operator sees every API key and can lock single ones; expired invitations stay listed there until withdrawn.",

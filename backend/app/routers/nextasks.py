@@ -84,7 +84,7 @@ def connect(payload: ConnectIn, account: Account, db: DbSession) -> dict[str, An
             # The operator can change it, and is told how; a member hears "cannot be reached" as for anything else
             # on the way (TIME-25 EC-6), so nobody maps the network from the form.
             raise error("nextasks_address_local", "This nextasks is in the local network. Allow that under Server › "
-                        "General › Other nex apps › 'Connections into the local network'.", 422) from exc
+                        "Connections › Other nex apps › 'Connections into the local network'.", 422) from exc
         raise exc.http() from exc
     return nextasks.connection_out(db, row)
 

@@ -58,6 +58,8 @@ export function AreaContent({ area }: { area: AreaSlug }) {
       return <ConnectionsArea />
     case 'general':
       return <GeneralArea />
+    case 'server-connections':
+      return <ServerConnectionsArea />
     case 'sign-in':
       return <SignInArea />
     case 'mail':
@@ -82,26 +84,36 @@ function MailArea() {
   return <MailCard request={mailRequest} subtitle={t('server.mailSubtitle')} when={(iso, language) => moment(iso, language, false, timeOptions)} />
 }
 
-/** Server › General (TIME-1): Limits, Features for every account, the key module's Interfaces (with the operator's
- * settings of the shared module mcp), "Andere nex-Apps" (the shared module verbinden), Languages. */
+/** Server › General (TIME-1): Limits, Features for every account, Languages. "Andere nex-Apps" and "Schnittstellen"
+ * stand under Server › Connections (E67). */
 function GeneralArea() {
-  const { i18n } = useTranslation()
   const server = useServerSettings()
-  const tools = useMcpWords()
   if (!server.settings) return null
   return (
     <div className="flex flex-col gap-6" data-testid="server-general">
       <LimitsCard server={server} />
       <FeaturesCard server={server} />
+      <LanguagesArea />
+    </div>
+  )
+}
+
+/** Server › Connections (E67, ui 1.2.1): the operator's mirror of My account › Connections. First "Andere nex-Apps"
+ * (the shared module verbinden), then the key module's "Schnittstellen" with the operator's settings of the shared
+ * module mcp, the same cards with the same props as under General before. */
+function ServerConnectionsArea() {
+  const { i18n } = useTranslation()
+  const tools = useMcpWords()
+  return (
+    <div className="flex flex-col gap-6" data-testid="server-connections">
+      {/* "Andere nex-Apps": connections with other nex apps on or off, their addresses (the shared module verbinden). */}
+      <ConnectionsOperatorCard app="nextime" request={verbindenRequest} language={i18n.language} />
       {/* The shared module mcp under "MCP-Zugang": programs may connect, the highest level, blocked tools. */}
       <InterfacesCard
         request={keyRequest}
         docsHref="/api/v1/docs"
         after={{ mcp: <McpOperatorSettings request={mcpRequest} words={tools} language={i18n.language} /> }}
       />
-      {/* "Andere nex-Apps": connections with other nex apps on or off, their addresses (the shared module verbinden). */}
-      <ConnectionsOperatorCard app="nextime" request={verbindenRequest} language={i18n.language} />
-      <LanguagesArea />
     </div>
   )
 }

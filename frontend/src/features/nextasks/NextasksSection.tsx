@@ -209,7 +209,7 @@ function ConnectForm({ url: before, localAllowed, changing, disabled, onCancel, 
       )}
       {problem && <Notice tone="danger">{problem}</Notice>}
       {ownNetwork && (
-        <Link to="/settings/general#nex-apps" className="block text-sm text-accent-400 hover:underline" data-testid="nextasks-local-switch">
+        <Link to="/settings/server-connections#nex-apps" className="block text-sm text-accent-400 hover:underline" data-testid="nextasks-local-switch">
           {t('nextasks.section.toSwitch')}
         </Link>
       )}

@@ -31,15 +31,16 @@ import { AreaContent } from './settings/SettingsAreas'
 
 const APP = 'nextime'
 
-/** The cards of Server › General in nextime, in their order (`GeneralArea`). */
-const GENERAL_PARTS: readonly GeneralPart[] = ['limits', 'features', 'interfaces', 'nexApps', 'languages']
+/** The cards of Server › General in nextime, in their order (`GeneralArea`); "Andere nex-Apps" and "Schnittstellen"
+ * stand under Server › Connections (E67). */
+const GENERAL_PARTS: readonly GeneralPart[] = ['limits', 'features', 'languages']
 
 export function SettingsPage() {
   const { t, i18n } = useTranslation()
   const { me } = useAuth()
   const { tab: asked } = useParams()
-  const { search } = useLocation()
-  const where = resolveArea(asked, me?.role, search)
+  const { search, hash } = useLocation()
+  const where = resolveArea(asked, me?.role, search, hash)
   const area = 'area' in where ? findArea(where.area) : undefined
   const things = t('settings.things')
   const thingsDative = t('settings.thingsDative')

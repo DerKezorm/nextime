@@ -77,7 +77,7 @@ bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schrei
 - **Seiten mittig (V48):** `ConnectPages.tsx` ohne eigene Hülle, nur Anmeldewächter und Routen.
 - **Ein Ort fürs eigene Netz:** der Haken „Verbindungen ins eigene Netz“ steht nur noch in „Andere nex-Apps“; der
   eigene Schalter unter „Funktionen für alle Konten“ ist weg, `PUT /api/settings` `connections_local_network` bleibt
-  (E55). Hinweise der Formulare von Hand zeigen auf Server › Allgemein › Andere nex-Apps (`#nex-apps`).
+  (E55). Hinweise der Formulare von Hand zeigen auf Server › Verbindungen › Andere nex-Apps (`#nex-apps`).
 - **verbinden 0.1.9** (`bauplaene-konten` `b277da0`): `ConsentPage` liest `navigate` über ein Ref und fragt
   `GET /api/connect/consent` einmal, auch ohne eigenes `navigate` (0.1.8 fragte ohne Ende, Fund aus nextime). Der
   Umweg `TODO verbinden 0.1.8` in `features/connect/ConnectPages.tsx` ist weg; `verbinden.test.tsx` bewacht die eine
@@ -113,6 +113,19 @@ bisher). nexfolk fragt mit dem Zugang der Verbindung `GET /api/connect/about/eve
 - Adapter: `about_purpose = "events.about"`, `about_seed` (künftiger Termin mit der Person als Teilnehmerin und im
   Titel), `probe` für `events.about` auf `/api/connect/about/events.about`. Eigene Tests `test_verbinden_about.py`.
 
+#### E67 Server › Verbindungen (27.11.2026, ui 1.2.1, verbinden 0.1.18, schluessel 1.1.3, mcp 1.1.5)
+
+- Neuer Bereich Server › Verbindungen (`server-connections`, `/settings/server-connections`, Symbol `Plug`) direkt
+  nach Allgemein, Titel und Zeile aus `areaText` des ui-Kits. Er hält „Andere nex-Apps“ (`ConnectionsOperatorCard`,
+  `#nex-apps`), dann „Schnittstellen“ (`InterfacesCard` mit `McpOperatorSettings` unter `after.mcp`), dieselben
+  Karten mit denselben Props wie vorher unter Allgemein (`ServerConnectionsArea` in `pages/settings/SettingsAreas.tsx`).
+- Allgemein behält Grenzen, Funktionen für alle Konten und Sprachen; `GENERAL_PARTS` ohne `interfaces`/`nexApps`.
+- `/settings/general#nex-apps` und `#interfaces` führen den Betreiber mit Anker zum neuen Bereich (`resolveArea` mit
+  Hash); ein Mitglied landet wie bisher im Profil. Die Links der Formulare von Hand zeigen auf
+  `/settings/server-connections#nex-apps`; in eine Partner-App führt `PARTNER_OPERATOR_PAGE` (alte Adresse, die jede
+  Fassung versteht).
+- ui 1.2.1 bringt auch `WhatsNewBanner`/`WhatsNewDialog` (ui 1.2.0), in nextime noch nicht benutzt.
+
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 
 Nach dem Bauplan in nexlore `Development/nexapps/Baupläne/Bauplan Einstellungen.md` (E1 bis E33). Aus
@@ -122,12 +135,13 @@ ihre Kopfzeile `// Vorlage <Paket> <Fassung>`. App-Fassung unverändert 0.4.0, k
 
 | Bereich | woher jetzt | was gewandert ist (alt → neu) |
 |---|---|---|
-| Gerüst | `SettingsLayout`, `SettingsNav`, `SettingsPage` (ui) in `pages/SettingsPage.tsx`; Titel und Zeilen der gemeinsamen Bereiche aus `areaText`, nextimes eigene (`own`) aus `settings.areas.*` | eigene `SettingsNav`/`SettingsJump` und `pages/settings/ui.tsx` → weg; Reihenfolge nach Bauplan (Profil, Sicherheit, Darstellung, Kalender und Konten, Freigaben, Auf iPhone und Co, Mitnehmen und umziehen, Benachrichtigungen, Verbindungen; Server: Allgemein, Anmeldung, Mail, Speicher und Sicherung, Google einrichten, Konten, Log); `/settings` auf dem Handy die Liste; alte Pfade (`/account/<reiter>`, `/server/<seite>`) leiten weiter um, neu `/settings/reminders` → `/settings/notifications` |
+| Gerüst | `SettingsLayout`, `SettingsNav`, `SettingsPage` (ui) in `pages/SettingsPage.tsx`; Titel und Zeilen der gemeinsamen Bereiche aus `areaText`, nextimes eigene (`own`) aus `settings.areas.*` | eigene `SettingsNav`/`SettingsJump` und `pages/settings/ui.tsx` → weg; Reihenfolge nach Bauplan (Profil, Sicherheit, Darstellung, Kalender und Konten, Freigaben, Auf iPhone und Co, Mitnehmen und umziehen, Benachrichtigungen, Verbindungen; Server: Allgemein, Verbindungen (E67), Anmeldung, Mail, Speicher und Sicherung, Google einrichten, Konten, Log); `/settings` auf dem Handy die Liste; alte Pfade (`/account/<reiter>`, `/server/<seite>`) leiten weiter um, neu `/settings/reminders` → `/settings/notifications` |
 | Profil | `PAGES.profile` (konten), dazu `UnconfirmedEmailBox` (nur wo `showUnconfirmed`), `SignOutCard` des Moduls (`things` = „Kalender“; überall sonst dazu `thingsDative` = „Kalendern“) | Zeitzone aus Darstellung → unter „Sprache“ (E14); Zeile „Anmeldung mit Passwort / über …“ weg |
 | Darstellung | `pages/settings/AppearanceArea.tsx`: `AppearanceCard` (Theme am Konto, `PUT /api/me/theme`, beim ersten Laden `POST /api/me/theme/adopt` mit `nextime.theme` des Browsers), dann je Wahl eine Karte: Erster Wochentag, Kalenderwochen (`CheckboxRow`), Uhrzeit, Doppelte Termine, Termine im Monat (`Segment`) | Karte „Darstellung“ mit `ThemeSwitcher` und Auswahllisten → Karten; Hell/Dunkel gilt jetzt für das Konto (E5, Spalte `accounts.theme`) |
 | Benachrichtigungen | `features/reminders/RemindersArea.tsx`: `NotifyWays` (Dieser Browser mit „Probemeldung schicken“, „Browser mit Mitteilungen“ mit „Entfernen“, iPhone und iPad), dann „Erinnerungen“, „Vorgabe je Kalender“, „Geräte mit Erinnerungen“ | Slug `reminders` → `notifications` (E1), `Toggle` → `CheckboxRow`, Hinweise als `Notice`; neu (E34) `POST /api/notify/webpush/probe`, `DELETE /api/notify/webpush/{id}` (nur eigene Browser, fremde 404) |
 | Verbindungen | `features/keys/ConnectionsArea.tsx`: „Geräte“ (`AppDevicesSection`), „Auf diesem Gerät installieren“ (`pwa/InstallCard.tsx`, `listenForInstall`), nextasks und nexpaper als `Collapsible variant="card"` mit Logo (`fold.nextasks`/`fold.nexpaper` je Gerät wie bisher), `ApiKeysCard`, `ToolsCard` (schluessel) | App-Geräte aus „Auf iPhone und Co“ → hierher (E4); „Auf iPhone und Co“ nur noch CalDAV; eigene Schlüsselkarte `features/keys/KeysSection.tsx` → Modulkarten (nextimes Sätze zu ausgeblendeten Kalendern, schreibenden KI-Werkzeugen und `/api/v1` als `children`) |
-| Allgemein | `pages/settings/GeneralCards.tsx`: „Grenzen“ (`Field action`), „Funktionen für alle Konten“ (`CheckboxRow`), `InterfacesCard` (schluessel), „Sprachen“ (`Chip`, `Field action`) | „Zustand“, HTTPS-Hinweis, Proxy-Hinweis, lose Versionszeile weg; MCP/API-Schalter → „Schnittstellen“; keine Karte „Web Push“ (nichts einzustellen, E33) |
+| Allgemein | `pages/settings/GeneralCards.tsx`: „Grenzen“ (`Field action`), „Funktionen für alle Konten“ (`CheckboxRow`), „Sprachen“ (`Chip`, `Field action`) | „Zustand“, HTTPS-Hinweis, Proxy-Hinweis, lose Versionszeile weg; MCP/API-Schalter → „Schnittstellen“; keine Karte „Web Push“ (nichts einzustellen, E33); „Schnittstellen“ und „Andere nex-Apps“ → Server › Verbindungen (E67) |
+| Server › Verbindungen | `ConnectionsOperatorCard` (verbinden, „Andere nex-Apps“), `InterfacesCard` (schluessel) mit `McpOperatorSettings` (mcp) | neu mit E67 (ui 1.2.1), beide Karten vorher unter Allgemein; alte Anker `#nex-apps`, `#interfaces` leiten um |
 | Anmeldung | `pages/settings/SignInArea.tsx` = `SignInPage` (konten) + `SignInProviders` (oidc); Wege `GET/PUT /api/server/sign-in`, `GET /api/server/sign-in/readiness` (`routers/server_signin.py`) mit nextimes eigenem Punkt „Server erreicht das Internet“ am Ende (E34, `internet_point`, Wörter `server.ready.internet`, Schlüssel in `pages/settings/readyPoints.ts`) | `SignInCards.tsx` weg; `PUT /api/settings` mit den Schaltern geht durch dieselben Regeln (Passwort-Rückfrage beim Abschalten des Faktors) |
 | Mail | `MailCard` (post) über `/api/server/mail`, Satz `server.mailSubtitle` | eigene `MailCard` weg; `/api/settings` (`smtp_*`) und `POST /api/settings/mail-test` bleiben (Testmail jetzt die des Moduls, alte Codes `mail_off`/`mail_failed`/`invalid_email`) |
 | Speicher und Sicherung | `StorageArea` (sicherung) über `/api/server/storage`, Zeiten in Uhr und Zone des Kontos (`when`, „heute 3:00 AM“); Haken `services/backup_hooks.py` (Format unverändert: `nextime-backup.json`, `database/nextime.db`, `attachments/`, `secret.key`; schrittweises Zurückspielen wie TIME-1 EC-5, Sync-Epoche) | eigene `BackupsCard` weg; neu „Jede Woche“, „Jeden Monat“; alte Wege `/api/backups/*` mit `x-nextime-password` (`legacy_router`, Codes `disk_full`/`write_failed`), `GET /api/backups/summary` in alter Form aus `plan.summary()` |

@@ -15,8 +15,9 @@ function sentences(tree: unknown): string[] {
 }
 
 const OLD = {
-  de: ['Einstellungen › API', 'API-Token', 'Token ändern', 'Speicher und Sicherungen', 'unter Einstellungen ein', 'Einstellungen, Server', 'unter „Mein Konto“'],
-  en: ['Settings › API', 'API token', 'Change token', 'under Settings.', 'Settings, Server', 'under “My account”'],
+  // E67: "Andere nex-Apps" and "Schnittstellen" left Server › Allgemein for Server › Verbindungen, here and in the partners.
+  de: ['Einstellungen › API', 'API-Token', 'Token ändern', 'Speicher und Sicherungen', 'unter Einstellungen ein', 'Einstellungen, Server', 'unter „Mein Konto“', 'Allgemein › Andere nex-Apps', 'Allgemein › Schnittstellen'],
+  en: ['Settings › API', 'API token', 'Change token', 'under Settings.', 'Settings, Server', 'under “My account”', 'General › Other nex apps', 'General › Interfaces'],
 }
 
 describe('the places nextime names', () => {
@@ -35,6 +36,10 @@ describe('the places nextime names', () => {
     expect(de.errors.nextasks_token_invalid).toContain('unter Mein Konto › Verbindungen › API-Schlüssel')
     expect(en.errors.nextasks_token_invalid).toContain('under My account › Connections › API keys')
     expect(de.errors.public_url_missing).toContain('unter Server › Anmeldung')
+    // E67: the own network and the API of a partner under Server › Verbindungen, there as here.
+    expect(de.errors.nextasks_address_local).toContain('unter Server › Verbindungen › Andere nex-Apps')
+    expect(en.nextasks.section.localOff).toContain('under Server › Connections › Other nex apps')
+    expect(de.errors.nexpaper_api_off).toContain('dort unter Server › Verbindungen › Schnittstellen')
   })
 })
 
@@ -86,7 +91,7 @@ describe('E46: places as group › area', () => {
     expect(wrongPlaces('Richte ihn unter Mein Konto, Sicherheit ein.', 'de')).toEqual(['… Sicherheit'])
     expect(wrongPlaces('unter Mein Konto › Verbindungen › API-Schlüssel', 'de')).toEqual([])
     expect(wrongPlaces('Settings › My account › Connections', 'en')).toEqual([])
-    expect(wrongPlaces('under Server › General › Interfaces', 'en')).toEqual([])
+    expect(wrongPlaces('under Server › Connections › Interfaces', 'en')).toEqual([])
   })
 })
 

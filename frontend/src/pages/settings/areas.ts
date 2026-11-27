@@ -4,6 +4,9 @@
  * end. `/settings` alone is the list on a phone and the profile beside it on a wider page; the addresses of before
  * (`/account/<tab>`, `/server/<page>`, the area "Erinnerungen" `/settings/reminders`) lead to their area.
  *
+ * Server › Connections (`server-connections`, plan E67, ui 1.2.1) holds "Andere nex-Apps" and "Schnittstellen", which
+ * stood under General before: `/settings/general#nex-apps` and `#interfaces` lead there with their anchor.
+ *
  * A new area: add its slug to `AreaSlug`, an entry to `AREAS` (the place in the list is its place in the navigation),
  * for an area of nextime's own (`own`) its texts `settings.areas.<key>.title` and `.text` in both languages, and what it
  * shows in `SettingsAreas.tsx`.
@@ -26,6 +29,7 @@ export type AreaSlug =
   | 'notifications'
   | 'connections'
   | 'general'
+  | 'server-connections'
   | 'sign-in'
   | 'mail'
   | 'storage'
@@ -40,7 +44,7 @@ export type AreaGroup = 'account' | 'server'
 export type Area = { slug: AreaSlug; group: AreaGroup; icon: IconLike; key: string; own?: boolean }
 
 /** In the order of the navigation (plan "Einstellungen": Profile, Security, Appearance, nextime's own areas in its order,
- * Notifications, Connections; Server: General, Sign-in, Mail, Storage and backups, Set up Google, Accounts, Log). */
+ * Notifications, Connections; Server: General, Connections, Sign-in, Mail, Storage and backups, Set up Google, Accounts, Log). */
 export const AREAS: Area[] = [
   { slug: 'profile', group: 'account', icon: 'UserRound', key: 'profile' },
   { slug: 'security', group: 'account', icon: 'ShieldCheck', key: 'security' },
@@ -52,6 +56,7 @@ export const AREAS: Area[] = [
   { slug: 'notifications', group: 'account', icon: 'Bell', key: 'notifications' },
   { slug: 'connections', group: 'account', icon: 'Plug', key: 'connections' },
   { slug: 'general', group: 'server', icon: 'SlidersHorizontal', key: 'general' },
+  { slug: 'server-connections', group: 'server', icon: 'Plug', key: 'serverConnections' },
   { slug: 'sign-in', group: 'server', icon: 'KeyRound', key: 'signIn' },
   { slug: 'mail', group: 'server', icon: 'Mail', key: 'mail' },
   { slug: 'storage', group: 'server', icon: 'HardDrive', key: 'storage' },
@@ -85,11 +90,19 @@ function providerAnswer(search: string): boolean {
   return params.has('linked') || params.has('error')
 }
 
+/** The cards that left Server › General for Server › Connections (E67), by their anchor. */
+const MOVED_FROM_GENERAL = new Set(['#nex-apps', '#interfaces'])
+
 /**
  * Where an address of the settings leads: the area itself, or the address to go to instead (an area the account may not
- * open goes to the profile). The answer of a provider after linking comes to `/settings` and goes on to Security.
+ * open goes to the profile). The answer of a provider after linking comes to `/settings` and goes on to Security. A link
+ * to a card that left General (E67: the cards' "Einrichten" of before, a partner app of an older version, saved links)
+ * lands at its new place with its anchor.
  */
-export function resolveArea(asked: string | undefined, role: Role | undefined, search: string): { area: AreaSlug } | { redirect: string } {
+export function resolveArea(asked: string | undefined, role: Role | undefined, search: string, hash = ''): { area: AreaSlug } | { redirect: string } {
+  if (asked === 'general' && MOVED_FROM_GENERAL.has(hash) && areasFor(role).some((area) => area.slug === 'server-connections')) {
+    return { redirect: areaPath('server-connections') + search + hash }
+  }
   if (asked === undefined) return providerAnswer(search) ? { redirect: areaPath('security') + search } : { area: 'profile' }
   if (asked === ABOUT_AREA.slug || areasFor(role).some((area) => area.slug === asked)) return { area: asked as AreaSlug }
   const renamed = RENAMED[asked]

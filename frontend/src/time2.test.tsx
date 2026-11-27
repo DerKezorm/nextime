@@ -44,7 +44,7 @@ describe('TIME-2 My account', () => {
     const nav = box.querySelector('[data-testid="settings-nav"]')!
     expect(nav.querySelector('#settings-group-server')!.textContent).toBe('Server')
     const server = [...nav.querySelectorAll('ul')][1]
-    expect([...server.querySelectorAll('a')].map((entry) => entry.textContent)).toEqual(['Allgemein', 'Anmeldung', 'Mail', 'Speicher und Sicherung', 'Google einrichten', 'Konten', 'Log'])
+    expect([...server.querySelectorAll('a')].map((entry) => entry.textContent)).toEqual(['Allgemein', 'Verbindungen', 'Anmeldung', 'Mail', 'Speicher und Sicherung', 'Google einrichten', 'Konten', 'Log'])
     // Each entry leads to its area of the settings.
     for (const [entry, area] of [['Allgemein', 'general'], ['Konten', 'accounts'], ['Google einrichten', 'google'], ['Profil', 'profile']]) {
       await click(byText(entry, box.querySelector<HTMLElement>('[data-testid="settings-nav"]')!))

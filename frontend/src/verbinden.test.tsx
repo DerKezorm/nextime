@@ -60,7 +60,7 @@ describe('the other nex apps on the page Connections', () => {
     const head = card.querySelector<HTMLElement>('[data-part="collapsible-head"]')
     if (head?.getAttribute('aria-expanded') === 'false') await click(head)
     expect(card.querySelector('[data-testid="connection-not-set-up"]')).not.toBeNull()
-    expect(card.querySelector('[data-testid="connection-set-up"]')?.getAttribute('href') ?? null).toBe(shown ? '/settings/general#nex-apps' : null)
+    expect(card.querySelector('[data-testid="connection-set-up"]')?.getAttribute('href') ?? null).toBe(shown ? '/settings/server-connections#nex-apps' : null)
   })
 })
 

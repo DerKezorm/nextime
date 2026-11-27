@@ -35,7 +35,7 @@
       {
         "title": "Einstellungen wie in allen nex-Apps",
         "where": "Einstellungen",
-        "body": "Gleiche Bereiche, Karten und Knöpfe wie in den anderen nex-Apps. In der Darstellung wählst du Hell, Dunkel oder Wie das System, jetzt für dein Konto auf allen Geräten. „Erinnerungen“ heißt jetzt „Benachrichtigungen“ und beginnt mit den Wegen: Mitteilungen für diesen Browser, eine Probemeldung, iPhone und iPad. Die Verbindungen bringen Geräte, Installieren, die anderen Apps, API-Schlüssel und KI-Werkzeuge an einen Ort; Schlüssel lassen sich jetzt bearbeiten."
+        "body": "Gleiche Bereiche, Karten und Knöpfe wie in den anderen nex-Apps. In der Darstellung wählst du Hell, Dunkel oder Wie das System, jetzt für dein Konto auf allen Geräten. „Erinnerungen“ heißt jetzt „Benachrichtigungen“ und beginnt mit den Wegen: Mitteilungen für diesen Browser, eine Probemeldung, iPhone und iPad. Die Verbindungen bringen Geräte, Installieren, die anderen Apps, API-Schlüssel und KI-Werkzeuge an einen Ort; Schlüssel lassen sich jetzt bearbeiten. Für den Betreiber stehen „Andere nex-Apps“ und „Schnittstellen“ unter Server › Verbindungen."
       },
       {
         "title": "Sicherung jede Woche oder jeden Monat",
@@ -51,8 +51,8 @@
     "smallTitle": "Außerdem",
     "small": [
       "In Terminen von iCloud- und Google-Kalendern lädst du jetzt Teilnehmer mit ihrer Mailadresse ein. Die Einladung verschickt iCloud oder Google wie gewohnt, Antworten der Eingeladenen bleiben erhalten. nextimes eigene Kalender laden niemanden ein.",
-      "Der Betreiber trägt die Adressen der anderen nex-Apps einmal unter Server › Allgemein › Andere nex-Apps ein und erlaubt dort bei Bedarf Verbindungen ins eigene Netz; danach verbindet jedes Konto mit einem Klick.",
-      "Unter Server › Allgemein › Schnittstellen legt der Betreiber fest, ob sich KI-Programme selbst verbinden dürfen, die höchste Stufe und gesperrte Werkzeuge. Auf einer neuen Installation ist MCP zuerst aus; wo es an war, bleibt es an.",
+      "Der Betreiber trägt die Adressen der anderen nex-Apps einmal unter Server › Verbindungen › Andere nex-Apps ein und erlaubt dort bei Bedarf Verbindungen ins eigene Netz; danach verbindet jedes Konto mit einem Klick.",
+      "Unter Server › Verbindungen › Schnittstellen legt der Betreiber fest, ob sich KI-Programme selbst verbinden dürfen, die höchste Stufe und gesperrte Werkzeuge. Auf einer neuen Installation ist MCP zuerst aus; wo es an war, bleibt es an.",
       "„Bereit fürs Internet?“ unter Server › Anmeldung prüft https, zweiten Faktor, Schutz vor Raten, Cookies, Proxy und ob der Server das Internet erreicht, und sagt, was zu tun ist.",
       "Ob es eine neue Version gibt, sieht nur noch der Betreiber; eine neue Installation fragt einmal, ob nextime nachsehen soll.",
       "Unter Server › Konten sieht der Betreiber alle API-Schlüssel und kann einzelne sperren; abgelaufene Einladungen bleiben dort sichtbar, bis er sie zurückzieht.",

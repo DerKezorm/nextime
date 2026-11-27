@@ -101,7 +101,8 @@ describe('the shared module mcp in nextime', () => {
 
   it('the operator sets programs, the highest level and blocked tools under "MCP-Zugang"', async () => {
     serve(server(me({ role: 'operator' })))
-    await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
+    // E67: the card "Schnittstellen" stands under Server › Verbindungen.
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/server-connections')
     const operator = box.querySelector('[data-card="interfaces"] [data-testid="mcp-operator"]')
     expect(operator?.textContent).toContain('Programme dürfen sich verbinden')
   })

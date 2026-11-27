@@ -181,6 +181,10 @@ describe('TIME-1 the group "Server" of the settings', () => {
     expect(switches[1].disabled).toBe(true)
     await click(switches[2])
     expect(calls.find((call) => call.method === 'PUT' && call.path === '/api/settings')?.body).toEqual({ address_suggestions: false })
+    // E67: "Andere nex-Apps" and "Schnittstellen" stand under Server › Verbindungen, General has neither.
+    expect(box.querySelector('[data-card="nex-apps"]')).toBeNull()
+    expect(box.querySelector('[data-card="interfaces"]')).toBeNull()
+    await render(<AuthProvider><App /></AuthProvider>, '/settings/server-connections')
     const ownNetwork = [...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].filter((item) => label(item)?.startsWith('Verbindungen ins eigene Netz'))
     expect(ownNetwork).toHaveLength(1)
     expect(ownNetwork[0].closest('[data-card="nex-apps"]')).not.toBeNull()
@@ -242,10 +246,10 @@ describe('TIME-1 the group "Server" of the settings', () => {
     await render(<AuthProvider><App /></AuthProvider>, '/settings/general')
     await vi.waitFor(() => expect(box.querySelector('[data-testid="language-nl"]')).not.toBeNull())
     const cards = [...box.querySelectorAll('[data-testid="server-general"] > [data-card]')].map((card) => card.getAttribute('data-card'))
-    // "Andere nex-Apps" of the shared module verbinden after the interfaces (V14), the languages last (E51).
-    expect(cards).toEqual(['limits', 'features', 'interfaces', 'nex-apps', 'languages'])
+    // The languages last (E51); "Andere nex-Apps" and "Schnittstellen" stand under Server › Verbindungen (E67).
+    expect(cards).toEqual(['limits', 'features', 'languages'])
     // U-3 (ui 1.1.3): the line under the title names exactly these cards, in their order.
-    expect(box.querySelector('[data-testid="settings-area-general"] h1 + p')!.textContent).toBe('Grenzen, Funktionen für alle Konten, Schnittstellen, andere nex-Apps und eigene Sprachen.')
+    expect(box.querySelector('[data-testid="settings-area-general"] h1 + p')!.textContent).toBe('Grenzen, Funktionen für alle Konten und eigene Sprachen.')
     const card = box.querySelector<HTMLElement>('[data-card="languages"]')!
     expect(card.textContent).toContain('Deutsch und Englisch sind eingebaut.')
     expect(box.querySelector('[data-testid="language-built-in-de"]')!.textContent).toContain('Deutsch')
@@ -339,10 +343,10 @@ describe('TIME-1 AC-11 looking for new versions', () => {
     const labels = [...box.querySelectorAll<HTMLInputElement>('input[type="checkbox"]')].map((item) => box.querySelector(`label[for="${item.id}"]`)?.textContent)
     expect(labels).not.toContain('Einmal am Tag nachsehen')
     expect(labels).not.toContain('Nach neuen Versionen suchen')
-    // The order of General (plan "Einstellungen"): limits, the features for every account, interfaces, the languages.
+    // The order of General (plan "Einstellungen"): limits, the features for every account, the languages (E51);
+    // "Andere nex-Apps" and "Schnittstellen" stand under Server › Verbindungen (E67).
     const cards = [...box.querySelectorAll('[data-testid="server-general"] [data-card]')].map((card) => card.getAttribute('data-card'))
-    // "Andere nex-Apps" of the shared module verbinden after the interfaces (V14), the languages last (E51).
-    expect(cards).toEqual(['limits', 'features', 'interfaces', 'nex-apps', 'languages'])
+    expect(cards).toEqual(['limits', 'features', 'languages'])
   })
 })
 

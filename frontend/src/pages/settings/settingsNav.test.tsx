@@ -12,6 +12,7 @@ import type { Me } from '../../api/client'
 import i18n from '../../i18n'
 import { AuthProvider } from '../../state/auth'
 import { box, byText, calls, click, KEYS_LISTING, me, ok, render, serve, signedIn, start, stop } from '../../testing'
+import { areaText, NEXUI_TEXTS } from '../../vendor/nexui'
 import { formerPath, resolveArea } from './areas'
 
 const OPERATOR = me({ id: 1, name: 'tester', display_name: 'Tester', role: 'operator' })
@@ -73,7 +74,7 @@ function server(account: Me = OPERATOR) {
 
 function Where() {
   const location = useLocation()
-  return <output data-testid="where">{location.pathname + location.search}</output>
+  return <output data-testid="where">{location.pathname + location.search + location.hash}</output>
 }
 
 async function open(at: string): Promise<void> {
@@ -93,7 +94,7 @@ const heading = () => box.querySelector('h1')!.textContent
 const cards = () => [...box.querySelectorAll('[data-part="settings-main"] [data-card]')].filter((card) => !card.parentElement?.closest('[data-card]')).map((card) => card.getAttribute('data-card'))
 
 const ACCOUNT_AREAS = ['profile', 'security', 'appearance', 'calendars', 'shares', 'devices', 'move', 'notifications', 'connections']
-const SERVER_AREAS = ['general', 'sign-in', 'mail', 'storage', 'google', 'accounts', 'log']
+const SERVER_AREAS = ['general', 'server-connections', 'sign-in', 'mail', 'storage', 'google', 'accounts', 'log']
 
 beforeEach(async () => {
   start()
@@ -111,6 +112,8 @@ describe('the addresses of the settings (TIME-2 AC-7)', () => {
 
   it('TIME-1 EC-10 a member asking for a server area lands on the profile', () => {
     for (const slug of SERVER_AREAS) expect(resolveArea(slug, 'member', '')).toEqual({ redirect: '/settings' })
+    // E67: the anchors of the cards that moved lead a member to the profile as before, not to the operator's area.
+    for (const hash of ['#nex-apps', '#interfaces']) expect(resolveArea('general', 'member', '', hash)).toEqual({ redirect: '/settings' })
   })
 
   it('TIME-2 AC-7 the answer of a provider after linking goes to Security, with its message', () => {
@@ -208,7 +211,7 @@ describe('the navigation of the settings (TIME-2 AC-7)', () => {
     const groups = [...nav.querySelectorAll('ul')].map((list) => box.querySelector(`#${list.getAttribute('aria-labelledby')}`)!.textContent)
     expect(groups).toEqual(['Mein Konto', 'Server'])
     expect([...nav.querySelectorAll('ul')][0].textContent).toBe('ProfilSicherheitDarstellungKalender und KontenFreigabenAuf iPhone und CoMitnehmen und umziehenBenachrichtigungenVerbindungen')
-    expect([...nav.querySelectorAll('ul')][1].textContent).toBe('AllgemeinAnmeldungMailSpeicher und SicherungGoogle einrichtenKontenLog')
+    expect([...nav.querySelectorAll('ul')][1].textContent).toBe('AllgemeinVerbindungenAnmeldungMailSpeicher und SicherungGoogle einrichtenKontenLog')
     const entries = [...nav.querySelectorAll('a')]
     expect(entries.at(-1)!.getAttribute('href')).toBe('/settings/about')
     expect(entries.at(-1)!.textContent).toBe('Über nextime')
@@ -311,7 +314,8 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     ['notifications', ['notify-ways', 'reminders', 'reminder-defaults', 'reminder-devices']],
     // The other nex apps are the cards of the shared module verbinden, one per partner of the catalog.
     ['connections', ['devices', 'install', 'nextasks', 'nexpaper', 'nexmail', 'nexfolk', 'nexdiary', 'nexnotes', 'api-keys', 'ai-tools']],
-    ['general', ['limits', 'features', 'interfaces', 'nex-apps', 'languages']],
+    ['general', ['limits', 'features', 'languages']],
+    ['server-connections', ['nex-apps', 'interfaces']],
     ['sign-in', ['sign-in-ready', 'sign-in', 'sign-in-providers', 'sign-in-authentik']],
     ['mail', ['mail']],
     ['storage', ['storage', 'backups']],
@@ -386,6 +390,56 @@ describe('every card in its area (TIME-2 AC-7)', () => {
     const toggle = area.querySelector<HTMLInputElement>('input[type="checkbox"]')!
     expect(box.querySelector(`label[for="${toggle.id}"]`)!.textContent).toBe('Google-Anbindung (nicht eingerichtet)')
     expect(toggle.disabled).toBe(true)
+  })
+})
+
+describe('E67: Server › Verbindungen', () => {
+  const KIT = NEXUI_TEXTS.de
+  const area = () => $('settings-area-server-connections')!
+
+  it('E67 the addresses of before lead to the cards at their new place, with their anchor', () => {
+    expect(resolveArea('general', 'operator', '', '#nex-apps')).toEqual({ redirect: '/settings/server-connections#nex-apps' })
+    expect(resolveArea('general', 'operator', '?x=1', '#interfaces')).toEqual({ redirect: '/settings/server-connections?x=1#interfaces' })
+    expect(resolveArea('general', 'operator', '', '#limits')).toEqual({ area: 'general' })
+    expect(resolveArea('general', 'operator', '')).toEqual({ area: 'general' })
+  })
+
+  it('E67 "Andere nex-Apps", then "Schnittstellen" stand under Server › Verbindungen with all their switches', async () => {
+    serve(server())
+    await open('/settings/server-connections')
+    expect(where()).toBe('/settings/server-connections')
+    expect(current()).toEqual(['settings-nav-server-connections'])
+    const words = areaText(KIT, 'server-connections', { app: 'nextime' })!
+    expect(heading()).toBe(words.title)
+    expect(heading()).toBe('Verbindungen')
+    expect(area().textContent).toContain(words.text)
+    expect(cards()).toEqual(['nex-apps', 'interfaces'])
+    const label = (item: HTMLInputElement) => box.querySelector(`label[for="${item.id}"]`)?.textContent ?? ''
+    const switches = [...area().querySelectorAll<HTMLInputElement>('input[type="checkbox"]')]
+    const inCard = (card: string) => switches.filter((item) => item.closest(`[data-card="${card}"]`)).map(label)
+    expect(inCard('nex-apps')).toEqual(expect.arrayContaining(['Verbindungen mit anderen nex-Apps', expect.stringMatching(/^Verbindungen ins eigene Netz/)]))
+    expect(inCard('interfaces')).toEqual(expect.arrayContaining(['Programmschnittstelle (API) für Mitglieder', 'MCP-Zugang']))
+    // The operator's settings of the shared module mcp under "MCP-Zugang", as under General before.
+    expect(area().querySelector('[data-card="interfaces"] [data-testid="mcp-operator"]')).not.toBeNull()
+  })
+
+  it.each(['#nex-apps', '#interfaces'])('E67 /settings/general%s opens Server › Verbindungen at the card', async (hash) => {
+    serve(server())
+    await open(`/settings/general${hash}`)
+    expect(where()).toBe(`/settings/server-connections${hash}`)
+    expect(current()).toEqual(['settings-nav-server-connections'])
+    expect(cards()).toEqual(['nex-apps', 'interfaces'])
+  })
+
+  it('E67 General keeps its other cards and names neither in its line', async () => {
+    serve(server())
+    await open('/settings/general')
+    expect(where()).toBe('/settings/general')
+    expect(cards()).toEqual(['limits', 'features', 'languages'])
+    expect(box.querySelector('[data-card="nex-apps"], [data-card="interfaces"]')).toBeNull()
+    const line = box.querySelector('[data-testid="settings-area-general"] h1 + p')!.textContent
+    expect(line).not.toContain(KIT.generalParts.interfaces)
+    expect(line).not.toContain(KIT.generalParts.nexApps)
   })
 })
 
