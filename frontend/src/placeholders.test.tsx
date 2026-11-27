@@ -56,9 +56,7 @@ beforeEach(() => {
       const path = String(input)
       const method = init?.method ?? 'GET'
       const body = typeof init?.body === 'string' ? JSON.parse(init.body) : undefined
-      // "Was ist neu" (the shared module wasneu) has nothing unread here.
-      const quiet = path.startsWith('/api/whats-new') ? { status: 200, body: { version: '0.1.0', seen: '0.1.0', unread: [], more: false, current: null, earlier: false } } : undefined
-      const answer = handler(method, path, body) ?? quiet ?? { status: 200, body: [] }
+      const answer = handler(method, path, body) ?? { status: 200, body: [] }
       return new Response(JSON.stringify(answer.body), { status: answer.status, headers: { 'Content-Type': 'application/json' } })
     }),
   )
