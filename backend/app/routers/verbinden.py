@@ -10,7 +10,7 @@ from fastapi import Request
 
 from ..db import SessionLocal
 from ..deps import require_account, require_operator
-from ..services import verbinden_store
+from ..services import about_person, verbinden_store
 from ..services.verbinden_store import CONFIG, Store, connected, old_key
 from ..vendor.nexverbinden import api as verbinden_api
 from . import devices
@@ -40,4 +40,6 @@ router = verbinden_api.router(
     old_key=old_key,
     on_connected=connected,
     on_disconnected=_disconnected,
+    # verbinden 0.1.13 (V52): what nextime tells nexfolk about a person (``events.about``).
+    about=about_person.about,
 )

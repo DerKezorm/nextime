@@ -54,7 +54,7 @@ Logos aus dem Modul (eigene Kopien weg); App-Teile offen in jeder Karte. Umwege 
 |---|---|---|
 | nextasks | Gast (`tasks.read`, `tasks.complete`) | V18: Klick-Verbindung bekommt die Zeile in `nextasks_connections` ohne Schlüssel, Zugang aus `nexverbinden.access`; Abgleich, Listenwahl (offen in der Karte, V23), Abhaken wie über den Schlüssel; Test `test_v18_guest.py` je Weg |
 | nexpaper | Gast (`deadlines.read`) | V18 ebenso (`nexpaper_connections`), Test je Weg |
-| nexfolk | Gast (`birthdays.read`, `people.read` seit verbinden 0.1.3) | Runde 3: „Mit nexfolk verbinden“ legt das Geburtstags-Abo selbst an (`GET /api/v1/birthdays.ics` mit dem Zugang der Verbindung, `subscriptions.subscribe_by_connection`, Takt und Zustand wie jedes Abo, Kalender geht mit der Verbindung); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
+| nexfolk | Gast (`birthdays.read`, `people.read` seit verbinden 0.1.3), seit 0.1.13 auch Gastgeber (`events.about`) | Runde 3: „Mit nexfolk verbinden“ legt das Geburtstags-Abo selbst an (`GET /api/v1/birthdays.ics` mit dem Zugang der Verbindung, `subscriptions.subscribe_by_connection`, Takt und Zustand wie jedes Abo, Kalender geht mit der Verbindung); Namen von Teilnehmenden über `/api/v1/people` (V29, `GET /api/people/names`, Entwurf) |
 | nexnotes | Gast (`notes.add`) | „Notiz in nexnotes“ im Seitenteil (`POST /api/events/{id}/nexnotes`, Entwurf) |
 | nexmail | Gastgeber (drei Zwecke) | `/api/v1` mit Verbindungs-Token (Stufe 1), Vertragstests |
 | nexdiary | Gastgeber (`calendars.read`) | `/api/v1` lesend, Schreiben 403, Test `test_verbinden_host.py` |
@@ -84,6 +84,29 @@ bisher). Dabei 0.1.7 mitgenommen: der Adapter nennt `write_into` (nexmail schrei
   Abfrage weiter.
 - **verbinden 0.1.10** (`bauplaene-konten` `22671dd`): die Karte „Andere nex-Apps“ rollt sich ins Bild, wenn die Seite mit `#nex-apps` geöffnet wurde, wohin „Einrichten“ der Karten führt. Nur die Kopie und die Vorlage `nexverbinden.test.tsx`.
 - **verbinden 0.1.11** (`bauplaene-konten` `a2d6cac`): die Karte „Andere nex-Apps“ wieder ohne Hülle, sie steht direkt in der Reihe unter Server › Allgemein (`time1.test.tsx` fand sie mit 0.1.10 nicht).
+- **verbinden 0.1.12** (`bauplaene-konten` `dd07746`): Beispieladressen der Modultests in `172.16.0.0/12`. Nur die Kopie.
+
+#### verbinden 0.1.13 (27.11.2026, aus `bauplaene-konten` `e12760e`)
+
+Mit `tools/sync.py copy`, `check` grün; Vorlage `nexverbinden.test.tsx` neu genommen (Paar nextime/nextasks wie
+bisher). nexfolk fragt mit dem Zugang der Verbindung `GET /api/connect/about/events.about?name=…&mail=…&phone=…`
+(Karte „In den anderen Apps“, V49 bis V53); nextime antwortet über den Haken `router(about=about_person.about)`
+(`services/about_person.py`).
+
+- **Was „betrifft die Person“ heißt:** ein Termin der gegebenen Kalender (wie ein Schlüssel für sie: genannte, bei
+  „alle“ die gezeigten, `apiv1.Caller.reach`), nicht im Papierkorb und keine abgesagte Einladung, an dem die Person
+  teilnimmt (eine Teilnehmer-Mailadresse gleich einer der Person, ohne Groß/klein) oder dessen Titel ihren ganzen
+  Namen als ganze Wörter nennt (ohne Groß/klein); Nummern sieht nextime nicht an.
+- **Antwort:** `count` = solche Termine, die noch kommen oder gerade laufen (eine Serie einmal, wie die Suche);
+  `next` der erste davon, `last` der letzte vorbei (bei einer laufenden Serie ihr letztes Vorkommen vor jetzt), je mit
+  Titel und Beginn (UTC, ganztägig das Datum); `open` = `/day?day=…&event=…[&occurrence=…]` zum nächsten, sonst zum
+  letzten. „Nur belegt“: belegte Termine ohne Titel und `open` nur zum Tag, freie gar nicht (TIME-19 AC-2).
+- **Fund beim Nachziehen, behoben:** `/api/v1` nahm jeden Verbindungs-Token mit dem Recht „lesen“, auch einen, der
+  hier nichts gewährt (nexpaper, nextasks) oder nur `events.about` (nexfolk): so hätte nexfolk alle Termine der
+  gegebenen Kalender lesen können. Jetzt öffnen nur die Zwecke, die für ein Schlüsselrecht stehen
+  (`calendars.read`, `events.write`, `invitations.answer`), sonst 403 `purpose_missing` (`api_v1._connection`).
+- Adapter: `about_purpose = "events.about"`, `about_seed` (künftiger Termin mit der Person als Teilnehmerin und im
+  Titel), `probe` für `events.about` auf `/api/connect/about/events.about`. Eigene Tests `test_verbinden_about.py`.
 
 ### Durchgang „Einstellungen“ (25./26.11.2026, Zweig `einst-desktop`)
 

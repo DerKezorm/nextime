@@ -148,8 +148,16 @@ def _connection(request: Request, token: str, sender: str) -> Caller:
         if account is None:
             raise refused(401, "token_invalid", "No valid key.")
         db.expunge(account)
+    # Only the purposes that stand for the right of a key open ``/api/v1``: a connection granting nothing here, or only
+    # a purpose about a person (``events.about``, verbinden 0.1.13, asked at ``/api/connect/about/…``), opens nothing.
+    catalog = verbinden_store.CONFIG.catalog
+    known = catalog.purposes.get(verbinden_store.CONFIG.app_name, {})
+    opened = tuple(purpose for purpose in found.purposes if purpose in known and not known[purpose].person)
+    level = catalog.level(verbinden_store.CONFIG.app_name, opened)
+    if level is None:
+        raise refused(403, "purpose_missing", "The connection does not allow this.")
     caller = Caller(account=account, key_id=f"connection-{found.connection_id}",  # type: ignore[arg-type]
-                    key_name=found.partner, level=found.level or "read",
+                    key_name=found.partner, level=level,
                     calendar_ids=[int(area) for area in found.areas] if found.areas is not None else None)
     if not apibrake.allow("api", caller.key_id):
         raise refused(429, "slow_down", "Too many requests with this key. Wait a minute.", {"Retry-After": "60"})

@@ -26,6 +26,26 @@ class Adapter(StandardAdapter):
     older_link = False
     #: verbinden 0.1.8 (B1, V43): the shown names ``Store.account_card`` gives (``make_account``: the name capitalized).
     shown_names = {"owner": "Kim", "other": "Sam"}  # noqa: RUF012 (read only)
+    #: verbinden 0.1.13 (V51): nextime tells nexfolk about a person (``services/about_person.py``).
+    about_purpose = "events.about"
+
+    def about_seed(self, purpose: str, area: Any, person: Any) -> None:
+        """A coming event of the owner in calendar ``area`` that the person takes part in, its title naming them."""
+        from datetime import UTC, datetime, timedelta
+
+        from app.db import SessionLocal
+        from app.services import events, ical
+
+        start = (datetime.now(UTC) + timedelta(days=5)).strftime("%Y%m%dT%H0000Z")
+        end = (datetime.now(UTC) + timedelta(days=5, hours=1)).strftime("%Y%m%dT%H0000Z")
+        uid = f"{secrets.token_hex(8)}@example.com"
+        text = ("BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Example//EN\r\nBEGIN:VEVENT\r\n"
+                f"UID:{uid}\r\nDTSTAMP:20261101T000000Z\r\nDTSTART:{start}\r\nDTEND:{end}\r\n"
+                f"SUMMARY:Kaffee mit {person.name}\r\nORGANIZER:mailto:lead@example.com\r\n"
+                f"ATTENDEE;PARTSTAT=ACCEPTED:mailto:{person.mails[0]}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+        with SessionLocal() as db:
+            events.add_new(db, int(area), ical.parse(text), uid, self._accounts["owner"].id)
+            db.commit()
 
     def start(self, folder: Path, *, older: bool = False) -> None:
         from app.main import app
@@ -124,6 +144,9 @@ class Adapter(StandardAdapter):
             (accounts.block if blocked else accounts.unblock)(db, row)
 
     def probe(self, purpose: str) -> str | None:
+        # verbinden 0.1.13: a purpose about a person is asked at the module's place, never through ``/api/v1``.
+        if purpose == self.about_purpose:
+            return f"/api/connect/about/{purpose}"
         return "/api/v1/calendars"
 
     def areas_seen(self, purpose: str, answer: Any) -> set[str]:
