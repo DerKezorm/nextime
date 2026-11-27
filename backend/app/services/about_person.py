@@ -5,14 +5,14 @@ card "In den anderen Apps" shows the next event with the contact the account loo
 attendees has one of the person's mail addresses, upper and lower case alike) or when its title names the person (the
 whole name as nexfolk sends it, as whole words, upper and lower case alike); numbers are not looked at, events carry
 none. Only events of the calendars the connection was given (as a key for them reads them: the ones named, for "all"
-the ones the member shows, ``apiv1.Caller.reach``), never one in the trash, never an invitation the member declined.
+the ones the member shows, ``apiv1.Caller.reach``), never one in the trash, never an invitation the member declined,
+never one of a calendar shared with the member "busy only": nexfolk learns no more than the member sees there itself.
 
 **What goes out.** ``count``: how many of them are still to come or running now (a series once, as the search counts
 it, TIME-22); ``next``: the first of them, ``last``: the latest that is over (for a series running on, its latest
-occurrence before now); each with its title and its start (a moment in UTC, a date for a whole day). A calendar shared
-"busy only" counts its busy events without a title, its free ones not at all (TIME-19 AC-2). ``open``: the day of the
-next (else the last) in nextime, a path; never the place, the notes or the attendees. The module checks the question
-and the connection, brakes it, and cuts the answer to its form (``persons.cleaned``)."""
+occurrence before now); each with its title and its start (a moment in UTC, a date for a whole day). ``open``: the
+day of the next (else the last) in nextime, a path; never the place, the notes or the attendees. The module checks
+the question and the connection, brakes it, and cuts the answer to its form (``persons.cleaned``)."""
 
 from __future__ import annotations
 
@@ -42,7 +42,6 @@ class _Moment:
     title: str
     owner: int
     uid: str
-    busy_only: bool
 
     def key(self) -> tuple[str, str]:
         """By start (a whole day before the times of that day), as the search sorts."""
@@ -115,9 +114,6 @@ def _at(moment: _Moment) -> str:
 
 def _open(moment: _Moment, zone: str) -> str:
     day = moment.start if moment.all_day else ical.local_wall(moment.start, zone).date()
-    if moment.busy_only:
-        # "Busy only": the day, not the event (the member sees it there without a title).
-        return f"/day?day={day.isoformat()}"
     path = f"/day?day={day.isoformat()}&event={moment.event_id}"
     key = ical.recurrence_key(moment.occurrence)
     return path + (f"&occurrence={key}" if key else "")
@@ -145,7 +141,8 @@ def about(store: Any, caller: Any, purpose: str, person: Any, *, now: datetime |
         return dict(NOTHING)
     key = apiv1.Caller(account=account, key_id=0, key_name=str(caller.partner), level="read",
                        calendar_ids=[int(area) for area in caller.areas] if caller.areas is not None else None)
-    reach = key.reach(db)
+    # "Busy only": the member sees neither titles nor attendees there, so nothing of it concerns anybody here.
+    reach = {calendar_id: item for calendar_id, item in key.reach(db).items() if item.right != RIGHT_BUSY}
     if not reach:
         return dict(NOTHING)
     now = now or apiv1.now()
@@ -165,9 +162,6 @@ def about(store: Any, caller: Any, purpose: str, person: Any, *, now: datetime |
     over: list[_Moment] = []
     for row in rows:
         item: calendars.Access = reach[row.calendar_id]
-        busy_only = item.right == RIGHT_BUSY
-        if busy_only and not row.busy:
-            continue
         # The object only where its columns cannot tell: attendees (and the member's answer), a series.
         parsed = ical.parse(row.ical) if (row.recurring or "ATTENDEE" in row.ical) else None
         if not concerns(row.title or "", parsed, pattern, mails):
@@ -177,10 +171,10 @@ def about(store: Any, caller: Any, purpose: str, person: Any, *, now: datetime |
             if state and state["state"] == "declined":
                 continue
 
-        def moment(occurrence: Any, span: tuple[bool, Any, Any], row: Event = row, busy_only: bool = busy_only,
+        def moment(occurrence: Any, span: tuple[bool, Any, Any], row: Event = row,
                    item: calendars.Access = item) -> _Moment:
-            return _Moment(row.id, occurrence, span[0], span[1], span[2], "" if busy_only else (row.title or ""),
-                           item.calendar.owner_id, row.uid, busy_only)
+            return _Moment(row.id, occurrence, span[0], span[1], span[2], row.title or "", item.calendar.owner_id,
+                           row.uid)
 
         if row.recurring and parsed is not None:
             series = search._series_occurrence(row, row.ical, now, today)

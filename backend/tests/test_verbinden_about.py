@@ -1,6 +1,6 @@
 """What nextime tells nexfolk about a person (verbinden 0.1.13, ``events.about``, ``services/about_person.py``): an
 event concerns the person when the person takes part (an attendee's mail address) or its title names the person;
-only in the calendars given, never from the trash or a declined invitation, "busy only" without a title, the past
+only in the calendars given, never from the trash, a declined invitation or a calendar shared "busy only", the past
 only as ``last``. A connection that has nothing but ``events.about`` opens nothing of ``/api/v1``."""
 
 from __future__ import annotations
@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from app.db import SessionLocal
 from app.main import app
-from app.models import RIGHT_BUSY, Account
+from app.models import RIGHT_BUSY, RIGHT_READ, Account
 from app.services import events, ical
 from app.vendor.nexverbinden import PREFIX
 
@@ -109,17 +109,21 @@ def test_about_a_person_never_from_the_trash(client: TestClient, account: Accoun
     assert ask(token) == {"count": 0, "next": None, "last": None, "open": None}
 
 
-def test_about_a_person_busy_only_counts_without_a_title(client: TestClient, account: Account) -> None:
+def test_about_a_person_busy_only_does_not_count(client: TestClient, account: Account) -> None:
+    """The member sees neither titles nor attendees of a calendar shared "busy only": nexfolk learns nothing of it."""
     other = make_account("sam")
     with new_client(other) as sam:
         theirs = make_calendar(sam, "Sams Kalender")
+        readable = make_calendar(sam, "Sams Familie")
     share(theirs, account.id, RIGHT_BUSY)
-    put(other.id, theirs, "Arzt mit Pat Example", _soon(6))
-    put(other.id, theirs, "Pat Example frei", _soon(1), free=True)
-    found = ask(hosted(account.id, "nexfolk", [theirs]))
+    share(readable, account.id, RIGHT_READ)
+    put(other.id, theirs, "Arzt mit Pat Example", _soon(2), attendees=("pat@example.com",))
+    put(other.id, theirs, "Pat Example zu Besuch", _soon(-2))
+    put(other.id, readable, "Pat Example zum Essen", _soon(6))
+    found = ask(hosted(account.id, "nexfolk", [theirs, readable]))
     assert found["count"] == 1
-    assert found["next"] == {"title": "", "at": _soon(6).strftime("%Y-%m-%dT%H:%M:%SZ")}
-    assert "event=" not in found["open"]
+    assert found["next"] == {"title": "Pat Example zum Essen", "at": _soon(6).strftime("%Y-%m-%dT%H:%M:%SZ")}
+    assert found["last"] is None
 
 
 def test_about_a_person_the_past_only_as_last(client: TestClient, account: Account) -> None:

@@ -94,13 +94,14 @@ bisher). nexfolk fragt mit dem Zugang der Verbindung `GET /api/connect/about/eve
 (`services/about_person.py`).
 
 - **Was „betrifft die Person“ heißt:** ein Termin der gegebenen Kalender (wie ein Schlüssel für sie: genannte, bei
-  „alle“ die gezeigten, `apiv1.Caller.reach`), nicht im Papierkorb und keine abgesagte Einladung, an dem die Person
+  „alle“ die gezeigten, `apiv1.Caller.reach`, ohne mit „nur belegt“ geteilte), nicht im Papierkorb und keine abgesagte Einladung, an dem die Person
   teilnimmt (eine Teilnehmer-Mailadresse gleich einer der Person, ohne Groß/klein) oder dessen Titel ihren ganzen
   Namen als ganze Wörter nennt (ohne Groß/klein); Nummern sieht nextime nicht an.
 - **Antwort:** `count` = solche Termine, die noch kommen oder gerade laufen (eine Serie einmal, wie die Suche);
   `next` der erste davon, `last` der letzte vorbei (bei einer laufenden Serie ihr letztes Vorkommen vor jetzt), je mit
   Titel und Beginn (UTC, ganztägig das Datum); `open` = `/day?day=…&event=…[&occurrence=…]` zum nächsten, sonst zum
-  letzten. „Nur belegt“: belegte Termine ohne Titel und `open` nur zum Tag, freie gar nicht (TIME-19 AC-2).
+  letzten. „Nur belegt“ zählt gar nicht (Bau-Leitung, 27.11.2026, „nie mehr als nötig“): dort sieht das Konto weder
+  Titel noch Teilnehmer, also erfährt nexfolk auch nichts daraus.
 - **Fund beim Nachziehen, behoben:** `/api/v1` nahm jeden Verbindungs-Token mit dem Recht „lesen“, auch einen, der
   hier nichts gewährt (nexpaper, nextasks) oder nur `events.about` (nexfolk): so hätte nexfolk alle Termine der
   gegebenen Kalender lesen können. Jetzt öffnen nur die Zwecke, die für ein Schlüsselrecht stehen
