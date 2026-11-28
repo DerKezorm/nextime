@@ -1,4 +1,23 @@
 {
+  "0.5.0": {
+    "lead": "Deine Aufgaben aus nextasks und deine Fristen aus nexpaper kommen jetzt mit aufs iPhone, und die Geburtstage aus nexfolk haben in der Seitenleiste einen eigenen Platz.",
+    "sections": [
+      {
+        "title": "Aufgaben und Fristen auf dem iPhone",
+        "where": "Einstellungen › Mein Konto › Auf iPhone und Co",
+        "body": "Das Kalenderkonto, das du per QR-Code auf dem iPhone einrichtest, bringt jetzt zwei weitere Kalender mit: „Meine Aufgaben“, solange nextime mit nextasks verbunden ist, und „Meine Fristen“, solange es mit nexpaper verbunden ist. Aufgaben stehen an ihrem Fälligkeitstag, mit Uhrzeit oder ganztägig, wiederkehrende als Serie; Fristen ganztägig an dem Tag, bis zu dem du handeln musst, mit Absender, Betrag und dem Link zum Dokument. Beide sind nur zum Lesen da: Abhaken und Erledigen geht weiter in nextasks und nexpaper. Was du in nextime ausblendest, verschwindet auch auf dem iPhone, und ist eine der Apps kurz nicht erreichbar, bleibt der letzte Stand stehen. Ein schon eingerichtetes iPhone bekommt die beiden Kalender beim nächsten Abgleich von selbst."
+      },
+      {
+        "title": "Geburtstage unter „Aus nexfolk“",
+        "where": "Seitenleiste › Aus nexfolk",
+        "body": "Der Geburtstagskalender, den „Mit nexfolk verbinden“ anlegt, steht nicht mehr zwischen den Abos, sondern wie die Aufgaben und Fristen unter einer eigenen Überschrift „Aus nexfolk“, auch in Einstellungen › Kalender und Konten."
+      }
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Die Liste „Diese Kalender kommen mit“ unter „Auf iPhone und Co“ nennt „Meine Aufgaben“ und „Meine Fristen“ mit."
+    ]
+  },
   "0.4.0": {
     "lead": "Deine nex-Apps arbeiten jetzt zusammen: Du verbindest nextime mit einem Klick mit nextasks, nexpaper, nexmail, nexdiary, nexnotes und nexfolk, ohne Schlüssel abzutippen. Dazu kommen Passkeys, mehr Kontrolle über KI-Werkzeuge und Einstellungen wie in allen nex-Apps.",
     "sections": [

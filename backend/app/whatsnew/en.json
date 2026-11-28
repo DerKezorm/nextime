@@ -1,4 +1,23 @@
 {
+  "0.5.0": {
+    "lead": "Your tasks from nextasks and your deadlines from nexpaper now come along to the iPhone, and the birthdays from nexfolk have a place of their own in the sidebar.",
+    "sections": [
+      {
+        "title": "Tasks and deadlines on the iPhone",
+        "where": "Settings › My account › On iPhone and co",
+        "body": "The calendar account you set up on the iPhone by QR code now brings two more calendars: “My tasks” while nextime is connected with nextasks, and “My deadlines” while it is connected with nexpaper. Tasks stand on their due day, at their time or all day, repeating ones as a series; deadlines all day on the day to act by, with sender, amount and the link to the document. Both are there to read: ticking off and dealing with them stays in nextasks and nexpaper. What you hide in nextime is hidden on the iPhone too, and while one of the apps cannot be reached, the last state stays. An iPhone set up before gets both calendars at its next sync by itself."
+      },
+      {
+        "title": "Birthdays under “From nexfolk”",
+        "where": "Sidebar › From nexfolk",
+        "body": "The birthday calendar that “Connect with nexfolk” makes no longer stands among the subscriptions but under a heading of its own, “From nexfolk”, like the tasks and deadlines, also in Settings › Calendars and accounts."
+      }
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "The list “These calendars come along” under “On iPhone and co” names “My tasks” and “My deadlines” too."
+    ]
+  },
   "0.4.0": {
     "lead": "Your nex apps now work together: connect nextime with nextasks, nexpaper, nexmail, nexdiary, nexnotes and nexfolk with one click, without typing keys. Also new: passkeys, more control over AI tools, and settings as in every nex app.",
     "sections": [
