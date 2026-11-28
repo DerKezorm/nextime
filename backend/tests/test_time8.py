@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import io
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -348,7 +349,10 @@ def test_time8_ec9_read_shows_place_and_point_busy_only_neither_and_the_guest_pa
     ben, anna = make_account("ben"), make_account("anna")
     familie = make_calendar(client, "Familie")
     put_share(client, familie, ben.id, RIGHT_READ)
-    made = make_event(client, "Arzt", "2026-11-27T10:00", "2026-11-27T11:00", calendar_id=familie,
+    # A day still to come, counted from today: the guest page shows only what lies ahead, and the fixed 27.11.2026
+    # of before fell into the past and failed the release run of 28.11.2026.
+    day = (datetime.now(UTC) + timedelta(days=2)).date()
+    made = make_event(client, "Arzt", f"{day}T10:00", f"{day}T11:00", calendar_id=familie,
                       location="Lindenstraße 4", geo={"lat": 52.5, "lon": 13.4})
     with new_client(ben) as browser:
         shown = browser.get(f"/api/events/{made['id']}").json()
@@ -357,7 +361,7 @@ def test_time8_ec9_read_shows_place_and_point_busy_only_neither_and_the_guest_pa
         refused = browser.patch(f"/api/events/{made['id']}", json={"location": "anders", "etag": shown["etag"]})
         assert refused.status_code == 403
     arbeit = source_calendar(account.id, "Arbeit")
-    from_source(arbeit, vevent("geheim", "20261127T100000Z", "20261127T110000Z", "Geheim",
+    from_source(arbeit, vevent("geheim", f"{day:%Y%m%d}T100000Z", f"{day:%Y%m%d}T110000Z", "Geheim",
                                location="Vorstandsetage", extra="GEO:52.5;13.4"))
     put_share(client, arbeit, anna.id, RIGHT_BUSY)
     with SessionLocal() as db:
@@ -365,8 +369,8 @@ def test_time8_ec9_read_shows_place_and_point_busy_only_neither_and_the_guest_pa
     with new_client(anna) as browser:
         hidden = browser.get(f"/api/events/{busy_id}").json()
         assert hidden["location"] == "" and hidden["place"] is None
-        listed = browser.get("/api/events", params={"start": "2026-11-27T00:00:00Z",
-                                                    "end": "2026-11-28T00:00:00Z"}).json()
+        listed = browser.get("/api/events", params={"start": f"{day}T00:00:00Z",
+                                                    "end": f"{day + timedelta(days=1)}T00:00:00Z"}).json()
         assert all(entry["location"] == "" for entry in listed)
     link = link_on(client, familie)
     with guest_client() as guest:
