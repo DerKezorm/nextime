@@ -1,4 +1,14 @@
 {
+  "0.5.1": {
+    "lead": "The iPhone app now recognises your nextime server by the first question that all nex apps share.",
+    "sections": [
+      {"title": "First question of the iPhone app", "where": "Settings › My account › On iPhone and co", "body": "The iPhone app first asks your server which app it is, how to sign in and what it can do. The shared devices module now answers that, the same in every nex app. Nothing changes for you: iPhones and iPads already connected keep working as before."}
+    ],
+    "smallTitle": "Also",
+    "small": [
+      "The app interface answers the first question (“Which app is this, how do I sign in, what can it do?”) through the shared devices module; apps in use notice no difference."
+    ]
+  },
   "0.5.0": {
     "lead": "Your tasks from nextasks and your deadlines from nexpaper now come along to the iPhone, and the birthdays from nexfolk have a place of their own in the sidebar.",
     "sections": [

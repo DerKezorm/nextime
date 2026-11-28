@@ -1,4 +1,14 @@
 {
+  "0.5.1": {
+    "lead": "Die iPhone-App erkennt deinen nextime-Server jetzt mit der gemeinsamen ersten Frage aller nex-Apps.",
+    "sections": [
+      {"title": "Erste Frage der iPhone-App", "where": "Einstellungen › Mein Konto › Auf iPhone und Co", "body": "Die iPhone-App fragt deinen Server als Erstes, welche App er ist, wie man sich anmeldet und was er kann. Das beantwortet jetzt das gemeinsame Geräte-Modul, in allen nex-Apps gleich. Für dich ändert sich nichts: schon verbundene iPhones und iPads arbeiten weiter wie bisher."}
+    ],
+    "smallTitle": "Außerdem",
+    "small": [
+      "Die Schnittstelle der iPhone-App beantwortet die erste Frage („Welche App ist das, wie melde ich mich an, was kann sie?“) über das gemeinsame Geräte-Modul; bisherige Apps merken keinen Unterschied."
+    ]
+  },
   "0.5.0": {
     "lead": "Deine Aufgaben aus nextasks und deine Fristen aus nexpaper kommen jetzt mit aufs iPhone, und die Geburtstage aus nexfolk haben in der Seitenleiste einen eigenen Platz.",
     "sections": [

@@ -14,5 +14,9 @@
   "0.4.0": {
     "de": "sha256-Y4rsCaIpAXpjTZvkb39VS1SbRWja+b7Q8STLwYmEUOk=",
     "en": "sha256-9fwRzrUjwshYz8oO2y4h5NB9TKRt/gVaZBvJqHOlG9A="
+  },
+  "0.5.0": {
+    "de": "sha256-eWcRZFLAjjnZyF6Yd/73Gu6VITPl3e/I7HMNv4BOs4g=",
+    "en": "sha256-GqdxgYcv7kdcqEhVgGgFBBPQXCsGtpK1hmtN6jssZwE="
   }
 }
