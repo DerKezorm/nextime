@@ -708,7 +708,8 @@
       "shared": "Mit mir geteilt",
       "subscriptions": "Abos und Hintergrund",
       "nextasks": "nextasks",
-      "caldav": "CalDAV"
+      "caldav": "CalDAV",
+      "fromApp": "Aus {{app}}"
     },
     "show": "einblenden",
     "hide": "ausblenden",

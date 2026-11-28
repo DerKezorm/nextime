@@ -24,7 +24,15 @@ export type Right = 'owner' | 'edit' | 'read' | 'busy'
 export type SourceKind = 'icloud' | 'caldav' | 'google' | 'subscription' | 'holidays'
 export type SourceState = 'ok' | 'expired' | 'unreachable' | 'paused'
 /** The source of a calendar, for the one who connected it: its group, "waiting", "state of 15:52" (TIME-15 EC-5). */
-export type Origin = { id: number; kind: SourceKind; label: string; state: SourceState; synced_at: string | null }
+export type Origin = {
+  id: number
+  kind: SourceKind
+  label: string
+  state: SourceState
+  synced_at: string | null
+  /** The nex app a subscription made over a connection comes from ("nexfolk"): its own group "Aus nexfolk". */
+  connection?: string | null
+}
 
 export type CalendarEntry = {
   id: number

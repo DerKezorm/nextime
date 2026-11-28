@@ -261,6 +261,31 @@ describe('TIME-17 holidays and school holidays', () => {
     expect(one('calendar-group-subscriptions')!.querySelector('h3')!.textContent).toBe('Abos und Hintergrund')
     expect([...one('calendar-group-subscriptions')!.querySelectorAll('[data-testid="calendar-name"]')].map((name) => name.textContent)).toEqual(['Müllabfuhr', 'Feiertage'])
   })
+
+  it('the birthdays of nexfolk stand apart under "Aus nexfolk", after the other groups', async () => {
+    const nexfolk = { id: 9, kind: 'subscription' as const, label: 'nexfolk', state: 'ok' as const, synced_at: null, connection: 'nexfolk' }
+    serve(
+      signedIn(robin, (_method, path) => {
+        if (path.startsWith('/api/calendars'))
+          return ok(
+            calendarList([
+              calendar(1, 'Familie', { default: true }),
+              calendar(61, 'Müllabfuhr', { group: 'subscriptions', read_only: true }),
+              calendar(80, 'Geburtstage', { group: 'subscriptions', read_only: true, origin: nexfolk }),
+            ]),
+          )
+        if (path === '/api/sources') return ok(sources([]))
+        return undefined
+      }),
+    )
+    await open()
+    const names = (group: string) => [...one(`calendar-group-${group}`)!.querySelectorAll('[data-testid="calendar-name"]')].map((name) => name.textContent)
+    expect(names('subscriptions')).toEqual(['Müllabfuhr'])
+    expect(one('calendar-group-nexfolk')!.querySelector('h3')!.textContent).toBe('Aus nexfolk')
+    expect(names('nexfolk')).toEqual(['Geburtstage'])
+    const heads = [...one('calendar-list')!.querySelectorAll('[data-testid^="calendar-group-"]')].map((group) => group.getAttribute('data-testid'))
+    expect(heads.at(-1)).toBe('calendar-group-nexfolk')
+  })
 })
 
 describe('TIME-17 "Tage hervorheben"', () => {

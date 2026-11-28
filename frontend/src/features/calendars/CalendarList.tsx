@@ -101,7 +101,7 @@ export function CalendarList({ onNavigate, settings = false }: { onNavigate?: ()
   }
 
   const openMenu = (anchor: MenuAnchor, calendar: CalendarEntry) => setMenu({ anchor, calendar })
-  const groups = list ? groupsOf(list.calendars) : []
+  const { groups, partners } = list ? groupsOf(list.calendars, t) : { groups: [], partners: [] }
   // In the settings a plain block among the cards (a card there is a section with its head).
   const Frame = settings ? 'div' : 'section'
   /** In the settings a click opens what there is to set: its dialog, a calendar of others its page. */
@@ -183,6 +183,100 @@ export function CalendarList({ onNavigate, settings = false }: { onNavigate?: ()
     </div>
   )
 
+  /** A group of the sidebar: its head (the first one with the "+") and a row per calendar. */
+  const sidebarGroup = ({ key, group, label, entries }: GroupRow, index: number) => (
+        <div key={key} data-testid={`calendar-group-${group}`}>
+          <div className={HEAD}>
+            <h3 className={HEAD_TEXT + ' min-w-0 truncate'} title={label ?? undefined}>
+              {label ?? t(`calendars.groups.${group}`)}
+            </h3>
+            {index === 0 && !settings && addButton}
+          </div>
+          <ul className={settings ? 'divide-y divide-line overflow-hidden rounded-[12px] border border-ink-700 bg-ink-850' : undefined}>
+            {entries.map((entry) => {
+              const note = settings ? marks(entry, list?.default_id ?? null, t) : extra(entry, t)
+              const open = menu?.calendar.id === entry.id
+              const alone = only === entry.id
+              return (
+                <li
+                  key={entry.id}
+                  className={
+                    settings
+                      ? 'group relative flex h-11 items-center gap-1.5 pr-2 text-sm ' + (open ? 'bg-ink-800' : 'hover:bg-ink-800')
+                      : 'group relative flex h-8 items-center gap-1.5 rounded-lg pr-1 text-[13.5px] pointer-coarse:h-11 ' +
+                        (alone ? 'nt-chosen ' : open ? 'bg-ink-800' : 'hover:bg-ink-800')
+                  }
+                  data-chosen={alone || undefined}
+                  onContextMenu={(event) => {
+                    event.preventDefault()
+                    openMenu({ x: event.clientX, y: event.clientY }, entry)
+                  }}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={alone}
+                    title={`${entry.name}: ${t('calendars.openAlone')}`}
+                    className={
+                      'flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-lg pl-2.5 text-left outline-offset-[-2px] ' +
+                      (alone ? 'font-semibold' : 'text-mist-100')
+                    }
+                    onClick={() => (settings ? settle(entry) : choose(entry))}
+                    data-testid={settings ? 'settings-calendar' : 'calendar-toggle'}
+                  >
+                    <Swatch color={entry.color} icon={entry.icon} hollow={entry.hidden} />
+                    <span className={'min-w-0 flex-1 truncate ' + (entry.hidden ? 'text-mist-500' : '')} data-testid="calendar-name">
+                      {entry.name}
+                    </span>
+                    {note && (
+                      <span
+                        className={
+                          'max-w-[45%] shrink-0 truncate text-xs text-mist-500 ' +
+                          (settings ? '' : open ? 'hidden pointer-coarse:inline' : 'group-focus-within:hidden group-hover:hidden pointer-coarse:inline')
+                        }
+                        data-testid="calendar-marks"
+                      >
+                        {note}
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={entry.hidden ? t('calendars.showNamed', { name: entry.name }) : t('calendars.hideNamed', { name: entry.name })}
+                    aria-pressed={!entry.hidden}
+                    disabled={offline}
+                    className={
+                      'h-6 w-6 shrink-0 items-center justify-center rounded p-0.5 text-mist-400 hover:bg-ink-700 hover:text-mist-100 disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:flex ' +
+                      (entry.hidden || settings ? 'flex' : open ? 'flex' : 'hidden group-focus-within:flex group-hover:flex')
+                    }
+                    onClick={() => toggle(entry)}
+                    data-testid="calendar-eye"
+                  >
+                    {entry.hidden ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t('calendars.more', { name: entry.name })}
+                    aria-haspopup="menu"
+                    aria-expanded={open}
+                    className={
+                      'shrink-0 rounded p-0.5 hover:bg-ink-700 hover:text-mist-100 pointer-coarse:block ' +
+                      (open
+                        ? 'block bg-accent-wash text-accent-400'
+                        : settings
+                          ? 'block text-mist-400'
+                          : 'hidden text-mist-400 group-focus-within:block group-hover:block')
+                    }
+                    onClick={(event) => openMenu(event.currentTarget, entry)}
+                  >
+                    <MoreHorizontal className="h-4 w-4" aria-hidden />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+  )
+
   return (
     <Frame
       aria-labelledby={settings ? undefined : 'calendars-title'}
@@ -195,7 +289,7 @@ export function CalendarList({ onNavigate, settings = false }: { onNavigate?: ()
           {t('nav.calendars')}
         </h2>
       )}
-      {!settings && groups.length === 0 && (
+      {!settings && groups.length === 0 && partners.length === 0 && (
         <div className={HEAD}>
           <span className={HEAD_TEXT} aria-hidden>
             {t('nav.calendars')}
@@ -206,101 +300,11 @@ export function CalendarList({ onNavigate, settings = false }: { onNavigate?: ()
       {!list && !failed && <div className="mx-2 h-16 animate-pulse rounded-[9px] bg-ink-800" aria-hidden />}
       {list && list.calendars.length === 0 && <p className="px-2.5 py-2 text-xs text-mist-500">{t('nav.noCalendars')}</p>}
       {settings
-        ? groups.map(({ key, group, label, entries }) => settingsGroup(key, group, label, entries))
-        : groups.map(({ key, group, label, entries }, index) => (
-            <div key={key} data-testid={`calendar-group-${group}`}>
-              <div className={HEAD}>
-                <h3 className={HEAD_TEXT + ' min-w-0 truncate'} title={label ?? undefined}>
-                  {label ?? t(`calendars.groups.${group}`)}
-                </h3>
-                {index === 0 && !settings && addButton}
-              </div>
-              <ul className={settings ? 'divide-y divide-line overflow-hidden rounded-[12px] border border-ink-700 bg-ink-850' : undefined}>
-                {entries.map((entry) => {
-                  const note = settings ? marks(entry, list?.default_id ?? null, t) : extra(entry, t)
-                  const open = menu?.calendar.id === entry.id
-                  const alone = only === entry.id
-                  return (
-                    <li
-                      key={entry.id}
-                      className={
-                        settings
-                          ? 'group relative flex h-11 items-center gap-1.5 pr-2 text-sm ' + (open ? 'bg-ink-800' : 'hover:bg-ink-800')
-                          : 'group relative flex h-8 items-center gap-1.5 rounded-lg pr-1 text-[13.5px] pointer-coarse:h-11 ' +
-                            (alone ? 'nt-chosen ' : open ? 'bg-ink-800' : 'hover:bg-ink-800')
-                      }
-                      data-chosen={alone || undefined}
-                      onContextMenu={(event) => {
-                        event.preventDefault()
-                        openMenu({ x: event.clientX, y: event.clientY }, entry)
-                      }}
-                    >
-                      <button
-                        type="button"
-                        aria-pressed={alone}
-                        title={`${entry.name}: ${t('calendars.openAlone')}`}
-                        className={
-                          'flex h-full min-w-0 flex-1 items-center gap-2.5 rounded-lg pl-2.5 text-left outline-offset-[-2px] ' +
-                          (alone ? 'font-semibold' : 'text-mist-100')
-                        }
-                        onClick={() => (settings ? settle(entry) : choose(entry))}
-                        data-testid={settings ? 'settings-calendar' : 'calendar-toggle'}
-                      >
-                        <Swatch color={entry.color} icon={entry.icon} hollow={entry.hidden} />
-                        <span className={'min-w-0 flex-1 truncate ' + (entry.hidden ? 'text-mist-500' : '')} data-testid="calendar-name">
-                          {entry.name}
-                        </span>
-                        {note && (
-                          <span
-                            className={
-                              'max-w-[45%] shrink-0 truncate text-xs text-mist-500 ' +
-                              (settings ? '' : open ? 'hidden pointer-coarse:inline' : 'group-focus-within:hidden group-hover:hidden pointer-coarse:inline')
-                            }
-                            data-testid="calendar-marks"
-                          >
-                            {note}
-                          </span>
-                        )}
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={entry.hidden ? t('calendars.showNamed', { name: entry.name }) : t('calendars.hideNamed', { name: entry.name })}
-                        aria-pressed={!entry.hidden}
-                        disabled={offline}
-                        className={
-                          'h-6 w-6 shrink-0 items-center justify-center rounded p-0.5 text-mist-400 hover:bg-ink-700 hover:text-mist-100 disabled:cursor-not-allowed disabled:opacity-50 pointer-coarse:flex ' +
-                          (entry.hidden || settings ? 'flex' : open ? 'flex' : 'hidden group-focus-within:flex group-hover:flex')
-                        }
-                        onClick={() => toggle(entry)}
-                        data-testid="calendar-eye"
-                      >
-                        {entry.hidden ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={t('calendars.more', { name: entry.name })}
-                        aria-haspopup="menu"
-                        aria-expanded={open}
-                        className={
-                          'shrink-0 rounded p-0.5 hover:bg-ink-700 hover:text-mist-100 pointer-coarse:block ' +
-                          (open
-                            ? 'block bg-accent-wash text-accent-400'
-                            : settings
-                              ? 'block text-mist-400'
-                              : 'hidden text-mist-400 group-focus-within:block group-hover:block')
-                        }
-                        onClick={(event) => openMenu(event.currentTarget, entry)}
-                      >
-                        <MoreHorizontal className="h-4 w-4" aria-hidden />
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          ))}
+        ? [...groups, ...partners].map(({ key, group, label, entries }) => settingsGroup(key, group, label, entries))
+        : groups.map(sidebarGroup)}
       {!settings && <NextasksGroup onNavigate={onNavigate} />}
       {!settings && <NexpaperGroup onNavigate={onNavigate} />}
+      {!settings && partners.map((row) => sidebarGroup(row, -1))}
       {problem && (
         <p role="alert" className="px-2.5 text-xs text-bad-500">
           {problem}
@@ -426,11 +430,20 @@ function extra(entry: CalendarEntry, t: (key: string) => string): string {
   return ''
 }
 
-/** The groups in the order of the sidebar; every CalDAV account a group of its own under its name (TIME-15 AC-9). */
-function groupsOf(calendars: CalendarEntry[]): { key: string; group: string; label: string | null; entries: CalendarEntry[] }[] {
-  const out: { key: string; group: string; label: string | null; entries: CalendarEntry[] }[] = []
+type GroupRow = { key: string; group: string; label: string | null; entries: CalendarEntry[] }
+
+/** The groups in the order of the sidebar; every CalDAV account a group of its own under its name (TIME-15 AC-9). A
+ * subscription made over a connection with a nex app stands apart under "Aus <app>" (`partners`), after the groups
+ * of nextasks and nexpaper, as they do. */
+function groupsOf(calendars: CalendarEntry[], t: (key: string, options: { app: string }) => string): { groups: GroupRow[]; partners: GroupRow[] } {
+  const out: GroupRow[] = []
+  const partners = new Map<string, CalendarEntry[]>()
+  for (const entry of calendars) {
+    const app = entry.group === 'subscriptions' ? entry.origin?.connection : null
+    if (app) partners.set(app, [...(partners.get(app) ?? []), entry])
+  }
   for (const group of GROUPS) {
-    const entries = calendars.filter((entry) => entry.group === group)
+    const entries = calendars.filter((entry) => entry.group === group && !(group === 'subscriptions' && entry.origin?.connection))
     if (!entries.length) continue
     if (group !== 'caldav') {
       out.push({ key: group, group, label: null, entries })
@@ -443,5 +456,5 @@ function groupsOf(calendars: CalendarEntry[]): { key: string; group: string; lab
     }
     for (const [id, own] of accounts) out.push({ key: `caldav-${id}`, group, label: own[0].origin?.label ?? null, entries: own })
   }
-  return out
+  return { groups: out, partners: [...partners].map(([app, entries]) => ({ key: `app-${app}`, group: app, label: t('calendars.groups.fromApp', { app }), entries })) }
 }

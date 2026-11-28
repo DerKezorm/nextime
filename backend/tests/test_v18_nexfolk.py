@@ -72,6 +72,7 @@ def test_connecting_with_nexfolk_makes_the_birthday_calendar_as_a_subscription(c
     assert folk["calls"] == [("/api/v1/birthdays.ics", f"Bearer {ACCESS}")]
     named = [calendar for calendar in _calendars(client) if calendar.get("name") == "Geburtstage"]
     assert len(named) == 1 and named[0].get("read_only", True)
+    assert named[0]["origin"]["connection"] == "nexfolk"  # the sidebar's group "Aus nexfolk"
     assert sync.run_source(source_id, force=True)
     assert len(folk["calls"]) == 2
     with SessionLocal() as db:

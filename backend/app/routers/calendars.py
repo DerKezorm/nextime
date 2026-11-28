@@ -101,8 +101,10 @@ def _source(db: DbSession, item: calendars.Access) -> dict[str, Any] | None:
     row = db.get(Source, calendar.source_id)
     if row is None:
         return None
+    # A subscription made by "Mit nexfolk verbinden" names its partner: the sidebar shows it under "Aus nexfolk".
     return {"id": row.id, "kind": row.kind, "label": row.label, "state": row.state,
-            "synced_at": row.synced_at.isoformat() if row.synced_at else None}
+            "synced_at": row.synced_at.isoformat() if row.synced_at else None,
+            "connection": (row.options or {}).get("connection") or None}
 
 
 def _shared(db: DbSession, calendar_id: int) -> bool:
