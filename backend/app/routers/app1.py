@@ -108,16 +108,17 @@ Device_ = Annotated[Caller, Depends(device)]
 # --- Server version (EC-2) ------------------------------------------------------------------------------------------
 
 
-@router.get("/hello", summary="Which interface this server speaks (no sign-in)")
-def hello() -> dict[str, Any]:
+def hello() -> geraete_api.NexgeraeteHello:
+    """What nextime answers at ``GET /api/app/1/hello`` besides the module's ``pairing`` (geraete 0.1.6): the route is
+    the module's (``module_router``), the answer keeps every field of 0.6."""
     with SessionLocal() as db:
         ways = []
         if settings_service.get(db, "password_login"):
             ways.append("password")
         if providers.public_list(SqlStore(db)):
             ways.append("oidc")
-    return {"app": "nextime", "api": API, "min_api": MIN_API, "version": __version__, "sign_in": ways,
-            "features": list(FEATURES), **geraete_api.hello_fields(geraete.CONFIG)}
+    return geraete_api.NexgeraeteHello(api=API, min_api=MIN_API, version=__version__, sign_in=ways,
+                                       features=list(FEATURES))
 
 
 # --- Pairing, devices, notifications: the module's routes (G1–G30) ---------------------------------------------
@@ -136,6 +137,7 @@ module_router = geraete_api.app_router(
     send=geraete.send,
     sender=client_ip,
     clock=geraete.now,
+    hello=hello,
 )
 
 

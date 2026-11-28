@@ -6,10 +6,17 @@ this text; a change raises `api` or is agreed on both sides first. It follows ne
 token, `hello`, `me`, `changes` with `wait`, the same errors, the same browser pages. What differs, and why, is listed
 in "Differences from nexnotes" at the end.
 
-Status: draft 0.6 (27.11.2026), server TIME-29 on nextime `main` (0.1 `dd89332`, after the review `6a158d7`, 0.2
-`a857c14`, 0.3 `29a72a3`/`ae9393a`, 0.4 and 0.5 on `ios-app2`, 0.6 with the shared module geraete 0.1.0; none
+Status: draft 0.7 (28.11.2026), server TIME-29 on nextime `main` (0.1 `dd89332`, after the review `6a158d7`, 0.2
+`a857c14`, 0.3 `29a72a3`/`ae9393a`, 0.4 and 0.5 on `ios-app2`, 0.6 with the shared module geraete 0.1.0, 0.7 with geraete 0.1.6; none
 released yet). Parts marked **later** are named so that later stages dock on; the server does not have them yet and
 `hello.features` does not name them.
+
+Changes in 0.7 (28.11.2026, the shared module geraete 0.1.6 in the server; nextime 0.5.1; every call of 0.6 answers as
+before):
+- `GET /api/app/1/hello` is a route of the module now (`app_router(hello=…)`), the first question of the shared iOS
+  modules (NexKonto, NexPush), the same in every nex app. The answer keeps every field of 0.6 (`app`, `api`, `min_api`,
+  `version`, `sign_in`, `features`, `pairing`) and adds none; it answers with `Cache-Control: no-store`, without a key,
+  and a wrong key changes nothing.
 
 Changes in 0.6 (27.11.2026, the shared module geraete 0.1.0 in the server; every call of 0.5 answers as before, the
 app in TestFlight notices nothing but G26):
@@ -100,10 +107,10 @@ device token in api 1.
 `GET /api/app/1/hello` (no sign-in)
 
 ```json
-{"app": "nextime", "api": 1, "min_api": 1, "version": "0.4.0", "sign_in": ["password", "oidc"],
+{"app": "nextime", "api": 1, "min_api": 1, "version": "0.5.1", "sign_in": ["password", "oidc"],
  "features": ["pairing", "changes", "ops", "conflicts", "calendar_account", "push_ticket", "nudge", "notify",
               "collections_write", "tasks", "deadlines", "invitations", "people", "year", "reminders",
-              "attachments", "trash"]}
+              "attachments", "trash"], "pairing": ["qr", "code", "browser", "icloud"]}
 ```
 
 The app speaks `api` 1. If `min_api` > 1 the app says "update the app"; if `api` < 1 it says "update the server"
