@@ -50,7 +50,7 @@ from ..models import (
     Setting,
 )
 from ..security import brake
-from ..services import alarms, calendars, devices, events, ical, live, reminders
+from ..services import alarms, calendars, dav_partners, devices, events, ical, live, reminders
 
 logger = logging.getLogger("nextime.dav")
 
@@ -199,7 +199,7 @@ class Caller:
 
     @property
     def german(self) -> bool:
-        return (self.account.language or self.account.browser_language or "").lower().startswith("de")
+        return dav_partners.speaks_german(self.account)
 
 
 def _authenticate(request: Request, db: Session) -> Caller | Response:
@@ -517,6 +517,94 @@ def _shown(row: Event, access: calendars.Access, caller: Caller, personal: Perso
     return text, personal.etag(row.etag, extra)
 
 
+# --- "Meine Aufgaben" and "Meine Fristen" (``services/dav_partners.py``) ---------------------------------------------
+
+
+#: Their place on the device: after nextime's own calendars.
+PARTNER_ORDER = 10_000
+
+
+def _partner_path(caller: Caller, partner: dav_partners.Partner, name: str = "") -> str:
+    return f"{home_path(caller.name)}{quote(partner.dav_name, safe='')}/{quote(name, safe='')}"
+
+
+def _partner_token(db: Session, partner: dav_partners.Partner) -> str:
+    return f"urn:x-nextime:partner:{epoch(db)}:{partner.dav_name}:{partner.mark}"
+
+
+def _partner_props(db: Session, caller: Caller, partner: dav_partners.Partner, order: int) -> dict[str, Any]:
+    """A calendar only to be read; a device compares its collection tag (it offers no sync-collection: what went is
+    not remembered)."""
+    return {
+        q(D, "resourcetype"): [element(q(D, "collection")), element(q(C, "calendar"))],
+        q(D, "displayname"): partner.name,
+        q(A, "calendar-color"): hex_of(partner.color) + "FF",
+        q(A, "calendar-order"): str(order),
+        q(CS, "getctag"): f"{epoch(db)}-{partner.mark}",
+        q(D, "sync-token"): _partner_token(db, partner),
+        q(C, "supported-calendar-component-set"): [element(q(C, "comp"), name="VEVENT")],
+        q(C, "supported-calendar-data"): [element(q(C, "calendar-data"), **{"content-type": "text/calendar",
+                                                                            "version": "2.0"})],
+        q(D, "current-user-privilege-set"): privileges(False),
+        q(D, "owner"): href(principal_path(caller.name)),
+        q(D, "current-user-principal"): href(principal_path(caller.name)),
+        q(D, "supported-report-set"): report_set([(C, "calendar-multiget"), (C, "calendar-query")]),
+    }
+
+
+def _partner_object(caller: Caller, partner: dav_partners.Partner, name: str, wanted: list[str] | None,
+                    names_only: bool = False) -> etree._Element:
+    text = partner.objects[name]
+    available = {
+        q(D, "getetag"): partner.etag(name),
+        q(D, "getcontenttype"): CALENDAR_DATA_TYPE + "; component=VEVENT",
+        q(D, "resourcetype"): None,
+        q(D, "getcontentlength"): str(len(text.encode("utf-8"))),
+        q(C, "calendar-data"): text,
+    }
+    return response_for(_partner_path(caller, partner, name), *select_props(available, wanted, names_only))
+
+
+def _partner_propfind(db: Session, caller: Caller, partner: dav_partners.Partner, parts: list[str], depth: str,
+                      wanted: list[str] | None, names_only: bool) -> Response:
+    if len(parts) == 3:
+        out = [response_for(_partner_path(caller, partner),
+                            *select_props(_partner_props(db, caller, partner, PARTNER_ORDER), wanted, names_only))]
+        if depth != "0":
+            out += [_partner_object(caller, partner, name, wanted, names_only) for name in sorted(partner.objects)]
+        return multistatus(out)
+    if len(parts) == 4 and parts[3] in partner.objects:
+        return multistatus([_partner_object(caller, partner, parts[3], wanted, names_only)])
+    return Response(status_code=404)
+
+
+def _partner_report(db: Session, caller: Caller, partner: dav_partners.Partner, kind: str, root: etree._Element,
+                    wanted: list[str]) -> Response:
+    """calendar-multiget by name; calendar-query gives every entry (a handful; the device sorts by time itself);
+    sync-collection only answers "nothing new" to the current token, any other starts the device over."""
+    if kind == "calendar-multiget":
+        out = []
+        for node in root.findall(q(D, "href")):
+            target = (node.text or "").strip()
+            name = unquote(urlsplit(target).path).rstrip("/").rsplit("/", 1)[-1]
+            out.append(_partner_object(caller, partner, name, wanted) if name in partner.objects
+                       else gone_response(target))
+        return multistatus(out)
+    if kind == "calendar-query":
+        return multistatus([_partner_object(caller, partner, name, wanted) for name in sorted(partner.objects)])
+    if kind == "sync-collection":
+        token_node = root.find(q(D, "sync-token"))
+        token = (token_node.text or "").strip() if token_node is not None else ""
+        current = _partner_token(db, partner)
+        if token == current:
+            return multistatus([], current)
+        if token:
+            return precondition(403, D, "valid-sync-token")
+        return multistatus([_partner_object(caller, partner, name, wanted) for name in sorted(partner.objects)],
+                           current)
+    return precondition(403, D, "supported-report")
+
+
 def _propfind(db: Session, caller: Caller, parts: list[str], depth: str, body: bytes) -> Response:
     wanted, names_only = wanted_props(body)
     if not parts:
@@ -542,7 +630,15 @@ def _propfind(db: Session, caller: Caller, parts: list[str], depth: str, body: b
             for item, order in _calendar_listing(db, caller):
                 out.append(response_for(calendar_path(caller.name, item.calendar),
                                         *select_props(calendar_props(db, caller, item, order), wanted, names_only)))
+            for index, partner in enumerate(dav_partners.listing(db, caller.account, caller.german)):
+                out.append(response_for(_partner_path(caller, partner), *select_props(
+                    _partner_props(db, caller, partner, PARTNER_ORDER + index), wanted, names_only)))
         return multistatus(out)
+    if parts[2] in dav_partners.NAMES:
+        partner = dav_partners.find(db, caller.account, caller.german, parts[2])
+        if partner is None:
+            return Response(status_code=404)
+        return _partner_propfind(db, caller, partner, parts, depth, wanted, names_only)
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=404)
@@ -608,12 +704,17 @@ def _report(db: Session, caller: Caller, parts: list[str], body: bytes) -> Respo
     kind = etree.QName(root).localname
     if len(parts) < 3 or parts[0] != "calendars" or parts[1] != caller.name:
         return precondition(403, D, "supported-report")
+    prop = root.find(q(D, "prop"))
+    wanted = [child.tag for child in prop if isinstance(child.tag, str)] if prop is not None else [q(D, "getetag")]
+    if parts[2] in dav_partners.NAMES:
+        partner = dav_partners.find(db, caller.account, caller.german, parts[2])
+        if partner is None:
+            return Response(status_code=404)
+        return _partner_report(db, caller, partner, kind, root, wanted)
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=404)
     access, _order = found
-    prop = root.find(q(D, "prop"))
-    wanted = [child.tag for child in prop if isinstance(child.tag, str)] if prop is not None else [q(D, "getetag")]
     if kind == "calendar-multiget":
         return _multiget(db, caller, access, root, wanted)
     if kind == "calendar-query":
@@ -743,6 +844,13 @@ def _get(db: Session, caller: Caller, parts: list[str], head: bool) -> Response:
         return _attachment(db, caller, parts[1], head)
     if len(parts) != 4 or parts[0] != "calendars" or parts[1] != caller.name:
         return Response(status_code=404 if len(parts) != 3 else 405)
+    if parts[2] in dav_partners.NAMES:
+        partner = dav_partners.find(db, caller.account, caller.german, parts[2])
+        if partner is None or parts[3] not in partner.objects:
+            return Response(status_code=404)
+        text = partner.objects[parts[3]]
+        return Response(content=b"" if head else text.encode("utf-8"), media_type=CALENDAR_DATA_TYPE,
+                        headers={"ETag": partner.etag(parts[3])})
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=404)
@@ -786,6 +894,8 @@ def _put(db: Session, caller: Caller, parts: list[str], body: bytes, headers: di
     device sent answers without an ETag, so the device reads it again."""
     if len(parts) != 4 or parts[0] != "calendars" or parts[1] != caller.name:
         return Response(status_code=405)
+    if parts[2] in dav_partners.NAMES:
+        return precondition(403, D, "need-privileges")
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=409)
@@ -865,6 +975,8 @@ def _drop_attachment_lines(text: str) -> str:
 def _delete(db: Session, caller: Caller, parts: list[str]) -> Response:
     if len(parts) < 3 or parts[0] != "calendars" or parts[1] != caller.name:
         return Response(status_code=405)
+    if parts[2] in dav_partners.NAMES:
+        return precondition(403, D, "need-privileges")
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=404)
@@ -930,7 +1042,8 @@ def _mkcalendar(db: Session, caller: Caller, parts: list[str], body: bytes) -> R
     if len(parts) != 3 or parts[0] != "calendars" or parts[1] != caller.name:
         return Response(status_code=403)
     dav_name = parts[2]
-    if not dav_name or len(dav_name) > 128 or db.scalar(select(Calendar.id).where(Calendar.dav_name == dav_name)):
+    if (not dav_name or len(dav_name) > 128 or dav_name in dav_partners.NAMES
+            or db.scalar(select(Calendar.id).where(Calendar.dav_name == dav_name))):
         return precondition(405, D, "resource-must-be-null")
     name, color = "", "slate"
     if body.strip():
@@ -964,6 +1077,8 @@ def _proppatch(db: Session, caller: Caller, parts: list[str], body: bytes) -> Re
     property leaves the others unchanged (424)."""
     if len(parts) != 3 or parts[0] != "calendars" or parts[1] != caller.name:
         return Response(status_code=403)
+    if parts[2] in dav_partners.NAMES:
+        return precondition(403, D, "need-privileges")
     found = _find_calendar(db, caller, parts[2])
     if found is None:
         return Response(status_code=404)

@@ -279,7 +279,8 @@ export const collectionsApi = {
 }
 
 export type DeviceRow = { id: number; name: string; client: string; created_at: string; last_used_at: string | null }
-export type ComingAlong = { id: number; name: string; color: CalendarColor; right: Right }
+/** One calendar a device gets; "Meine Aufgaben" and "Meine Fristen" by their name on the calendar account. */
+export type ComingAlong = { id: number | string; name: string; color: CalendarColor; right: Right }
 export type DeviceOverview = { devices: DeviceRow[]; https: boolean; address: string; user: string; calendars: ComingAlong[]; minutes: number }
 export type NewDevice = {
   device: DeviceRow

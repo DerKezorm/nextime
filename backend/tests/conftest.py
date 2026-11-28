@@ -50,6 +50,7 @@ from app.routers import health  # noqa: E402
 from app.security import SESSION_COOKIE, brake, hash_password, start_session  # noqa: E402
 from app.services import (  # noqa: E402
     apibrake,
+    dav_partners,
     internet,
     nexfolk,
     nexpaper,
@@ -172,6 +173,7 @@ def clean_db(schema: None) -> Iterator[None]:
     nextasks.forget()
     nexpaper.forget()
     nexfolk.forget()
+    dav_partners.forget()
     yield
     app.dependency_overrides.clear()
 

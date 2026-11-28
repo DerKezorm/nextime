@@ -24,7 +24,7 @@ from ..deps import Account, DbSession
 from ..errors import error
 from ..models import Account as AccountRow
 from ..models import Device
-from ..services import calendars, devices, settings_service
+from ..services import calendars, dav_partners, devices, settings_service
 
 router = APIRouter(tags=["devices"])
 
@@ -52,11 +52,14 @@ PASSED_BY = ("icloud", "google", "caldav")
 
 
 def coming_along(db: Session, account: AccountRow) -> list[dict[str, Any]]:
-    """The calendars a device gets: own and shared ones with their right (AC-9); hidden ones not (TIME-4 AC-3)."""
+    """The calendars a device gets: own and shared ones with their right (AC-9); hidden ones not (TIME-4 AC-3); then
+    "Meine Aufgaben" and "Meine Fristen" of the connections, only to be read (``services/dav_partners.py``)."""
     calendars.ensure_seeded(db, account)
-    return [{"id": item.calendar.id, "name": item.calendar.name, "color": item.calendar.color,
-             "right": item.right} for item, setting in calendars.ordered(db, account.id)
-            if not setting.hidden and not (item.right == calendars.OWNER and item.kind in PASSED_BY)]
+    own = [{"id": item.calendar.id, "name": item.calendar.name, "color": item.calendar.color,
+            "right": item.right} for item, setting in calendars.ordered(db, account.id)
+           if not setting.hidden and not (item.right == calendars.OWNER and item.kind in PASSED_BY)]
+    return own + [{"id": partner.dav_name, "name": partner.name, "color": partner.color, "right": "read"}
+                  for partner in dav_partners.shown(db, account, dav_partners.speaks_german(account))]
 
 
 @router.get("/api/devices", summary="Own devices and what to type into a calendar program")
