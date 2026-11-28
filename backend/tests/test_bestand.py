@@ -123,6 +123,8 @@ def bestand():
         verbindung.execute("UPDATE invites SET expires_at = datetime('now', '+30 days')")
         verbindung.execute("UPDATE password_resets SET expires_at = datetime('now', '+30 days')")
         verbindung.execute("UPDATE accounts SET deleted_at = datetime('now') WHERE deleted_at IS NOT NULL")
+        # A paired device rests after 365 days unused.
+        verbindung.execute("UPDATE app_devices SET last_used_at = datetime('now')")
         verbindung.commit()
     finally:
         verbindung.close()
