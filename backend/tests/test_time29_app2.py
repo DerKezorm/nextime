@@ -87,6 +87,8 @@ def tasks_fake(monkeypatch: pytest.MonkeyPatch) -> Any:
     made = Fake()
     monkeypatch.setattr(nextasks, "TRANSPORT", httpx.MockTransport(made))
     monkeypatch.setattr(nextasks, "RESOLVER", lambda host, port: [PUBLIC])
+    # The tasks of the stand-in lie in November 2026: "overdue" counts from that day, not from the day the tests run.
+    monkeypatch.setattr(nextasks, "clock", lambda: datetime(2026, 11, 26, 10, 0, tzinfo=UTC))
     return made
 
 
@@ -94,11 +96,12 @@ def tasks_fake(monkeypatch: pytest.MonkeyPatch) -> Any:
 def paper(monkeypatch: pytest.MonkeyPatch) -> Any:
     from app.services import nexpaper
 
-    from .test_nexpaper import PUBLIC, Fake
+    from .test_nexpaper import PUBLIC, TODAY, Fake
 
     made = Fake()
     monkeypatch.setattr(nexpaper, "TRANSPORT", httpx.MockTransport(made))
     monkeypatch.setattr(nexpaper, "RESOLVER", lambda host, port: [PUBLIC])
+    monkeypatch.setattr(nexpaper, "clock", lambda: TODAY)
     return made
 
 

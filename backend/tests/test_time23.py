@@ -472,14 +472,16 @@ def test_time23_ec7_a_calendar_broken_off_while_restoring_stays_whole_in_the_tra
     def broken(_db: Any, _calendar_id: int) -> None:
         raise RuntimeError("the server stops here")
 
-    monkeypatch.setattr(shares, "calendar_restored", broken)
-    with SessionLocal() as db, pytest.raises(RuntimeError):
-        trash.restore_calendar(db, db.get(Account, account.id), verein)
+    # Only the break is taken back afterwards: ``monkeypatch.undo()`` would also take the test's clock away, and the
+    # calendar deleted at START would be past its deadline on the real day.
+    with monkeypatch.context() as patch:
+        patch.setattr(shares, "calendar_restored", broken)
+        with SessionLocal() as db, pytest.raises(RuntimeError):
+            trash.restore_calendar(db, db.get(Account, account.id), verein)
     with SessionLocal() as db:
         row = db.get(Calendar, verein)
         assert row is not None and row.deleted_at is not None
     assert entry(client, "calendar", verein)["events"] == 20
-    monkeypatch.undo()
     assert restore(client, "calendar", verein).status_code == 200
     assert len(titles(client)) == 20
 

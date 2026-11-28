@@ -170,9 +170,10 @@ def tick(client: TestClient, task_id: str, done: bool, ref: str) -> httpx.Respon
     return client.post(f"/api/tasks/{task_id}/tick", json={"done": done, "ref": ref, "title": "Müll rausbringen"})
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def clock(monkeypatch: pytest.MonkeyPatch) -> dict[str, Any]:
-    """nextasks' clock in this file: 26.11.2026 10:00 UTC, moved by ``now["at"]``."""
+    """nextasks' clock in this file: 26.11.2026 10:00 UTC, moved by ``now["at"]``. For every test here: the tasks of the
+    stand-in lie in November 2026, and "overdue", "today" and "some months ahead" count from the clock."""
     now = {"at": utcnow().replace(year=2026, month=11, day=26, hour=10, minute=0, second=0, microsecond=0)}
     monkeypatch.setattr(nextasks, "clock", lambda: now["at"])
     return now

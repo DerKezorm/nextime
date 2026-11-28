@@ -5,6 +5,7 @@ side is a stand-in of nexpaper's ``/api/v1`` behind ``httpx.MockTransport``; not
 from __future__ import annotations
 
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Any
 
 import httpx
@@ -16,6 +17,8 @@ from app.services import nexpaper
 
 TOKEN = "npk_richtig-und-geheim-1234567890"
 PUBLIC = "93.184.216.34"
+#: The day of the stand-in (its ``today``): the views ask from it, not from the day the tests run.
+TODAY = datetime(2026, 11, 26, 10, 0, tzinfo=UTC)
 
 
 def deadline(document_id: int, day: str, what: str = "pay", *, kind: str = "due", status: str = "filed",
@@ -64,6 +67,7 @@ def fake(monkeypatch: pytest.MonkeyPatch) -> Iterator[Fake]:
     made = Fake()
     monkeypatch.setattr(nexpaper, "TRANSPORT", httpx.MockTransport(made))
     monkeypatch.setattr(nexpaper, "RESOLVER", lambda host, port: [PUBLIC])
+    monkeypatch.setattr(nexpaper, "clock", lambda: TODAY)
     yield made
 
 

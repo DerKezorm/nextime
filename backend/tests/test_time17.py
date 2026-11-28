@@ -362,8 +362,9 @@ def test_time17_ac3_every_region_of_a_country_has_its_holidays(client: TestClien
                    if item["code"] == country)["regions"]
     assert len(regions) == {"DE": 16, "AT": 9, "CH": 26}[country]
     for region in regions:
-        built = holidays.build(country, [region["code"]], holidays.PUBLIC, sync.clock().date().replace(year=2027),
-                               "de")
+        # A day in the middle of 2027: ``replace(year=2027)`` of a 29 February would have no day.
+        middle = sync.clock().date().replace(year=2027, month=6, day=15)
+        built = holidays.build(country, [region["code"]], holidays.PUBLIC, middle, "de")
         # Four years around today; even the canton with the fewest has more than four a year.
         assert len(built) >= 4 * 4, region
 
@@ -432,7 +433,7 @@ def test_time17_ec13_switzerland_has_no_school_holidays_switch(client: TestClien
 
 def test_time17_ec14_a_year_without_published_school_holidays_shows_the_holidays_alone(
         client: TestClient, account: Account, monkeypatch: pytest.MonkeyPatch) -> None:
-    later = sync.clock().replace(year=2031)
+    later = sync.clock().replace(year=2031, month=6, day=15)  # a 29 February has no 2031
     monkeypatch.setattr(sync, "clock", lambda: later)
     client.put("/api/sources/holidays", json={"country": "DE", "regions": ["NW"], "school": True})
     rows = window(client, "2032-01-01T00:00:00Z", "2033-01-01T00:00:00Z")
